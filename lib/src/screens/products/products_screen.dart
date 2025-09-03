@@ -36,7 +36,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           children: [
             // Fancy gradient header with search
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+              margin: const EdgeInsets.fromLTRB(30, 30, 30, 10),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -56,6 +56,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                 ],
               ),
+              clipBehavior: Clip.none,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -68,7 +69,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   FutureBuilder<List<Map<String, Object?>>>(
                     future: db.getAllProducts(
                       query: _query,
@@ -97,24 +98,25 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 ((p['quantity'] as num?) ?? 0)),
                       );
                       return Align(
-                        alignment: Alignment.topLeft,
-                        child: Wrap(
-                          alignment: WrapAlignment.end,
-                          spacing: 10,
-                          runSpacing: 10,
+                        alignment: Alignment.topRight,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             _summaryChip('عدد المنتجات', '$totalCount',
-                                Colors.blue, Icons.inventory_2),
+                                Colors.white, Icons.inventory_2),
+                            const SizedBox(width: 16),
                             _summaryChip(
                                 'قيمة المخزون',
                                 Formatters.currencyIQD(totalAmount),
-                                Colors.teal,
+                                Colors.white,
                                 Icons.attach_money),
+                            const SizedBox(width: 16),
                             _summaryChip(
                                 'إجمالي الأرباح',
                                 Formatters.currencyIQD(totalProfit),
-                                Colors.orange,
+                                Colors.white,
                                 Icons.trending_up),
+                            const SizedBox(width: 16),
                             _summaryChip(
                                 'إجمالي الكمية',
                                 products
@@ -124,14 +126,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                             sum +
                                             ((p['quantity'] as num?) ?? 0))
                                     .toString(),
-                                Colors.indigo,
+                                Colors.white,
                                 Icons.inventory),
                           ],
                         ),
                       );
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -237,306 +239,358 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         // Table body - منفصل عن الرأس
                         Expanded(
                           child: Container(
+                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: const BorderRadius.only(
-                                bottomLeft: Radius.circular(8),
-                                bottomRight: Radius.circular(8),
-                              ),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: Colors.grey.shade600,
+                                color: Colors.grey.shade300,
                                 width: 1,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
                             ),
-                            child: SizedBox(
-                              height: 800,
-                              // زيادة ارتفاع الجدول
-                              child: SingleChildScrollView(
-                                controller: ScrollController(),
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  controller: _tableHController,
-                                  child: Table(
-                                    columnWidths: const {
-                                      0: FixedColumnWidth(100), // تكبير المعرف
-                                      1: FixedColumnWidth(250), // تكبير الاسم
-                                      2: FixedColumnWidth(
-                                          180), // تكبير الباركود
-                                      3: FixedColumnWidth(120), // تكبير الكمية
-                                      4: FixedColumnWidth(180), // تكبير السعر
-                                      5: FixedColumnWidth(
-                                          250), // تكبير الإجراءات
-                                    },
-                                    border: TableBorder.all(
-                                      color: Colors.grey.shade600,
-                                      width: 1,
+                            child: Column(
+                              children: [
+                                // Fixed Header - رؤوس الأعمدة الثابتة
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade100,
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(16),
+                                      topRight: Radius.circular(16),
                                     ),
-                                    children: [
-                                      // Header Row - صف الترويسة
-                                      TableRow(
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade800,
+                                  ),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    controller: _tableHController,
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 150,
+                                          height: 60,
+                                          padding: const EdgeInsets.all(16),
+                                          child: Center(
+                                            child: Text(
+                                              'المعرف',
+                                              style: TextStyle(
+                                                color: Colors.blue.shade800,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
                                         ),
-                                        children: [
-                                          Container(
-                                            height: 60,
-                                            padding: const EdgeInsets.all(12),
-                                            child: Center(
-                                              child: Text(
-                                                'المعرف',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 16,
-                                                ),
-                                                textAlign: TextAlign.center,
+                                        Container(
+                                          width: 350,
+                                          height: 60,
+                                          padding: const EdgeInsets.all(16),
+                                          child: Center(
+                                            child: Text(
+                                              'الاسم',
+                                              style: TextStyle(
+                                                color: Colors.blue.shade800,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
                                               ),
+                                              textAlign: TextAlign.center,
                                             ),
                                           ),
-                                          Container(
-                                            height: 60,
-                                            padding: const EdgeInsets.all(12),
-                                            child: Center(
-                                              child: Text(
-                                                'الاسم',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 16,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                          ),
-                                          Container(
-                                            height: 60,
-                                            padding: const EdgeInsets.all(12),
-                                            child: Center(
-                                              child: Text(
-                                                'الباركود',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 16,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                          ),
-                                          Container(
-                                            height: 60,
-                                            padding: const EdgeInsets.all(12),
-                                            child: Center(
-                                              child: Text(
-                                                'الكمية',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 16,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                          ),
-                                          Container(
-                                            height: 60,
-                                            padding: const EdgeInsets.all(12),
-                                            child: Center(
-                                              child: Text(
-                                                'السعر',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 16,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                          ),
-                                          Container(
-                                            height: 60,
-                                            padding: const EdgeInsets.all(12),
-                                            child: Center(
-                                              child: Text(
-                                                'الإجراءات',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 16,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      // Data Rows - صفوف البيانات
-                                      for (int i = 0; i < products.length; i++)
-                                        TableRow(
-                                          decoration: BoxDecoration(
-                                            color: i % 2 == 0
-                                                ? Colors.grey.shade50
-                                                : Colors.white,
-                                          ),
-                                          children: [
-                                            // المعرف
-                                            Container(
-                                              height: 80,
-                                              padding: const EdgeInsets.all(12),
-                                              child: Center(
-                                                child: Text(
-                                                  '${i + 1}',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.grey.shade800,
-                                                    fontSize: 16,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            // الاسم
-                                            Container(
-                                              height: 80,
-                                              padding: const EdgeInsets.all(12),
-                                              child: Center(
-                                                child: Text(
-                                                  products[i]['name']
-                                                          ?.toString() ??
-                                                      'بدون اسم',
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 15,
-                                                    color: Colors.black87,
-                                                  ),
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ),
-                                            // الباركود
-                                            Container(
-                                              height: 80,
-                                              padding: const EdgeInsets.all(12),
-                                              child: Center(
-                                                child: Text(
-                                                  products[i]['barcode']
-                                                          ?.toString() ??
-                                                      '—',
-                                                  style: TextStyle(
-                                                    fontFamily: 'monospace',
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 14,
-                                                    color: Colors.blue.shade700,
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ),
-                                            // الكمية
-                                            Container(
-                                              height: 80,
-                                              padding: const EdgeInsets.all(12),
-                                              child: Center(
-                                                child: Text(
-                                                  (products[i]['quantity']
-                                                              as num?)
-                                                          ?.toString() ??
-                                                      '0',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w600,
-                                                    color:
-                                                        Colors.green.shade700,
-                                                    fontSize: 16,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            // السعر
-                                            Container(
-                                              height: 80,
-                                              padding: const EdgeInsets.all(12),
-                                              child: Center(
-                                                child: Text(
-                                                  Formatters.currencyIQD(
-                                                    (products[i]['price']
-                                                            as num?) ??
-                                                        0,
-                                                  ),
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w600,
-                                                    color:
-                                                        Colors.orange.shade700,
-                                                    fontSize: 15,
-                                                  ),
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ),
-                                            ),
-                                            // الإجراءات
-                                            Container(
-                                              height: 80,
-                                              padding: const EdgeInsets.all(12),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  _iconGradButton(
-                                                    tooltip: 'حذف',
-                                                    colors: [
-                                                      Colors.red.shade500,
-                                                      Colors.red.shade600
-                                                    ],
-                                                    icon: Icons
-                                                        .delete_outline_rounded,
-                                                    onTap: () => _deleteProduct(
-                                                      context,
-                                                      products[i]['id'] as int,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  _iconGradButton(
-                                                    tooltip: 'تعديل',
-                                                    colors: [
-                                                      Colors.blue.shade500,
-                                                      Colors.blue.shade600
-                                                    ],
-                                                    icon: Icons.edit_rounded,
-                                                    onTap: () => _openEditor(
-                                                      context,
-                                                      product: products[i],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  _iconGradButton(
-                                                    tooltip: 'باركود',
-                                                    colors: [
-                                                      Colors.green.shade500,
-                                                      Colors.green.shade600
-                                                    ],
-                                                    icon:
-                                                        Icons.qr_code_2_rounded,
-                                                    onTap: () => _showBarcode(
-                                                      context,
-                                                      products[i]['barcode']
-                                                              ?.toString() ??
-                                                          '',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
                                         ),
-                                    ],
+                                        Container(
+                                          width: 250,
+                                          height: 60,
+                                          padding: const EdgeInsets.all(16),
+                                          child: Center(
+                                            child: Text(
+                                              'الباركود',
+                                              style: TextStyle(
+                                                color: Colors.blue.shade800,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          width: 180,
+                                          height: 60,
+                                          padding: const EdgeInsets.all(16),
+                                          child: Center(
+                                            child: Text(
+                                              'الكمية',
+                                              style: TextStyle(
+                                                color: Colors.blue.shade800,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          width: 250,
+                                          height: 60,
+                                          padding: const EdgeInsets.all(16),
+                                          child: Center(
+                                            child: Text(
+                                              'السعر',
+                                              style: TextStyle(
+                                                color: Colors.blue.shade800,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          width: 200,
+                                          height: 60,
+                                          padding: const EdgeInsets.all(16),
+                                          child: Center(
+                                            child: Text(
+                                              'الإجراءات',
+                                              style: TextStyle(
+                                                color: Colors.blue.shade800,
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
+                                // Scrollable Data - البيانات القابلة للتمرير
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    controller: ScrollController(),
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      controller: _tableHController,
+                                      child: Table(
+                                        columnWidths: const {
+                                          0: FixedColumnWidth(
+                                              150), // تكبير المعرف
+                                          1: FixedColumnWidth(
+                                              350), // تكبير الاسم
+                                          2: FixedColumnWidth(
+                                              250), // تكبير الباركود
+                                          3: FixedColumnWidth(
+                                              180), // تكبير الكمية
+                                          4: FixedColumnWidth(
+                                              250), // تكبير السعر
+                                          5: FixedColumnWidth(
+                                              200), // تقليل الإجراءات
+                                        },
+                                        border: TableBorder.all(
+                                          color: Colors.grey.shade300,
+                                          width: 1,
+                                        ),
+                                        children: [
+                                          // Data Rows - صفوف البيانات
+                                          for (int i = 0;
+                                              i < products.length;
+                                              i++)
+                                            TableRow(
+                                              decoration: BoxDecoration(
+                                                color: i % 2 == 0
+                                                    ? Colors.white
+                                                    : Colors.grey.shade50,
+                                              ),
+                                              children: [
+                                                // المعرف
+                                                Container(
+                                                  height: 80,
+                                                  padding:
+                                                      const EdgeInsets.all(16),
+                                                  child: Center(
+                                                    child: Text(
+                                                      '${i + 1}',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors
+                                                            .grey.shade700,
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                // الاسم
+                                                Container(
+                                                  height: 80,
+                                                  padding:
+                                                      const EdgeInsets.all(16),
+                                                  child: Center(
+                                                    child: Text(
+                                                      products[i]['name']
+                                                              ?.toString() ??
+                                                          'بدون اسم',
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        fontSize: 15,
+                                                        color: Colors.black87,
+                                                      ),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ),
+                                                // الباركود
+                                                Container(
+                                                  height: 80,
+                                                  padding:
+                                                      const EdgeInsets.all(16),
+                                                  child: Center(
+                                                    child: Text(
+                                                      products[i]['barcode']
+                                                              ?.toString() ??
+                                                          '—',
+                                                      style: TextStyle(
+                                                        fontFamily: 'monospace',
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 14,
+                                                        color: Colors
+                                                            .blue.shade700,
+                                                        letterSpacing: 0.5,
+                                                      ),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ),
+                                                // الكمية
+                                                Container(
+                                                  height: 80,
+                                                  padding:
+                                                      const EdgeInsets.all(16),
+                                                  child: Center(
+                                                    child: Text(
+                                                      (products[i]['quantity']
+                                                                  as num?)
+                                                              ?.toString() ??
+                                                          '0',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors
+                                                            .green.shade700,
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                // السعر
+                                                Container(
+                                                  height: 80,
+                                                  padding:
+                                                      const EdgeInsets.all(16),
+                                                  child: Center(
+                                                    child: Text(
+                                                      Formatters.currencyIQD(
+                                                        (products[i]['price']
+                                                                as num?) ??
+                                                            0,
+                                                      ),
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors
+                                                            .orange.shade700,
+                                                        fontSize: 15,
+                                                      ),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
+                                                  ),
+                                                ),
+                                                // الإجراءات
+                                                Container(
+                                                  height: 80,
+                                                  padding:
+                                                      const EdgeInsets.all(16),
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      _iconGradButton(
+                                                        tooltip: 'حذف',
+                                                        colors: [
+                                                          Colors.red.shade500,
+                                                          Colors.red.shade600
+                                                        ],
+                                                        icon: Icons
+                                                            .delete_outline_rounded,
+                                                        onTap: () =>
+                                                            _deleteProduct(
+                                                          context,
+                                                          products[i]['id']
+                                                              as int,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      _iconGradButton(
+                                                        tooltip: 'تعديل',
+                                                        colors: [
+                                                          Colors.blue.shade500,
+                                                          Colors.blue.shade600
+                                                        ],
+                                                        icon:
+                                                            Icons.edit_rounded,
+                                                        onTap: () =>
+                                                            _openEditor(
+                                                          context,
+                                                          product: products[i],
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      _iconGradButton(
+                                                        tooltip: 'باركود',
+                                                        colors: [
+                                                          Colors.green.shade500,
+                                                          Colors.green.shade600
+                                                        ],
+                                                        icon: Icons
+                                                            .qr_code_2_rounded,
+                                                        onTap: () =>
+                                                            _showBarcode(
+                                                          context,
+                                                          products[i]['barcode']
+                                                                  ?.toString() ??
+                                                              '',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -553,51 +607,65 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   Widget _summaryChip(String title, String value, Color color, IconData icon) {
-    final Color start = Color.lerp(color, Colors.white, 0.15)!;
-    final Color end = Color.lerp(color, Colors.black, 0.10)!;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      width: 140,
+      height: 80,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [start, end],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1.5,
         ),
-        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.white, size: 18),
-          const SizedBox(width: 8),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.white.withOpacity(0.9),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          // Icon with background circle
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 14,
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Value
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          // Title
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              color: color.withOpacity(0.8),
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
