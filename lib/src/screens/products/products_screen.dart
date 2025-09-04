@@ -19,10 +19,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
   String _query = '';
   int? _selectedCategoryId;
   final ScrollController _tableHController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void dispose() {
     _tableHController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -36,8 +38,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
           children: [
             // Fancy gradient header with search
             Container(
-              margin: const EdgeInsets.fromLTRB(30, 30, 30, 10),
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.fromLTRB(100, 2, 100, 10),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -60,104 +62,109 @@ class _ProductsScreenState extends State<ProductsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'إدارة المنتجات',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  FutureBuilder<List<Map<String, Object?>>>(
-                    future: db.getAllProducts(
-                      query: _query,
-                      categoryId:
-                          _selectedCategoryId ?? widget.initialCategoryId,
-                    ),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const SizedBox.shrink();
-                      }
-                      final products = snapshot.data!;
-                      final int totalCount = products.length;
-                      final num totalAmount = products.fold<num>(
-                        0,
-                        (sum, p) =>
-                            sum +
-                            (((p['price'] as num?) ?? 0) *
-                                ((p['quantity'] as num?) ?? 0)),
-                      );
-                      final num totalProfit = products.fold<num>(
-                        0,
-                        (sum, p) =>
-                            sum +
-                            ((((p['price'] as num?) ?? 0) -
-                                    ((p['cost'] as num?) ?? 0)) *
-                                ((p['quantity'] as num?) ?? 0)),
-                      );
-                      return Align(
-                        alignment: Alignment.topRight,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            _summaryChip('عدد المنتجات', '$totalCount',
-                                Colors.white, Icons.inventory_2),
-                            const SizedBox(width: 16),
-                            _summaryChip(
-                                'قيمة المخزون',
-                                Formatters.currencyIQD(totalAmount),
-                                Colors.white,
-                                Icons.attach_money),
-                            const SizedBox(width: 16),
-                            _summaryChip(
-                                'إجمالي الأرباح',
-                                Formatters.currencyIQD(totalProfit),
-                                Colors.white,
-                                Icons.trending_up),
-                            const SizedBox(width: 16),
-                            _summaryChip(
-                                'إجمالي الكمية',
-                                products
-                                    .fold<num>(
-                                        0,
-                                        (sum, p) =>
-                                            sum +
-                                            ((p['quantity'] as num?) ?? 0))
-                                    .toString(),
-                                Colors.white,
-                                Icons.inventory),
-                          ],
+                  // Title with icon
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                    },
+                        child: const Icon(
+                          Icons.inventory_2_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'إدارة المنتجات',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
                         flex: 1,
-                        child: SizedBox(
-                          height: 38,
+                        child: Container(
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(25),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
                           child: TextField(
+                            controller: _searchController,
                             decoration: InputDecoration(
                               hintText: 'بحث بالاسم أو الباركود',
-                              hintStyle: const TextStyle(color: Colors.white70),
-                              prefixIcon:
-                                  const Icon(Icons.search, color: Colors.white),
-                              filled: true,
-                              fillColor: Colors.white.withOpacity(0.15),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
+                              hintStyle: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
                               ),
+                              prefixIcon: Container(
+                                margin: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.search_rounded,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                              suffixIcon: _query.isNotEmpty
+                                  ? IconButton(
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.2),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.close_rounded,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _query = '');
+                                      },
+                                    )
+                                  : null,
+                              filled: false,
+                              border: InputBorder.none,
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
+                                horizontal: 16,
+                                vertical: 12,
                               ),
                             ),
-                            style: const TextStyle(color: Colors.white),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
                             onChanged: (v) => setState(() => _query = v),
                           ),
                         ),
@@ -165,8 +172,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         flex: 1,
-                        child: SizedBox(
-                          height: 38,
+                        child: Container(
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(25),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
                           child: FutureBuilder<List<Map<String, Object?>>>(
                             future: db.getCategories(),
                             builder: (context, catSnap) {
@@ -179,22 +201,35 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 isDense: true,
                                 iconEnabledColor: Colors.white,
                                 dropdownColor: Colors.white,
-                                style: const TextStyle(color: Colors.black),
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
                                 decoration: InputDecoration(
                                   hintText: 'القسم',
-                                  hintStyle:
-                                      const TextStyle(color: Colors.white70),
-                                  prefixIcon: const Icon(Icons.category,
-                                      color: Colors.white),
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.15),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                    borderSide: BorderSide.none,
+                                  hintStyle: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
                                   ),
+                                  prefixIcon: Container(
+                                    margin: const EdgeInsets.all(8),
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.category_rounded,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  filled: false,
+                                  border: InputBorder.none,
                                   contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
+                                    horizontal: 16,
+                                    vertical: 12,
                                   ),
                                 ),
                                 items: [
@@ -204,8 +239,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   ),
                                   ...cats.map((c) => DropdownMenuItem<int>(
                                         value: c['id'] as int,
-                                        child:
-                                            Text(c['name']?.toString() ?? ''),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
+                                          child:
+                                              Text(c['name']?.toString() ?? ''),
+                                        ),
                                       )),
                                 ],
                                 onChanged: (val) =>
@@ -222,7 +263,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.zero,
                 child: FutureBuilder<List<Map<String, Object?>>>(
                   future: db.getAllProducts(
                     query: _query,
@@ -239,7 +280,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         // Table body - منفصل عن الرأس
                         Expanded(
                           child: Container(
-                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            margin: const EdgeInsets.fromLTRB(90, 0, 90, 20),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
@@ -255,6 +296,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 ),
                               ],
                             ),
+                            clipBehavior: Clip.antiAlias,
                             child: Column(
                               children: [
                                 // Fixed Header - رؤوس الأعمدة الثابتة
@@ -269,103 +311,141 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   child: SingleChildScrollView(
                                     scrollDirection: Axis.horizontal,
                                     controller: _tableHController,
-                                    child: Row(
+                                    child: Table(
+                                      columnWidths: const {
+                                        0: FixedColumnWidth(80), // المعرف
+                                        1: FixedColumnWidth(260), // الاسم
+                                        2: FixedColumnWidth(160), // الباركود
+                                        3: FixedColumnWidth(90), // الكمية
+                                        4: FixedColumnWidth(160), // التكلفة
+                                        5: FixedColumnWidth(180), // السعر
+                                        6: FixedColumnWidth(160), // الإجراءات
+                                      },
+                                      border: TableBorder.symmetric(
+                                        inside: BorderSide(
+                                          color: Colors.grey.shade300,
+                                          width: 1,
+                                        ),
+                                      ),
                                       children: [
-                                        Container(
-                                          width: 150,
-                                          height: 60,
-                                          padding: const EdgeInsets.all(16),
-                                          child: Center(
-                                            child: Text(
-                                              'المعرف',
-                                              style: TextStyle(
-                                                color: Colors.blue.shade800,
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 16,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
+                                        TableRow(
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.shade100,
                                           ),
-                                        ),
-                                        Container(
-                                          width: 350,
-                                          height: 60,
-                                          padding: const EdgeInsets.all(16),
-                                          child: Center(
-                                            child: Text(
-                                              'الاسم',
-                                              style: TextStyle(
-                                                color: Colors.blue.shade800,
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 16,
+                                          children: [
+                                            // المعرف
+                                            Container(
+                                              height: 60,
+                                              padding: const EdgeInsets.all(10),
+                                              child: Center(
+                                                child: Text(
+                                                  'المعرف',
+                                                  style: TextStyle(
+                                                    color: Colors.blue.shade800,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 16,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
                                               ),
-                                              textAlign: TextAlign.center,
                                             ),
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 250,
-                                          height: 60,
-                                          padding: const EdgeInsets.all(16),
-                                          child: Center(
-                                            child: Text(
-                                              'الباركود',
-                                              style: TextStyle(
-                                                color: Colors.blue.shade800,
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 16,
+                                            // الاسم
+                                            Container(
+                                              height: 60,
+                                              padding: const EdgeInsets.all(16),
+                                              child: Center(
+                                                child: Text(
+                                                  'الاسم',
+                                                  style: TextStyle(
+                                                    color: Colors.blue.shade800,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 16,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
                                               ),
-                                              textAlign: TextAlign.center,
                                             ),
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 180,
-                                          height: 60,
-                                          padding: const EdgeInsets.all(16),
-                                          child: Center(
-                                            child: Text(
-                                              'الكمية',
-                                              style: TextStyle(
-                                                color: Colors.blue.shade800,
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 16,
+                                            // الباركود
+                                            Container(
+                                              height: 60,
+                                              padding: const EdgeInsets.all(16),
+                                              child: Center(
+                                                child: Text(
+                                                  'الباركود',
+                                                  style: TextStyle(
+                                                    color: Colors.blue.shade800,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 16,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
                                               ),
-                                              textAlign: TextAlign.center,
                                             ),
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 250,
-                                          height: 60,
-                                          padding: const EdgeInsets.all(16),
-                                          child: Center(
-                                            child: Text(
-                                              'السعر',
-                                              style: TextStyle(
-                                                color: Colors.blue.shade800,
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 16,
+                                            // الكمية
+                                            Container(
+                                              height: 60,
+                                              padding: const EdgeInsets.all(16),
+                                              child: Center(
+                                                child: Text(
+                                                  'الكمية',
+                                                  style: TextStyle(
+                                                    color: Colors.blue.shade800,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 16,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
                                               ),
-                                              textAlign: TextAlign.center,
                                             ),
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 200,
-                                          height: 60,
-                                          padding: const EdgeInsets.all(16),
-                                          child: Center(
-                                            child: Text(
-                                              'الإجراءات',
-                                              style: TextStyle(
-                                                color: Colors.blue.shade800,
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 16,
+                                            // التكلفة
+                                            Container(
+                                              height: 60,
+                                              padding: const EdgeInsets.all(16),
+                                              child: Center(
+                                                child: Text(
+                                                  'التكلفة',
+                                                  style: TextStyle(
+                                                    color: Colors.blue.shade800,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 16,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
                                               ),
-                                              textAlign: TextAlign.center,
                                             ),
-                                          ),
+                                            // السعر
+                                            Container(
+                                              height: 60,
+                                              padding: const EdgeInsets.all(16),
+                                              child: Center(
+                                                child: Text(
+                                                  'السعر',
+                                                  style: TextStyle(
+                                                    color: Colors.blue.shade800,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 16,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
+                                            ),
+                                            // الإجراءات
+                                            Container(
+                                              height: 60,
+                                              padding: const EdgeInsets.all(16),
+                                              child: Center(
+                                                child: Text(
+                                                  'الإجراءات',
+                                                  style: TextStyle(
+                                                    color: Colors.blue.shade800,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 16,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
@@ -380,22 +460,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                       controller: _tableHController,
                                       child: Table(
                                         columnWidths: const {
-                                          0: FixedColumnWidth(
-                                              150), // تكبير المعرف
-                                          1: FixedColumnWidth(
-                                              350), // تكبير الاسم
-                                          2: FixedColumnWidth(
-                                              250), // تكبير الباركود
-                                          3: FixedColumnWidth(
-                                              180), // تكبير الكمية
-                                          4: FixedColumnWidth(
-                                              250), // تكبير السعر
-                                          5: FixedColumnWidth(
-                                              200), // تقليل الإجراءات
+                                          0: FixedColumnWidth(80), // المعرف
+                                          1: FixedColumnWidth(260), // الاسم
+                                          2: FixedColumnWidth(160), // الباركود
+                                          3: FixedColumnWidth(90), // الكمية
+                                          4: FixedColumnWidth(160), // التكلفة
+                                          5: FixedColumnWidth(180), // السعر
+                                          6: FixedColumnWidth(160), // الإجراءات
                                         },
-                                        border: TableBorder.all(
-                                          color: Colors.grey.shade300,
-                                          width: 1,
+                                        border: TableBorder.symmetric(
+                                          inside: BorderSide(
+                                            color: Colors.grey.shade300,
+                                            width: 1,
+                                          ),
                                         ),
                                         children: [
                                           // Data Rows - صفوف البيانات
@@ -496,6 +573,30 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                             .green.shade700,
                                                         fontSize: 16,
                                                       ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                // التكلفة
+                                                Container(
+                                                  height: 80,
+                                                  padding:
+                                                      const EdgeInsets.all(16),
+                                                  child: Center(
+                                                    child: Text(
+                                                      Formatters.currencyIQD(
+                                                        (products[i]['cost']
+                                                                as num?) ??
+                                                            0,
+                                                      ),
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors
+                                                            .purple.shade700,
+                                                        fontSize: 15,
+                                                      ),
+                                                      textAlign:
+                                                          TextAlign.center,
                                                     ),
                                                   ),
                                                 ),
@@ -603,13 +704,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openEditor(context, product: const {}),
+        icon: const Icon(Icons.add),
+        label: const Text('إضافة منتج'),
+      ),
     );
   }
 
   Widget _summaryChip(String title, String value, Color color, IconData icon) {
     return Container(
-      width: 140,
-      height: 80,
+      width: 110,
+      height: 64,
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
@@ -625,13 +731,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Icon with background circle
           Container(
-            width: 24,
-            height: 24,
+            width: 20,
+            height: 20,
             decoration: BoxDecoration(
               color: color.withOpacity(0.2),
               shape: BoxShape.circle,
@@ -639,33 +745,38 @@ class _ProductsScreenState extends State<ProductsScreen> {
             child: Icon(
               icon,
               color: color,
-              size: 14,
+              size: 12,
             ),
           ),
-          const SizedBox(height: 6),
-          // Value
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          // Title
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 10,
-              color: color.withOpacity(0.8),
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          const SizedBox(width: 6),
+          // Value and Title in column
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: color.withOpacity(0.8),
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ],
       ),
@@ -776,19 +887,171 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Future<void> _openEditor(BuildContext context,
       {required Map<String, Object?> product}) async {
-    await showDialog<void>(
+    final db = context.read<DatabaseService>();
+    final TextEditingController nameCtrl =
+        TextEditingController(text: product['name']?.toString() ?? '');
+    final TextEditingController barcodeCtrl =
+        TextEditingController(text: product['barcode']?.toString() ?? '');
+    final TextEditingController priceCtrl = TextEditingController(
+        text: (product['price'] as num?)?.toString() ?? '0');
+    final TextEditingController costCtrl = TextEditingController(
+        text: (product['cost'] as num?)?.toString() ?? '0');
+    final TextEditingController qtyCtrl = TextEditingController(
+        text: (product['quantity'] as num?)?.toString() ?? '0');
+    final TextEditingController minQtyCtrl = TextEditingController(
+        text: (product['min_quantity'] as num?)?.toString() ?? '1');
+    int? categoryId = product['category_id'] as int?;
+
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+    final bool isEdit = product['id'] != null;
+
+    final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('تعديل المنتج'),
-        content: Text('"${product['name']}"'),
+        title: Text(isEdit ? 'تعديل منتج' : 'إضافة منتج'),
+        content: SizedBox(
+          width: 460,
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'الاسم'),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: barcodeCtrl,
+                  decoration: const InputDecoration(labelText: 'الباركود'),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: priceCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(labelText: 'السعر'),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                        ],
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'السعر مطلوب' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: costCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(labelText: 'الكلفة'),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: qtyCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            signed: false),
+                        decoration: const InputDecoration(labelText: 'الكمية'),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: minQtyCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            signed: false),
+                        decoration:
+                            const InputDecoration(labelText: 'الحد الأدنى'),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                FutureBuilder<List<Map<String, Object?>>>(
+                  future: db.getCategories(),
+                  builder: (context, snap) {
+                    final cats = snap.data ?? const <Map<String, Object?>>[];
+                    final ids = cats.map<int>((c) => c['id'] as int).toSet();
+                    final int? effectiveCategoryId =
+                        (categoryId != null && ids.contains(categoryId))
+                            ? categoryId
+                            : null;
+                    return DropdownButtonFormField<int>(
+                      initialValue: effectiveCategoryId,
+                      isExpanded: true,
+                      decoration:
+                          const InputDecoration(labelText: 'القسم (اختياري)'),
+                      items: [
+                        const DropdownMenuItem<int>(
+                          value: null,
+                          child: Text('بدون قسم'),
+                        ),
+                        ...cats.map((c) => DropdownMenuItem<int>(
+                              value: c['id'] as int,
+                              child: Text(c['name']?.toString() ?? ''),
+                            )),
+                      ],
+                      onChanged: (v) => categoryId = v,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إغلاق'),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              final values = <String, Object?>{
+                'name': nameCtrl.text.trim(),
+                'barcode': barcodeCtrl.text.trim().isEmpty
+                    ? null
+                    : barcodeCtrl.text.trim(),
+                'price': double.tryParse(priceCtrl.text.trim()) ?? 0,
+                'cost': double.tryParse(costCtrl.text.trim()) ?? 0,
+                'quantity': int.tryParse(qtyCtrl.text.trim()) ?? 0,
+                'min_quantity': int.tryParse(minQtyCtrl.text.trim()) ?? 1,
+                'category_id': categoryId,
+              };
+              if (isEdit) {
+                await db.updateProduct(product['id'] as int, values);
+              } else {
+                await db.insertProduct(values);
+              }
+              if (context.mounted) Navigator.pop(context, true);
+            },
+            child: const Text('حفظ'),
           ),
         ],
       ),
     );
+    if (ok == true && mounted) setState(() {});
   }
 
   Future<void> _showBarcode(BuildContext context, String code) async {
