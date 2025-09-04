@@ -9,10 +9,12 @@ import 'screens/settings_screen.dart';
 import 'screens/customers_screen.dart';
 import 'screens/suppliers_screen.dart';
 import 'screens/sales_screen.dart';
+import 'screens/sales_history_screen.dart';
 import 'screens/inventory_screen.dart';
 import 'screens/accounting_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/categories_screen.dart';
+import 'screens/debts_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -34,12 +36,14 @@ class _AppShellState extends State<AppShell> {
     final pages = <Widget>[
       const DashboardScreen(),
       const SalesScreen(),
+      const SalesHistoryScreen(),
       const ProductsScreen(),
       const CategoriesScreen(),
       const InventoryScreen(),
       const CustomersScreen(),
       const SuppliersScreen(),
       const AccountingScreen(),
+      const DebtsScreen(),
       const ReportsScreen(),
       const SettingsScreen(),
     ];
@@ -165,52 +169,64 @@ class _AppShellState extends State<AppShell> {
                         isSelected: _selectedIndex == 1,
                       ),
                       _buildNavItem(
-                        icon: Icons.inventory_2,
-                        label: 'المنتجات',
+                        icon: Icons.history,
+                        label: 'تاريخ المبيعات',
                         index: 2,
                         isSelected: _selectedIndex == 2,
                       ),
                       _buildNavItem(
-                        icon: Icons.category,
-                        label: 'الأقسام',
+                        icon: Icons.inventory_2,
+                        label: 'المنتجات',
                         index: 3,
                         isSelected: _selectedIndex == 3,
                       ),
                       _buildNavItem(
-                        icon: Icons.warehouse,
-                        label: 'المخزون',
+                        icon: Icons.category,
+                        label: 'الأقسام',
                         index: 4,
                         isSelected: _selectedIndex == 4,
                       ),
                       _buildNavItem(
-                        icon: Icons.people_alt,
-                        label: 'العملاء',
+                        icon: Icons.warehouse,
+                        label: 'المخزون',
                         index: 5,
                         isSelected: _selectedIndex == 5,
                       ),
                       _buildNavItem(
-                        icon: Icons.local_shipping,
-                        label: 'الموردون',
+                        icon: Icons.people_alt,
+                        label: 'العملاء',
                         index: 6,
                         isSelected: _selectedIndex == 6,
                       ),
                       _buildNavItem(
-                        icon: Icons.account_balance,
-                        label: 'الحسابات',
+                        icon: Icons.local_shipping,
+                        label: 'الموردون',
                         index: 7,
                         isSelected: _selectedIndex == 7,
                       ),
                       _buildNavItem(
-                        icon: Icons.bar_chart,
-                        label: 'التقارير',
+                        icon: Icons.account_balance,
+                        label: 'الحسابات',
                         index: 8,
                         isSelected: _selectedIndex == 8,
                       ),
                       _buildNavItem(
-                        icon: Icons.settings,
-                        label: 'الإعدادات',
+                        icon: Icons.payments,
+                        label: 'الديون',
                         index: 9,
                         isSelected: _selectedIndex == 9,
+                      ),
+                      _buildNavItem(
+                        icon: Icons.bar_chart,
+                        label: 'التقارير',
+                        index: 10,
+                        isSelected: _selectedIndex == 10,
+                      ),
+                      _buildNavItem(
+                        icon: Icons.settings,
+                        label: 'الإعدادات',
+                        index: 11,
+                        isSelected: _selectedIndex == 11,
                       ),
                     ],
                   ),
@@ -274,20 +290,26 @@ class _AppShellState extends State<AppShell> {
 
           Expanded(
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 500),
               transitionBuilder: (Widget child, Animation<double> animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.1, 0),
-                      end: Offset.zero,
-                    ).animate(animation),
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.3),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  )),
+                  child: FadeTransition(
+                    opacity: animation,
                     child: child,
                   ),
                 );
               },
-              child: pages[_selectedIndex],
+              child: Container(
+                key: ValueKey(_selectedIndex),
+                child: pages[_selectedIndex],
+              ),
             ),
           ),
         ],

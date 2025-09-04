@@ -21,6 +21,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   int _totalSuppliers = 0;
   double _monthlySales = 0;
   double _monthlyProfit = 0;
+  double _totalDebt = 0;
+  double _overdueDebt = 0;
+  int _customersWithDebt = 0;
   List<Map<String, dynamic>> _recentSales = [];
   List<Map<String, dynamic>> _topProducts = [];
   List<Map<String, dynamic>> _lowStockProducts = [];
@@ -100,6 +103,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     final lowStockProducts = await db.rawQuery(
         "SELECT name, quantity, min_quantity FROM products WHERE quantity <= min_quantity LIMIT 5");
 
+    // إحصائيات الديون
+    final debtStats = await context.read<DatabaseService>().getDebtStatistics();
+
     if (mounted) {
       setState(() {
         _todaySales = (todaySales.first['t'] as num).toDouble();
@@ -113,6 +119,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         _recentSales = recentSales;
         _topProducts = topProducts;
         _lowStockProducts = lowStockProducts;
+        _totalDebt = debtStats['total_debt']!;
+        _overdueDebt = debtStats['overdue_debt']!;
+        _customersWithDebt = debtStats['customers_with_debt']!.toInt();
       });
 
       _fadeController.forward();
@@ -250,10 +259,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 4,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
-          childAspectRatio: 1.2,
+          crossAxisCount: 6,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 2.0,
           children: [
             _buildStatCard(
               'مبيعات اليوم',
@@ -311,6 +320,27 @@ class _DashboardScreenState extends State<DashboardScreen>
               Colors.red,
               Colors.red.shade50,
             ),
+            _buildStatCard(
+              'إجمالي الديون',
+              Formatters.currencyIQD(_totalDebt),
+              Icons.account_balance_wallet,
+              Colors.deepOrange,
+              Colors.deepOrange.shade50,
+            ),
+            _buildStatCard(
+              'ديون متأخرة',
+              Formatters.currencyIQD(_overdueDebt),
+              Icons.warning_amber,
+              Colors.red,
+              Colors.red.shade50,
+            ),
+            _buildStatCard(
+              'عملاء مدينون',
+              '$_customersWithDebt',
+              Icons.people_outline,
+              Colors.amber,
+              Colors.amber.shade50,
+            ),
           ],
         ),
       ],
@@ -321,18 +351,29 @@ class _DashboardScreenState extends State<DashboardScreen>
       String title, String value, IconData icon, Color color, Color bgColor) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.1),
+            color.withOpacity(0.05),
+          ],
+        ),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -340,44 +381,55 @@ class _DashboardScreenState extends State<DashboardScreen>
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(8),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        color.withOpacity(0.3),
+                        color.withOpacity(0.2),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: color.withOpacity(0.4),
+                      width: 0.5,
+                    ),
                   ),
-                  child: Icon(icon, color: color, size: 18),
+                  child: Icon(icon, color: color, size: 14),
                 ),
                 const Spacer(),
                 Icon(
                   Icons.trending_up,
-                  color: Colors.green.shade400,
-                  size: 14,
+                  color: color.withOpacity(0.7),
+                  size: 12,
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Flexible(
               child: Text(
                 value,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 1),
             Flexible(
               child: Text(
                 title,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 9,
                   color: Colors.grey.shade600,
                   fontWeight: FontWeight.w500,
                 ),
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
