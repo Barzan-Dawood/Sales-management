@@ -6,6 +6,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'src/app_shell.dart';
 import 'src/services/db/database_service.dart';
 import 'src/services/auth/auth_provider.dart';
+import 'src/utils/strings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +36,7 @@ class MyApp extends StatelessWidget {
       brightness: Brightness.light,
     );
     return MaterialApp(
-      title: 'نظام نقاط البيع - إدارة المحل',
+      title: AppStrings.appTitle,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: colorScheme,

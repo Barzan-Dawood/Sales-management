@@ -7,6 +7,7 @@ import '../services/db/database_service.dart';
 import '../utils/format.dart';
 import 'package:printing/printing.dart';
 import '../utils/invoice_pdf.dart';
+import '../utils/strings.dart';
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -2667,13 +2668,17 @@ class _SalesScreenState extends State<SalesScreen> {
     final db = context.read<DatabaseService>();
     final settings = await db.database.query('settings', limit: 1);
     final shopName = (settings.isNotEmpty
-        ? (settings.first['shop_name']?.toString() ?? 'المحل')
-        : 'المحل');
+        ? (settings.first['shop_name']?.toString() ??
+            AppStrings.defaultShopName)
+        : AppStrings.defaultShopName);
     final phone =
         (settings.isNotEmpty ? settings.first['phone']?.toString() : null);
+    final address =
+        (settings.isNotEmpty ? settings.first['address']?.toString() : null);
     final pdfData = await InvoicePdf.generate(
       shopName: shopName,
       phone: phone,
+      address: address,
       items: _lastInvoiceItems,
       paymentType: _lastType,
     );

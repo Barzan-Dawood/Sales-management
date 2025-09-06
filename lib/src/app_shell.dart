@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'services/auth/auth_provider.dart';
+import 'utils/strings.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/products/products_screen.dart';
@@ -50,7 +51,7 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('نظام نقاط البيع - إدارة المحل'),
+        title: const Text(AppStrings.appTitle),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -59,7 +60,7 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
           IconButton(
-            tooltip: 'تسجيل الخروج',
+            tooltip: AppStrings.logout,
             icon: const Icon(Icons.logout),
             onPressed: () => context.read<AuthProvider>().logout(),
           ),
@@ -130,7 +131,7 @@ class _AppShellState extends State<AppShell> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'القائمة الرئيسية',
+                              AppStrings.mainMenu,
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -138,7 +139,7 @@ class _AppShellState extends State<AppShell> {
                               ),
                             ),
                             Text(
-                              'اختر القسم المطلوب',
+                              AppStrings.selectSection,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.8),
                                 fontSize: 14,
@@ -158,73 +159,73 @@ class _AppShellState extends State<AppShell> {
                     children: [
                       _buildNavItem(
                         icon: Icons.space_dashboard,
-                        label: 'لوحة التحكم',
+                        label: AppStrings.dashboard,
                         index: 0,
                         isSelected: _selectedIndex == 0,
                       ),
                       _buildNavItem(
                         icon: Icons.point_of_sale,
-                        label: 'المبيعات',
+                        label: AppStrings.sales,
                         index: 1,
                         isSelected: _selectedIndex == 1,
                       ),
                       _buildNavItem(
                         icon: Icons.history,
-                        label: 'تاريخ المبيعات',
+                        label: AppStrings.salesHistory,
                         index: 2,
                         isSelected: _selectedIndex == 2,
                       ),
                       _buildNavItem(
                         icon: Icons.inventory_2,
-                        label: 'المنتجات',
+                        label: AppStrings.products,
                         index: 3,
                         isSelected: _selectedIndex == 3,
                       ),
                       _buildNavItem(
                         icon: Icons.category,
-                        label: 'الأقسام',
+                        label: AppStrings.categories,
                         index: 4,
                         isSelected: _selectedIndex == 4,
                       ),
                       _buildNavItem(
                         icon: Icons.warehouse,
-                        label: 'المخزون',
+                        label: AppStrings.inventory,
                         index: 5,
                         isSelected: _selectedIndex == 5,
                       ),
                       _buildNavItem(
                         icon: Icons.people_alt,
-                        label: 'العملاء',
+                        label: AppStrings.customers,
                         index: 6,
                         isSelected: _selectedIndex == 6,
                       ),
                       _buildNavItem(
                         icon: Icons.local_shipping,
-                        label: 'الموردون',
+                        label: AppStrings.suppliers,
                         index: 7,
                         isSelected: _selectedIndex == 7,
                       ),
                       _buildNavItem(
                         icon: Icons.account_balance,
-                        label: 'الحسابات',
+                        label: AppStrings.accounting,
                         index: 8,
                         isSelected: _selectedIndex == 8,
                       ),
                       _buildNavItem(
                         icon: Icons.payments,
-                        label: 'الديون',
+                        label: AppStrings.debts,
                         index: 9,
                         isSelected: _selectedIndex == 9,
                       ),
                       _buildNavItem(
                         icon: Icons.bar_chart,
-                        label: 'التقارير',
+                        label: AppStrings.reports,
                         index: 10,
                         isSelected: _selectedIndex == 10,
                       ),
                       _buildNavItem(
                         icon: Icons.settings,
-                        label: 'الإعدادات',
+                        label: AppStrings.settings,
                         index: 11,
                         isSelected: _selectedIndex == 11,
                       ),
@@ -262,7 +263,7 @@ class _AppShellState extends State<AppShell> {
                           children: [
                             Text(
                               auth.currentUser?['name']?.toString() ??
-                                  'المستخدم',
+                                  AppStrings.user,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -270,7 +271,7 @@ class _AppShellState extends State<AppShell> {
                               ),
                             ),
                             Text(
-                              'مستخدم نشط',
+                              AppStrings.activeUser,
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.7),
                                 fontSize: 12,

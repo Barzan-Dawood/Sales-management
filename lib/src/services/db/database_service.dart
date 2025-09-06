@@ -7,7 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
-  static const int _dbVersion = 4;
+  static const int _dbVersion = 5;
 
   late final Database _db;
   late String _dbPath;
@@ -36,6 +36,9 @@ class DatabaseService {
         }
         if (oldVersion < 4) {
           await _migrateToV4(db);
+        }
+        if (oldVersion < 5) {
+          await _migrateToV5(db);
         }
         await _ensureCategorySchemaOn(db);
       },
@@ -181,6 +184,7 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         shop_name TEXT,
         phone TEXT,
+        address TEXT,
         logo_path TEXT
       );
     ''');
@@ -234,6 +238,15 @@ class DatabaseService {
         FOREIGN KEY(customer_id) REFERENCES customers(id)
       );
     ''');
+  }
+
+  Future<void> _migrateToV5(Database db) async {
+    // Add address field to settings table
+    try {
+      await db.execute('ALTER TABLE settings ADD COLUMN address TEXT');
+    } catch (_) {
+      // column already exists
+    }
   }
 
   Future<void> _seedData(Database db) async {

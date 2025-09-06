@@ -4,10 +4,13 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import 'strings.dart';
+
 class InvoicePdf {
   static Future<Uint8List> generate({
     required String shopName,
     required String? phone,
+    required String? address,
     required List<Map<String, Object?>> items,
     required String paymentType,
   }) async {
@@ -33,16 +36,19 @@ class InvoicePdf {
                     style: pw.TextStyle(
                         fontSize: 16, fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.center),
+                if (address != null && address.isNotEmpty)
+                  pw.Text(address, textAlign: pw.TextAlign.center),
                 if (phone != null && phone.isNotEmpty)
-                  pw.Text('هاتف: $phone', textAlign: pw.TextAlign.center),
+                  pw.Text('${AppStrings.phonePrefix} $phone',
+                      textAlign: pw.TextAlign.center),
                 pw.SizedBox(height: 8),
                 pw.Divider(),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('التاريخ: $date'),
+                    pw.Text('${AppStrings.date}: $date'),
                     pw.Text(
-                        'الدفع: ${paymentType == 'cash' ? 'نقدي' : 'أقساط'}')
+                        '${AppStrings.payment}: ${paymentType == 'cash' ? AppStrings.cash : AppStrings.credit}')
                   ],
                 ),
                 pw.SizedBox(height: 8),
@@ -57,13 +63,13 @@ class InvoicePdf {
                     pw.TableRow(children: [
                       pw.Padding(
                           padding: const pw.EdgeInsets.all(4),
-                          child: pw.Text('المنتج')),
+                          child: pw.Text(AppStrings.product)),
                       pw.Padding(
                           padding: const pw.EdgeInsets.all(4),
-                          child: pw.Text('الكمية')),
+                          child: pw.Text(AppStrings.quantity)),
                       pw.Padding(
                           padding: const pw.EdgeInsets.all(4),
-                          child: pw.Text('الإجمالي')),
+                          child: pw.Text(AppStrings.total)),
                     ]),
                     ...items.map((e) {
                       final name = e['name']?.toString() ?? '';
@@ -80,7 +86,7 @@ class InvoicePdf {
                             padding: const pw.EdgeInsets.all(4),
                             child: pw.Text(NumberFormat.currency(
                                     locale: 'ar_IQ',
-                                    symbol: 'د.ع',
+                                    symbol: AppStrings.currency,
                                     decimalDigits: 0)
                                 .format(lineTotal))),
                       ]);
@@ -91,19 +97,19 @@ class InvoicePdf {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('الإجمالي',
+                    pw.Text(AppStrings.total,
                         style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                     pw.Text(
                         NumberFormat.currency(
                                 locale: 'ar_IQ',
-                                symbol: 'د.ع',
+                                symbol: AppStrings.currency,
                                 decimalDigits: 0)
                             .format(total),
                         style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                   ],
                 ),
                 pw.SizedBox(height: 12),
-                pw.Text('شكراً لتعاملكم معنا', textAlign: pw.TextAlign.center),
+                pw.Text(AppStrings.thankYou, textAlign: pw.TextAlign.center),
               ],
             ),
           );

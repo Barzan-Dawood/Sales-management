@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/backup/backup_service.dart';
 import '../services/db/database_service.dart';
+import '../utils/strings.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -12,61 +13,133 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _shopName = TextEditingController();
-  final _phone = TextEditingController();
-
   @override
   Widget build(BuildContext context) {
-    final db = context.read<DatabaseService>().database;
     final backup = BackupService(context.read<DatabaseService>());
     return Padding(
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: [
-          Text('بيانات المحل', style: Theme.of(context).textTheme.titleLarge),
+          // Store Information Section (Read-only)
+          Text(AppStrings.storeData,
+              style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-                child: TextField(
-                    controller: _shopName,
-                    decoration: const InputDecoration(labelText: 'اسم المحل'))),
-            const SizedBox(width: 8),
-            Expanded(
-                child: TextField(
-                    controller: _phone,
-                    decoration:
-                        const InputDecoration(labelText: 'رقم الهاتف'))),
-          ]),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed: () async {
-                final has = await db.query('settings', limit: 1);
-                if (has.isEmpty) {
-                  await db.insert('settings', {
-                    'shop_name': _shopName.text.trim(),
-                    'phone': _phone.text.trim()
-                  });
-                } else {
-                  await db.update(
-                      'settings',
-                      {
-                        'shop_name': _shopName.text.trim(),
-                        'phone': _phone.text.trim()
-                      },
-                      where: 'id = ?',
-                      whereArgs: [has.first['id']]);
-                }
-                if (!mounted) return;
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
-              },
-              child: const Text('حفظ'),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.store, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.shopNameLabel,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppStrings.defaultShopName,
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.phone, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.phoneLabel,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppStrings.defaultPhone,
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.location_on,
+                        color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.addressLabel,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppStrings.defaultAddress,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
-          Text('قاعدة البيانات', style: Theme.of(context).textTheme.titleLarge),
+
+          // Developer Information Section
+          Text(AppStrings.developerTitle1,
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.code, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.developerTitle2,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppStrings.developerInfo,
+                  style: TextStyle(
+                    color: Colors.blue.shade700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Database Section
+          Text(AppStrings.database,
+              style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           Wrap(spacing: 8, children: [
             FilledButton.icon(
@@ -75,23 +148,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (!mounted) return;
                 if (path != null) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('تم حفظ النسخة الاحتياطية في: $path')));
+                      content: Text('${AppStrings.backupSaved} $path')));
                 }
               },
               icon: const Icon(Icons.backup),
-              label: const Text('نسخ احتياطي'),
+              label: const Text(AppStrings.backup),
             ),
             OutlinedButton.icon(
               onPressed: () async {
                 final name = await backup.restoreDatabase();
                 if (!mounted) return;
                 if (name != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('تم الاسترجاع من: $name')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('${AppStrings.backupRestored} $name')));
                 }
               },
               icon: const Icon(Icons.restore),
-              label: const Text('استرجاع'),
+              label: const Text(AppStrings.restore),
             ),
           ]),
         ],
