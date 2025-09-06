@@ -1838,16 +1838,115 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                     height: 6),
                                                               ],
 
-                                                              // Actions
+                                                              // Actions - Simplified and organized buttons
                                                               Container(
                                                                 padding:
                                                                     const EdgeInsets
                                                                         .all(
-                                                                        16),
+                                                                        20),
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  color: Colors
+                                                                      .grey
+                                                                      .shade50,
+                                                                  borderRadius:
+                                                                      const BorderRadius
+                                                                          .only(
+                                                                    bottomLeft:
+                                                                        Radius.circular(
+                                                                            20),
+                                                                    bottomRight:
+                                                                        Radius.circular(
+                                                                            20),
+                                                                  ),
+                                                                ),
                                                                 child: Column(
                                                                   children: [
+                                                                    // Primary action buttons row
                                                                     Row(
                                                                       children: [
+                                                                        // Print button
+                                                                        Expanded(
+                                                                          child:
+                                                                              ElevatedButton.icon(
+                                                                            onPressed:
+                                                                                () async {
+                                                                              // Show loading indicator while printing
+                                                                              showDialog(
+                                                                                context: context,
+                                                                                barrierDismissible: false,
+                                                                                builder: (BuildContext context) {
+                                                                                  return const Center(
+                                                                                    child: Card(
+                                                                                      child: Padding(
+                                                                                        padding: EdgeInsets.all(20),
+                                                                                        child: Column(
+                                                                                          mainAxisSize: MainAxisSize.min,
+                                                                                          children: [
+                                                                                            CircularProgressIndicator(),
+                                                                                            SizedBox(height: 16),
+                                                                                            Text('جاري طباعة الفاتورة...'),
+                                                                                          ],
+                                                                                        ),
+                                                                                      ),
+                                                                                    ),
+                                                                                  );
+                                                                                },
+                                                                              );
+
+                                                                              try {
+                                                                                // Print invoice without closing the success dialog
+                                                                                await _printInvoice(context);
+
+                                                                                // Close loading dialog
+                                                                                Navigator.of(context).pop();
+
+                                                                                // Show success message
+                                                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                                                  const SnackBar(
+                                                                                    content: Text('تم طباعة الفاتورة بنجاح'),
+                                                                                    backgroundColor: Colors.green,
+                                                                                    duration: Duration(seconds: 2),
+                                                                                  ),
+                                                                                );
+                                                                              } catch (e) {
+                                                                                // Close loading dialog
+                                                                                Navigator.of(context).pop();
+
+                                                                                // Show error message
+                                                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                                                  SnackBar(
+                                                                                    content: Text('خطأ في طباعة الفاتورة: $e'),
+                                                                                    backgroundColor: Colors.red,
+                                                                                    duration: const Duration(seconds: 3),
+                                                                                  ),
+                                                                                );
+                                                                              }
+                                                                            },
+                                                                            icon:
+                                                                                const Icon(Icons.print, size: 20),
+                                                                            label:
+                                                                                const Text('طباعة الفاتورة'),
+                                                                            style:
+                                                                                ElevatedButton.styleFrom(
+                                                                              backgroundColor: _lastType == 'credit'
+                                                                                  ? Colors.orange.shade600
+                                                                                  : _lastType == 'installment'
+                                                                                      ? Colors.blue.shade600
+                                                                                      : Colors.green.shade600,
+                                                                              foregroundColor: Colors.white,
+                                                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                                                              shape: RoundedRectangleBorder(
+                                                                                borderRadius: BorderRadius.circular(12),
+                                                                              ),
+                                                                              elevation: 2,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        const SizedBox(
+                                                                            width:
+                                                                                12),
+                                                                        // OK button
                                                                         Expanded(
                                                                           child:
                                                                               ElevatedButton.icon(
@@ -1871,65 +1970,29 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                               Navigator.of(context).pop();
                                                                             },
                                                                             icon:
-                                                                                const Icon(Icons.check),
+                                                                                const Icon(Icons.check_circle, size: 20),
                                                                             label:
                                                                                 const Text('موافق'),
                                                                             style:
                                                                                 ElevatedButton.styleFrom(
-                                                                              backgroundColor: _lastType == 'credit'
-                                                                                  ? Colors.orange
-                                                                                  : _lastType == 'installment'
-                                                                                      ? Colors.blue
-                                                                                      : Colors.green,
+                                                                              backgroundColor: Colors.grey.shade700,
                                                                               foregroundColor: Colors.white,
-                                                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                              padding: const EdgeInsets.symmetric(vertical: 14),
                                                                               shape: RoundedRectangleBorder(
-                                                                                borderRadius: BorderRadius.circular(8),
+                                                                                borderRadius: BorderRadius.circular(12),
                                                                               ),
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                        const SizedBox(
-                                                                            width:
-                                                                                12),
-                                                                        Expanded(
-                                                                          child:
-                                                                              OutlinedButton.icon(
-                                                                            onPressed:
-                                                                                () async {
-                                                                              Navigator.of(context).pop();
-                                                                              await _printInvoice(context);
-                                                                            },
-                                                                            icon:
-                                                                                const Icon(Icons.print),
-                                                                            label:
-                                                                                const Text('طباعة'),
-                                                                            style:
-                                                                                OutlinedButton.styleFrom(
-                                                                              foregroundColor: _lastType == 'credit'
-                                                                                  ? Colors.orange
-                                                                                  : _lastType == 'installment'
-                                                                                      ? Colors.blue
-                                                                                      : Colors.green,
-                                                                              padding: const EdgeInsets.symmetric(vertical: 12),
-                                                                              side: BorderSide(
-                                                                                color: _lastType == 'credit'
-                                                                                    ? Colors.orange
-                                                                                    : _lastType == 'installment'
-                                                                                        ? Colors.blue
-                                                                                        : Colors.green,
-                                                                              ),
-                                                                              shape: RoundedRectangleBorder(
-                                                                                borderRadius: BorderRadius.circular(8),
-                                                                              ),
+                                                                              elevation: 2,
                                                                             ),
                                                                           ),
                                                                         ),
                                                                       ],
                                                                     ),
+
                                                                     const SizedBox(
                                                                         height:
                                                                             12),
+
+                                                                    // Cancel order button (full width)
                                                                     SizedBox(
                                                                       width: double
                                                                           .infinity,
@@ -1951,8 +2014,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                 title: Row(
                                                                                   children: [
                                                                                     Icon(
-                                                                                      Icons.warning,
-                                                                                      color: Colors.red,
+                                                                                      Icons.warning_amber_rounded,
+                                                                                      color: Colors.red.shade600,
                                                                                       size: 28,
                                                                                     ),
                                                                                     const SizedBox(width: 12),
@@ -1979,9 +2042,9 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                             Navigator.of(context).pop(false);
                                                                                           },
                                                                                           style: OutlinedButton.styleFrom(
-                                                                                            foregroundColor: Colors.grey,
+                                                                                            foregroundColor: Colors.grey.shade600,
                                                                                             padding: const EdgeInsets.symmetric(vertical: 12),
-                                                                                            side: const BorderSide(color: Colors.grey),
+                                                                                            side: BorderSide(color: Colors.grey.shade400),
                                                                                             shape: RoundedRectangleBorder(
                                                                                               borderRadius: BorderRadius.circular(8),
                                                                                             ),
@@ -1996,7 +2059,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                             Navigator.of(context).pop(true);
                                                                                           },
                                                                                           style: ElevatedButton.styleFrom(
-                                                                                            backgroundColor: Colors.red,
+                                                                                            backgroundColor: Colors.red.shade600,
                                                                                             foregroundColor: Colors.white,
                                                                                             padding: const EdgeInsets.symmetric(vertical: 12),
                                                                                             shape: RoundedRectangleBorder(
@@ -2060,22 +2123,26 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                           }
                                                                         },
                                                                         icon: const Icon(
-                                                                            Icons.cancel),
+                                                                            Icons
+                                                                                .cancel_outlined,
+                                                                            size:
+                                                                                20),
                                                                         label: const Text(
                                                                             'إلغاء الطلب'),
                                                                         style: OutlinedButton
                                                                             .styleFrom(
-                                                                          foregroundColor:
-                                                                              Colors.red,
+                                                                          foregroundColor: Colors
+                                                                              .red
+                                                                              .shade600,
                                                                           padding: const EdgeInsets
                                                                               .symmetric(
                                                                               vertical: 12),
                                                                           side:
-                                                                              const BorderSide(color: Colors.red),
+                                                                              BorderSide(color: Colors.red.shade300),
                                                                           shape:
                                                                               RoundedRectangleBorder(
                                                                             borderRadius:
-                                                                                BorderRadius.circular(8),
+                                                                                BorderRadius.circular(12),
                                                                           ),
                                                                         ),
                                                                       ),
