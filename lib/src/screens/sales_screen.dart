@@ -1,3 +1,5 @@
+// ignore_for_file: dead_code
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,6 +21,15 @@ class _SalesScreenState extends State<SalesScreen> {
   String _type = 'cash';
   List<Map<String, Object?>> _lastInvoiceItems = [];
   String _lastType = 'cash';
+  final Set<int> _addedToCartProducts = {}; // Track products added to cart
+  final TextEditingController _searchController = TextEditingController();
+
+  // Customer information controllers
+  final TextEditingController _customerNameController = TextEditingController();
+  final TextEditingController _customerPhoneController =
+      TextEditingController();
+  final TextEditingController _customerAddressController =
+      TextEditingController();
 
   // Credit system variables
   DateTime? _dueDate;
@@ -31,6 +42,15 @@ class _SalesScreenState extends State<SalesScreen> {
   String _lastCustomerName = '';
   String _lastCustomerPhone = '';
   String _lastCustomerAddress = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _customerNameController.dispose();
+    _customerPhoneController.dispose();
+    _customerAddressController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,406 +117,310 @@ class _SalesScreenState extends State<SalesScreen> {
           padding: const EdgeInsets.all(8),
           child: Column(
             children: [
-              // Header Section
+              // Header Section - Compact
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color:
                         Theme.of(context).colorScheme.primary.withOpacity(0.2),
                   ),
                 ),
-                child: Column(
+                child: Row(
                   children: [
-                    // Title
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.point_of_sale,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'نظام المبيعات',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                              ),
-                              Text(
-                                'إدارة المبيعات والفواتير',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withOpacity(0.7),
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Total Amount Card
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Theme.of(context).colorScheme.primary,
-                                Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withOpacity(0.8),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withOpacity(0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(
-                                Icons.attach_money,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                Formatters.currencyIQD(total),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    // Title and Icon
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(
+                        Icons.point_of_sale,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
-                    const SizedBox(height: 12),
-
-                    // Controls Row
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextField(
-                            decoration:
-                                pill('🔍 ابحث عن منتج...', Icons.search),
-                            onChanged: (v) => setState(() => _query = v),
+                    const SizedBox(width: 8),
+                    Text(
+                      'نظام المبيعات',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Theme.of(context)
-                                    .dividerColor
-                                    .withOpacity(0.5),
-                              ),
-                            ),
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _type,
-                              decoration:
-                                  pill('💳 نوع الدفع', Icons.payments_outlined),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'cash',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.money, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('نقدي'),
-                                    ],
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'installment',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.credit_card, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('أقساط'),
-                                    ],
-                                  ),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'credit',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.schedule, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('أجل'),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                              onChanged: (v) {
-                                setState(() {
-                                  _type = v ?? 'cash';
-                                  // Clear credit fields when changing payment type
-                                  if (_type != 'credit') {
-                                    _customerName = '';
-                                    _customerPhone = '';
-                                    _customerAddress = '';
-                                    _dueDate = null;
-                                  }
-                                });
-                              },
+                    ),
+                    const Spacer(),
+                    // Total Amount
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.attach_money,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            Formatters.currencyIQD(total),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
-              // Credit system fields - show only when credit is selected
-              if (_type == 'credit') ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.orange.shade50,
-                        Colors.orange.shade100.withOpacity(0.3),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.orange.shade200,
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.orange.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+              // Controls Row - Compact
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: '🔍 ابحث عن منتج...',
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        suffixIcon: _query.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _query = '');
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withOpacity(0.25),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color:
+                                Theme.of(context).dividerColor.withOpacity(0.4),
+                            width: 1,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color:
+                                Theme.of(context).dividerColor.withOpacity(0.4),
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
                       ),
-                    ],
+                      onChanged: (v) => setState(() => _query = v),
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.orange.shade600,
-                              Colors.orange.shade700,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Icon(
-                                Icons.schedule,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'معلومات البيع بالأجل',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color:
+                              Theme.of(context).dividerColor.withOpacity(0.5),
                         ),
                       ),
-                      const SizedBox(height: 12),
-
-                      // Customer Information Section
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.orange.shade200,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _type,
+                        decoration:
+                            pill('💳 نوع الدفع', Icons.payments_outlined),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'cash',
+                            child: Row(
                               children: [
-                                Icon(
-                                  Icons.person,
-                                  color: Colors.orange.shade600,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'معلومات العميل',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange.shade700,
-                                  ),
-                                ),
+                                Icon(Icons.money, size: 16),
+                                SizedBox(width: 6),
+                                Text('نقدي'),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Row(
+                          ),
+                          DropdownMenuItem(
+                            value: 'installment',
+                            child: Row(
                               children: [
-                                // Customer Name
-                                Expanded(
-                                  flex: 1,
-                                  child: TextField(
-                                    decoration:
-                                        pill('👤 اسم العميل', Icons.person),
-                                    onChanged: (v) => _customerName = v,
-                                  ),
+                                Icon(Icons.credit_card, size: 16),
+                                SizedBox(width: 6),
+                                Text('أقساط'),
+                              ],
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'credit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.schedule, size: 16),
+                                SizedBox(width: 6),
+                                Text('أجل'),
+                              ],
+                            ),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          setState(() {
+                            _type = v ?? 'cash';
+                            // Clear due date only when changing from credit to other types
+                            if (_type != 'credit') {
+                              _dueDate = null;
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Customer information fields - compact version with dynamic colors
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _getCustomerInfoBackgroundColor(),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _getCustomerInfoBorderColor(),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _getCustomerInfoShadowColor(),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Customer Name
+                    Expanded(
+                      flex: 1,
+                      child: TextField(
+                        controller: _customerNameController,
+                        decoration: pill('👤 اسم العميل', Icons.person),
+                        onChanged: (v) => _customerName = v,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Customer Phone
+                    Expanded(
+                      flex: 1,
+                      child: TextField(
+                        controller: _customerPhoneController,
+                        decoration: pill('📱 الهاتف', Icons.phone),
+                        onChanged: (v) => _customerPhone = v,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Customer Address
+                    Expanded(
+                      flex: 1,
+                      child: TextField(
+                        controller: _customerAddressController,
+                        decoration: pill('📍 العنوان', Icons.location_on),
+                        onChanged: (v) => _customerAddress = v,
+                      ),
+                    ),
+                    // Due Date field - only show for credit payments
+                    if (_type == 'credit') ...[
+                      const SizedBox(width: 6),
+                      Expanded(
+                        flex: 1,
+                        child: InkWell(
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate:
+                                  DateTime.now().add(const Duration(days: 30)),
+                              firstDate: DateTime.now(),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (date != null) {
+                              setState(() => _dueDate = date);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .dividerColor
+                                    .withOpacity(0.4),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                                 const SizedBox(width: 6),
-                                // Customer Phone
                                 Expanded(
-                                  flex: 1,
-                                  child: TextField(
-                                    decoration: pill('📱 الهاتف', Icons.phone),
-                                    onChanged: (v) => _customerPhone = v,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                // Customer Address
-                                Expanded(
-                                  flex: 1,
-                                  child: TextField(
-                                    decoration:
-                                        pill('📍 العنوان', Icons.location_on),
-                                    onChanged: (v) => _customerAddress = v,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                // Due Date (compact field)
-                                Expanded(
-                                  flex: 1,
-                                  child: InkWell(
-                                    onTap: () async {
-                                      final date = await showDatePicker(
-                                        context: context,
-                                        initialDate: DateTime.now()
-                                            .add(const Duration(days: 30)),
-                                        firstDate: DateTime.now(),
-                                        lastDate: DateTime.now()
-                                            .add(const Duration(days: 365)),
-                                      );
-                                      if (date != null) {
-                                        setState(() => _dueDate = date);
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .surfaceContainerHighest
-                                            .withOpacity(0.25),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Theme.of(context)
-                                              .dividerColor
-                                              .withOpacity(0.4),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.calendar_today,
-                                            size: 18,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              _dueDate != null
-                                                  ? '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}'
-                                                  : '📅 تاريخ الاستحقاق',
-                                              style: TextStyle(
-                                                color: _dueDate != null
-                                                    ? Theme.of(context)
-                                                        .colorScheme
-                                                        .onSurface
-                                                    : Theme.of(context)
-                                                        .colorScheme
-                                                        .onSurface
-                                                        .withOpacity(0.6),
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                  child: Text(
+                                    _dueDate != null
+                                        ? '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}'
+                                        : '📅 تاريخ الاستحقاق',
+                                    style: TextStyle(
+                                      color: _dueDate != null
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
+                                      fontSize: 11,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-              ],
+              ),
+              Divider(),
               Expanded(
                 child: Row(
                   children: [
@@ -712,224 +636,232 @@ class _SalesScreenState extends State<SalesScreen> {
                                         ),
                                         child: Material(
                                           color: Colors.transparent,
-                                          child: InkWell(
-                                            onTap: isOutOfStock
-                                                ? null
-                                                : () => _addToCart(p),
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                            child: Padding(
-                                              padding: const EdgeInsets.all(8),
-                                              child: Row(
-                                                children: [
-                                                  // Product Icon
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.all(6),
-                                                    decoration: BoxDecoration(
-                                                      color: isOutOfStock
-                                                          ? Colors.grey.shade300
-                                                          : Theme.of(context)
-                                                              .colorScheme
-                                                              .primary
-                                                              .withOpacity(0.1),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8),
-                                                    ),
-                                                    child: Icon(
-                                                      Icons.inventory,
-                                                      color: isOutOfStock
-                                                          ? Colors.grey.shade600
-                                                          : Theme.of(context)
-                                                              .colorScheme
-                                                              .primary,
-                                                      size: 16,
-                                                    ),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8),
+                                            child: Row(
+                                              children: [
+                                                // Product Icon
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.all(6),
+                                                  decoration: BoxDecoration(
+                                                    color: isOutOfStock
+                                                        ? Colors.grey.shade300
+                                                        : Theme.of(context)
+                                                            .colorScheme
+                                                            .primary
+                                                            .withOpacity(0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
                                                   ),
-                                                  const SizedBox(width: 8),
+                                                  child: Icon(
+                                                    Icons.inventory,
+                                                    color: isOutOfStock
+                                                        ? Colors.grey.shade600
+                                                        : Theme.of(context)
+                                                            .colorScheme
+                                                            .primary,
+                                                    size: 16,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
 
-                                                  // Product Info
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                          p['name']
-                                                                  ?.toString() ??
-                                                              '',
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: isOutOfStock
-                                                                ? Colors.grey
-                                                                    .shade600
-                                                                : Theme.of(
-                                                                        context)
-                                                                    .colorScheme
-                                                                    .onSurface,
-                                                          ),
+                                                // Product Info
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        p['name']?.toString() ??
+                                                            '',
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: isOutOfStock
+                                                              ? Colors
+                                                                  .grey.shade600
+                                                              : Theme.of(
+                                                                      context)
+                                                                  .colorScheme
+                                                                  .onSurface,
                                                         ),
-                                                        const SizedBox(
-                                                            height: 4),
-                                                        Wrap(
-                                                          spacing: 8,
-                                                          runSpacing: 4,
-                                                          children: [
-                                                            Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                      horizontal:
-                                                                          8,
-                                                                      vertical:
-                                                                          4),
-                                                              decoration:
-                                                                  BoxDecoration(
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Wrap(
+                                                        spacing: 8,
+                                                        runSpacing: 4,
+                                                        children: [
+                                                          Container(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        8,
+                                                                    vertical:
+                                                                        4),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: isOutOfStock
+                                                                  ? Colors.grey
+                                                                      .shade200
+                                                                  : Colors.green
+                                                                      .shade100,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          12),
+                                                            ),
+                                                            child: Text(
+                                                              Formatters
+                                                                  .currencyIQD(
+                                                                      p['price']
+                                                                          as num),
+                                                              style: TextStyle(
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
                                                                 color: isOutOfStock
                                                                     ? Colors
                                                                         .grey
-                                                                        .shade200
+                                                                        .shade600
                                                                     : Colors
                                                                         .green
-                                                                        .shade100,
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            12),
-                                                              ),
-                                                              child: Text(
-                                                                Formatters.currencyIQD(
-                                                                    p['price']
-                                                                        as num),
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize: 10,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                  color: isOutOfStock
-                                                                      ? Colors
-                                                                          .grey
-                                                                          .shade600
-                                                                      : Colors
-                                                                          .green
-                                                                          .shade700,
-                                                                ),
+                                                                        .shade700,
                                                               ),
                                                             ),
+                                                          ),
+                                                          Container(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        8,
+                                                                    vertical:
+                                                                        4),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: isOutOfStock
+                                                                  ? Colors.red
+                                                                      .shade100
+                                                                  : Colors.blue
+                                                                      .shade100,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          12),
+                                                            ),
+                                                            child: Text(
+                                                              'المتاح: $stock',
+                                                              style: TextStyle(
+                                                                fontSize: 10,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500,
+                                                                color: isOutOfStock
+                                                                    ? Colors.red
+                                                                        .shade700
+                                                                    : Colors
+                                                                        .blue
+                                                                        .shade700,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          // Code/Barcode Display
+                                                          if (p['barcode']
+                                                                  ?.toString()
+                                                                  .isNotEmpty ==
+                                                              true)
                                                             Container(
                                                               padding:
                                                                   const EdgeInsets
                                                                       .symmetric(
                                                                       horizontal:
-                                                                          8,
+                                                                          6,
                                                                       vertical:
-                                                                          4),
+                                                                          2),
                                                               decoration:
                                                                   BoxDecoration(
-                                                                color: isOutOfStock
-                                                                    ? Colors.red
-                                                                        .shade100
-                                                                    : Colors
-                                                                        .blue
-                                                                        .shade100,
+                                                                color: Colors
+                                                                    .purple
+                                                                    .shade100,
                                                                 borderRadius:
                                                                     BorderRadius
                                                                         .circular(
-                                                                            12),
+                                                                            8),
                                                               ),
                                                               child: Text(
-                                                                'المتاح: $stock',
+                                                                'باركود: ${p['barcode']}',
                                                                 style:
                                                                     TextStyle(
                                                                   fontSize: 10,
                                                                   fontWeight:
                                                                       FontWeight
                                                                           .w500,
-                                                                  color: isOutOfStock
-                                                                      ? Colors
-                                                                          .red
-                                                                          .shade700
-                                                                      : Colors
-                                                                          .blue
-                                                                          .shade700,
+                                                                  color: Colors
+                                                                      .purple
+                                                                      .shade700,
                                                                 ),
                                                               ),
                                                             ),
-                                                            // Code/Barcode Display
-                                                            if (p['barcode']
-                                                                    ?.toString()
-                                                                    .isNotEmpty ==
-                                                                true)
-                                                              Container(
-                                                                padding: const EdgeInsets
-                                                                    .symmetric(
-                                                                    horizontal:
-                                                                        6,
-                                                                    vertical:
-                                                                        2),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: Colors
-                                                                      .purple
-                                                                      .shade100,
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              8),
-                                                                ),
-                                                                child: Text(
-                                                                  'باركود: ${p['barcode']}',
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        10,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w500,
-                                                                    color: Colors
-                                                                        .purple
-                                                                        .shade700,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                          ],
-                                                        ),
-                                                      ],
-                                                    ),
+                                                        ],
+                                                      ),
+                                                    ],
                                                   ),
+                                                ),
 
-                                                  // Add to Cart Button
-                                                  Container(
+                                                // Add to Cart Button
+                                                GestureDetector(
+                                                  onTap: isOutOfStock
+                                                      ? null
+                                                      : () => _addToCart(p),
+                                                  child: Container(
                                                     padding:
-                                                        const EdgeInsets.all(6),
+                                                        const EdgeInsets.all(8),
                                                     decoration: BoxDecoration(
                                                       color: isOutOfStock
                                                           ? Colors.grey.shade300
-                                                          : Theme.of(context)
-                                                              .colorScheme
-                                                              .primary,
+                                                          : Colors
+                                                              .green.shade600,
                                                       borderRadius:
                                                           BorderRadius.circular(
-                                                              12),
+                                                              20),
+                                                      boxShadow: isOutOfStock
+                                                          ? null
+                                                          : [
+                                                              BoxShadow(
+                                                                color: Colors
+                                                                    .green
+                                                                    .shade200,
+                                                                blurRadius: 4,
+                                                                offset:
+                                                                    const Offset(
+                                                                        0, 2),
+                                                              ),
+                                                            ],
                                                     ),
                                                     child: Icon(
                                                       isOutOfStock
                                                           ? Icons.block
-                                                          : Icons
-                                                              .add_shopping_cart,
+                                                          : _addedToCartProducts
+                                                                  .contains(
+                                                                      p['id'])
+                                                              ? Icons.check
+                                                              : Icons.add,
                                                       color: isOutOfStock
                                                           ? Colors.grey.shade600
                                                           : Colors.white,
-                                                      size: 16,
+                                                      size: 15,
                                                     ),
                                                   ),
-                                                ],
-                                              ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -1214,6 +1146,9 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             Colors.red.shade600,
                                                       ),
                                                     ),
+                                                    SizedBox(
+                                                      width: 10,
+                                                    ),
                                                     Container(
                                                       padding: const EdgeInsets
                                                           .symmetric(
@@ -1248,6 +1183,9 @@ class _SalesScreenState extends State<SalesScreen> {
                                                           fontSize: 12,
                                                         ),
                                                       ),
+                                                    ),
+                                                    SizedBox(
+                                                      width: 10,
                                                     ),
                                                     IconButton(
                                                       tooltip: 'زيادة',
@@ -1285,7 +1223,9 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     IconButton(
                                                       tooltip: 'حذف',
                                                       icon: const Icon(
-                                                          Icons.delete_outline),
+                                                        Icons.delete_outline,
+                                                        color: Colors.red,
+                                                      ),
                                                       onPressed: () {
                                                         final qty = (_cart[i]
                                                                 ['quantity']
@@ -1298,16 +1238,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                 DatabaseService>()
                                                             .adjustProductQuantity(
                                                                 productId, qty);
-                                                        setState(() =>
-                                                            _cart.removeAt(i));
+                                                        setState(() {
+                                                          _cart.removeAt(i);
+                                                          _addedToCartProducts
+                                                              .remove(
+                                                                  productId);
+                                                        });
                                                       },
-                                                      style:
-                                                          IconButton.styleFrom(
-                                                        backgroundColor:
-                                                            Colors.red.shade50,
-                                                        foregroundColor:
-                                                            Colors.red.shade600,
-                                                      ),
                                                     ),
                                                   ],
                                                 ),
@@ -1335,21 +1272,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                 children: [
                                   // Total Amount
                                   Container(
-                                    padding: const EdgeInsets.all(16),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 6),
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withOpacity(0.1),
-                                          Theme.of(context)
-                                              .colorScheme
-                                              .primary
-                                              .withOpacity(0.05),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
                                         color: Theme.of(context)
                                             .colorScheme
@@ -1368,14 +1298,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                               color: Theme.of(context)
                                                   .colorScheme
                                                   .primary,
-                                              size: 24,
+                                              size: 16,
                                             ),
-                                            const SizedBox(width: 12),
+                                            const SizedBox(width: 6),
                                             Text(
                                               'الإجمالي:',
                                               style: Theme.of(context)
                                                   .textTheme
-                                                  .titleMedium
+                                                  .bodyMedium
                                                   ?.copyWith(
                                                     fontWeight: FontWeight.bold,
                                                     color: Theme.of(context)
@@ -1389,13 +1319,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                           Formatters.currencyIQD(total),
                                           style: Theme.of(context)
                                               .textTheme
-                                              .titleMedium
+                                              .bodyMedium
                                               ?.copyWith(
                                                 fontWeight: FontWeight.bold,
                                                 color: Theme.of(context)
                                                     .colorScheme
                                                     .primary,
-                                                fontSize: 16,
+                                                fontSize: 14,
                                               ),
                                         ),
                                       ],
@@ -1423,7 +1353,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                         .adjustProductQuantity(
                                                             productId, qty);
                                                   }
-                                                  setState(() => _cart.clear());
+                                                  // Don't clear cart or customer fields here - they will be cleared when dialog is closed
                                                   ScaffoldMessenger.of(context)
                                                       .showSnackBar(
                                                     const SnackBar(
@@ -1448,34 +1378,45 @@ class _SalesScreenState extends State<SalesScreen> {
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
-                                        flex: 2,
                                         child: FilledButton.icon(
                                           onPressed: _cart.isEmpty
                                               ? null
                                               : () async {
-                                                  // Validate credit sale requirements
-                                                  if (_type == 'credit') {
-                                                    if (_customerName
-                                                            .trim()
-                                                            .isEmpty ||
-                                                        _customerPhone
-                                                            .trim()
-                                                            .isEmpty ||
-                                                        _customerAddress
-                                                            .trim()
-                                                            .isEmpty ||
-                                                        _dueDate == null) {
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                              const SnackBar(
-                                                        content: Text(
-                                                            'يرجى ملء جميع حقول البيع بالأجل'),
-                                                        backgroundColor:
-                                                            Colors.red,
-                                                      ));
-                                                      return;
-                                                    }
+                                                  // Validate customer information requirements
+                                                  if (_customerName
+                                                          .trim()
+                                                          .isEmpty ||
+                                                      _customerPhone
+                                                          .trim()
+                                                          .isEmpty ||
+                                                      _customerAddress
+                                                          .trim()
+                                                          .isEmpty) {
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                            const SnackBar(
+                                                      content: Text(
+                                                          'يرجى ملء جميع معلومات العميل'),
+                                                      backgroundColor:
+                                                          Colors.red,
+                                                    ));
+                                                    return;
+                                                  }
+
+                                                  // Additional validation for credit sales
+                                                  if (_type == 'credit' &&
+                                                      _dueDate == null) {
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                            const SnackBar(
+                                                      content: Text(
+                                                          'يرجى تحديد تاريخ الاستحقاق للبيع بالأجل'),
+                                                      backgroundColor:
+                                                          Colors.red,
+                                                    ));
+                                                    return;
                                                   }
 
                                                   await db.createSale(
@@ -1486,18 +1427,11 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             : 'credit',
                                                     items: _cart,
                                                     decrementStock: false,
-                                                    customerName:
-                                                        _type == 'credit'
-                                                            ? _customerName
-                                                            : null,
+                                                    customerName: _customerName,
                                                     customerPhone:
-                                                        _type == 'credit'
-                                                            ? _customerPhone
-                                                            : null,
+                                                        _customerPhone,
                                                     customerAddress:
-                                                        _type == 'credit'
-                                                            ? _customerAddress
-                                                            : null,
+                                                        _customerAddress,
                                                     dueDate: _type == 'credit'
                                                         ? _dueDate
                                                         : null,
@@ -1510,44 +1444,651 @@ class _SalesScreenState extends State<SalesScreen> {
                                                         .toList();
                                                     _lastType = _type;
 
-                                                    // Save credit info for last invoice
-                                                    if (_type == 'credit') {
-                                                      _lastDueDate = _dueDate;
-                                                      _lastCustomerName =
-                                                          _customerName;
-                                                      _lastCustomerPhone =
-                                                          _customerPhone;
-                                                      _lastCustomerAddress =
-                                                          _customerAddress;
-                                                    }
+                                                    // Save customer info for last invoice
+                                                    _lastDueDate = _dueDate;
+                                                    _lastCustomerName =
+                                                        _customerName;
+                                                    _lastCustomerPhone =
+                                                        _customerPhone;
+                                                    _lastCustomerAddress =
+                                                        _customerAddress;
 
-                                                    _cart.clear();
-                                                    // Clear credit fields
-                                                    if (_type == 'credit') {
-                                                      _customerName = '';
-                                                      _customerPhone = '';
-                                                      _customerAddress = '';
-                                                      _dueDate = null;
-                                                    }
+                                                    // Don't clear cart or customer fields here - they will be cleared when dialog is closed
                                                   });
 
-                                                  String successMessage =
-                                                      'تم تسجيل الفاتورة';
-                                                  if (_type == 'credit' &&
-                                                      _dueDate != null) {
-                                                    successMessage =
-                                                        'تم تسجيل الفاتورة بالأجل - تاريخ الاستحقاق: ${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}';
-                                                  }
+                                                  // Success message no longer needed as we show detailed dialog
 
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(SnackBar(
-                                                    content:
-                                                        Text(successMessage),
-                                                    backgroundColor:
-                                                        _type == 'credit'
-                                                            ? Colors.orange
-                                                            : Colors.green,
-                                                  ));
+                                                  // Show success dialog with invoice details in center of screen
+                                                  showDialog(
+                                                    context: context,
+                                                    barrierDismissible: false,
+                                                    builder:
+                                                        (BuildContext context) {
+                                                      final totalAmount =
+                                                          _lastInvoiceItems
+                                                              .fold<num>(
+                                                        0,
+                                                        (sum, item) =>
+                                                            sum +
+                                                            ((item['price']
+                                                                    as num) *
+                                                                (item['quantity']
+                                                                    as num)),
+                                                      );
+
+                                                      return Dialog(
+                                                        shape:
+                                                            RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(20),
+                                                        ),
+                                                        child: Container(
+                                                          constraints:
+                                                              const BoxConstraints(
+                                                                  maxWidth: 500,
+                                                                  maxHeight:
+                                                                      600),
+                                                          child: Column(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              // Header
+                                                              Container(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .all(
+                                                                        20),
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  gradient:
+                                                                      LinearGradient(
+                                                                    colors: _lastType ==
+                                                                            'credit'
+                                                                        ? [
+                                                                            Colors.orange.shade600,
+                                                                            Colors.orange.shade700
+                                                                          ]
+                                                                        : _lastType ==
+                                                                                'installment'
+                                                                            ? [
+                                                                                Colors.blue.shade600,
+                                                                                Colors.blue.shade700
+                                                                              ]
+                                                                            : [
+                                                                                Colors.green.shade600,
+                                                                                Colors.green.shade700
+                                                                              ],
+                                                                  ),
+                                                                  borderRadius:
+                                                                      const BorderRadius
+                                                                          .only(
+                                                                    topLeft: Radius
+                                                                        .circular(
+                                                                            20),
+                                                                    topRight: Radius
+                                                                        .circular(
+                                                                            20),
+                                                                  ),
+                                                                ),
+                                                                child: Row(
+                                                                  children: [
+                                                                    Icon(
+                                                                      Icons
+                                                                          .check_circle,
+                                                                      color: Colors
+                                                                          .white,
+                                                                      size: 32,
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        width:
+                                                                            12),
+                                                                    Expanded(
+                                                                      child:
+                                                                          Column(
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.start,
+                                                                        children: [
+                                                                          const Text(
+                                                                            'تم إنجاز البيع بنجاح',
+                                                                            style:
+                                                                                TextStyle(
+                                                                              color: Colors.white,
+                                                                              fontSize: 20,
+                                                                              fontWeight: FontWeight.bold,
+                                                                            ),
+                                                                          ),
+                                                                          Text(
+                                                                            _lastType == 'credit'
+                                                                                ? 'بيع آجل'
+                                                                                : _lastType == 'installment'
+                                                                                    ? 'بيع بالتقسيط'
+                                                                                    : 'بيع نقدي',
+                                                                            style:
+                                                                                TextStyle(
+                                                                              color: Colors.white.withOpacity(0.9),
+                                                                              fontSize: 14,
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                    Container(
+                                                                      padding: const EdgeInsets
+                                                                          .symmetric(
+                                                                          horizontal:
+                                                                              12,
+                                                                          vertical:
+                                                                              6),
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: Colors
+                                                                            .white
+                                                                            .withOpacity(0.2),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(12),
+                                                                      ),
+                                                                      child:
+                                                                          Text(
+                                                                        Formatters.currencyIQD(
+                                                                            totalAmount),
+                                                                        style:
+                                                                            const TextStyle(
+                                                                          color:
+                                                                              Colors.white,
+                                                                          fontWeight:
+                                                                              FontWeight.bold,
+                                                                          fontSize:
+                                                                              16,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+
+                                                              // Items List
+                                                              Flexible(
+                                                                child:
+                                                                    Container(
+                                                                  padding:
+                                                                      const EdgeInsets
+                                                                          .all(
+                                                                          16),
+                                                                  child: Column(
+                                                                    crossAxisAlignment:
+                                                                        CrossAxisAlignment
+                                                                            .start,
+                                                                    children: [
+                                                                      Row(
+                                                                        mainAxisAlignment:
+                                                                            MainAxisAlignment.spaceBetween,
+                                                                        children: [
+                                                                          Text(
+                                                                            'المنتجات (${_lastInvoiceItems.length})',
+                                                                            style:
+                                                                                TextStyle(
+                                                                              fontWeight: FontWeight.bold,
+                                                                              fontSize: 16,
+                                                                              color: _lastType == 'credit'
+                                                                                  ? Colors.orange.shade700
+                                                                                  : _lastType == 'installment'
+                                                                                      ? Colors.blue.shade700
+                                                                                      : Colors.green.shade700,
+                                                                            ),
+                                                                          ),
+                                                                          if (_lastType == 'credit' &&
+                                                                              _lastDueDate != null)
+                                                                            Container(
+                                                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                                              decoration: BoxDecoration(
+                                                                                color: Colors.orange.shade100,
+                                                                                borderRadius: BorderRadius.circular(8),
+                                                                              ),
+                                                                              child: Text(
+                                                                                'تاريخ الاستحقاق: ${_lastDueDate!.day}/${_lastDueDate!.month}/${_lastDueDate!.year}',
+                                                                                style: TextStyle(
+                                                                                  fontSize: 10,
+                                                                                  color: Colors.orange.shade700,
+                                                                                  fontWeight: FontWeight.w600,
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                        ],
+                                                                      ),
+                                                                      const SizedBox(
+                                                                          height:
+                                                                              12),
+                                                                      Flexible(
+                                                                        child: ListView
+                                                                            .builder(
+                                                                          shrinkWrap:
+                                                                              true,
+                                                                          itemCount:
+                                                                              _lastInvoiceItems.length,
+                                                                          itemBuilder:
+                                                                              (context, index) {
+                                                                            final item =
+                                                                                _lastInvoiceItems[index];
+                                                                            return Container(
+                                                                              margin: const EdgeInsets.only(bottom: 8),
+                                                                              padding: const EdgeInsets.all(12),
+                                                                              decoration: BoxDecoration(
+                                                                                color: Colors.grey.shade50,
+                                                                                borderRadius: BorderRadius.circular(8),
+                                                                                border: Border.all(
+                                                                                  color: _lastType == 'credit'
+                                                                                      ? Colors.orange.shade200
+                                                                                      : _lastType == 'installment'
+                                                                                          ? Colors.blue.shade200
+                                                                                          : Colors.green.shade200,
+                                                                                ),
+                                                                              ),
+                                                                              child: Row(
+                                                                                children: [
+                                                                                  Expanded(
+                                                                                    child: Text(
+                                                                                      item['name']?.toString() ?? '',
+                                                                                      style: const TextStyle(
+                                                                                        fontWeight: FontWeight.w600,
+                                                                                        fontSize: 14,
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
+                                                                                  Text(
+                                                                                    '${item['quantity']} × ${Formatters.currencyIQD(item['price'] as num)}',
+                                                                                    style: TextStyle(
+                                                                                      fontWeight: FontWeight.w600,
+                                                                                      fontSize: 12,
+                                                                                      color: _lastType == 'credit'
+                                                                                          ? Colors.orange.shade700
+                                                                                          : _lastType == 'installment'
+                                                                                              ? Colors.blue.shade700
+                                                                                              : Colors.green.shade700,
+                                                                                    ),
+                                                                                  ),
+                                                                                ],
+                                                                              ),
+                                                                            );
+                                                                          },
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              ),
+
+                                                              // Customer Information Section
+                                                              if (_lastCustomerName
+                                                                  .isNotEmpty) ...[
+                                                                Container(
+                                                                  margin: const EdgeInsets
+                                                                      .symmetric(
+                                                                      horizontal:
+                                                                          16),
+                                                                  padding:
+                                                                      const EdgeInsets
+                                                                          .all(
+                                                                          6),
+                                                                  decoration:
+                                                                      BoxDecoration(
+                                                                    color: _lastType ==
+                                                                            'credit'
+                                                                        ? Colors
+                                                                            .orange
+                                                                            .shade50
+                                                                        : _lastType ==
+                                                                                'installment'
+                                                                            ? Colors.blue.shade50
+                                                                            : Colors.green.shade50,
+                                                                    borderRadius:
+                                                                        BorderRadius
+                                                                            .circular(6),
+                                                                    border:
+                                                                        Border
+                                                                            .all(
+                                                                      color: _lastType ==
+                                                                              'credit'
+                                                                          ? Colors
+                                                                              .orange
+                                                                              .shade200
+                                                                          : _lastType == 'installment'
+                                                                              ? Colors.blue.shade200
+                                                                              : Colors.green.shade200,
+                                                                      width: 1,
+                                                                    ),
+                                                                  ),
+                                                                  child: Column(
+                                                                    crossAxisAlignment:
+                                                                        CrossAxisAlignment
+                                                                            .start,
+                                                                    children: [
+                                                                      Row(
+                                                                        children: [
+                                                                          Icon(
+                                                                            Icons.person,
+                                                                            color: _lastType == 'credit'
+                                                                                ? Colors.orange.shade700
+                                                                                : _lastType == 'installment'
+                                                                                    ? Colors.blue.shade700
+                                                                                    : Colors.green.shade700,
+                                                                            size:
+                                                                                14,
+                                                                          ),
+                                                                          const SizedBox(
+                                                                              width: 4),
+                                                                          Text(
+                                                                            'معلومات العميل',
+                                                                            style:
+                                                                                TextStyle(
+                                                                              fontWeight: FontWeight.bold,
+                                                                              fontSize: 10,
+                                                                              color: _lastType == 'credit'
+                                                                                  ? Colors.orange.shade700
+                                                                                  : _lastType == 'installment'
+                                                                                      ? Colors.blue.shade700
+                                                                                      : Colors.green.shade700,
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                      const SizedBox(
+                                                                          height:
+                                                                              6),
+                                                                      if (_lastCustomerName
+                                                                          .isNotEmpty) ...[
+                                                                        _buildCustomerInfoRow(
+                                                                            'الاسم',
+                                                                            _lastCustomerName),
+                                                                        const SizedBox(
+                                                                            height:
+                                                                                4),
+                                                                      ],
+                                                                      if (_lastCustomerPhone
+                                                                          .isNotEmpty) ...[
+                                                                        _buildCustomerInfoRow(
+                                                                            'الهاتف',
+                                                                            _lastCustomerPhone),
+                                                                        const SizedBox(
+                                                                            height:
+                                                                                4),
+                                                                      ],
+                                                                      if (_lastCustomerAddress
+                                                                          .isNotEmpty) ...[
+                                                                        _buildCustomerInfoRow(
+                                                                            'العنوان',
+                                                                            _lastCustomerAddress),
+                                                                        const SizedBox(
+                                                                            height:
+                                                                                4),
+                                                                      ],
+                                                                      if (_lastType ==
+                                                                              'credit' &&
+                                                                          _lastDueDate !=
+                                                                              null) ...[
+                                                                        _buildCustomerInfoRow(
+                                                                            'تاريخ الاستحقاق',
+                                                                            '${_lastDueDate!.day}/${_lastDueDate!.month}/${_lastDueDate!.year}'),
+                                                                      ],
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                    height: 6),
+                                                              ],
+
+                                                              // Actions
+                                                              Container(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .all(
+                                                                        16),
+                                                                child: Column(
+                                                                  children: [
+                                                                    Row(
+                                                                      children: [
+                                                                        Expanded(
+                                                                          child:
+                                                                              ElevatedButton.icon(
+                                                                            onPressed:
+                                                                                () {
+                                                                              // Clear everything when closing dialog
+                                                                              setState(() {
+                                                                                // Clear cart
+                                                                                _cart.clear();
+                                                                                _addedToCartProducts.clear();
+                                                                                // Clear customer fields
+                                                                                _customerName = '';
+                                                                                _customerPhone = '';
+                                                                                _customerAddress = '';
+                                                                                _dueDate = null;
+                                                                                // Clear controllers
+                                                                                _customerNameController.clear();
+                                                                                _customerPhoneController.clear();
+                                                                                _customerAddressController.clear();
+                                                                              });
+                                                                              Navigator.of(context).pop();
+                                                                            },
+                                                                            icon:
+                                                                                const Icon(Icons.check),
+                                                                            label:
+                                                                                const Text('موافق'),
+                                                                            style:
+                                                                                ElevatedButton.styleFrom(
+                                                                              backgroundColor: _lastType == 'credit'
+                                                                                  ? Colors.orange
+                                                                                  : _lastType == 'installment'
+                                                                                      ? Colors.blue
+                                                                                      : Colors.green,
+                                                                              foregroundColor: Colors.white,
+                                                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                              shape: RoundedRectangleBorder(
+                                                                                borderRadius: BorderRadius.circular(8),
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        const SizedBox(
+                                                                            width:
+                                                                                12),
+                                                                        Expanded(
+                                                                          child:
+                                                                              OutlinedButton.icon(
+                                                                            onPressed:
+                                                                                () async {
+                                                                              Navigator.of(context).pop();
+                                                                              await _printInvoice(context);
+                                                                            },
+                                                                            icon:
+                                                                                const Icon(Icons.print),
+                                                                            label:
+                                                                                const Text('طباعة'),
+                                                                            style:
+                                                                                OutlinedButton.styleFrom(
+                                                                              foregroundColor: _lastType == 'credit'
+                                                                                  ? Colors.orange
+                                                                                  : _lastType == 'installment'
+                                                                                      ? Colors.blue
+                                                                                      : Colors.green,
+                                                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                              side: BorderSide(
+                                                                                color: _lastType == 'credit'
+                                                                                    ? Colors.orange
+                                                                                    : _lastType == 'installment'
+                                                                                        ? Colors.blue
+                                                                                        : Colors.green,
+                                                                              ),
+                                                                              shape: RoundedRectangleBorder(
+                                                                                borderRadius: BorderRadius.circular(8),
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            12),
+                                                                    SizedBox(
+                                                                      width: double
+                                                                          .infinity,
+                                                                      child: OutlinedButton
+                                                                          .icon(
+                                                                        onPressed:
+                                                                            () async {
+                                                                          // Show confirmation dialog
+                                                                          final shouldCancel =
+                                                                              await showDialog<bool>(
+                                                                            context:
+                                                                                context,
+                                                                            builder:
+                                                                                (BuildContext context) {
+                                                                              return AlertDialog(
+                                                                                shape: RoundedRectangleBorder(
+                                                                                  borderRadius: BorderRadius.circular(16),
+                                                                                ),
+                                                                                title: Row(
+                                                                                  children: [
+                                                                                    Icon(
+                                                                                      Icons.warning,
+                                                                                      color: Colors.red,
+                                                                                      size: 28,
+                                                                                    ),
+                                                                                    const SizedBox(width: 12),
+                                                                                    const Text(
+                                                                                      'تأكيد الإلغاء',
+                                                                                      style: TextStyle(
+                                                                                        fontSize: 18,
+                                                                                        fontWeight: FontWeight.bold,
+                                                                                      ),
+                                                                                    ),
+                                                                                  ],
+                                                                                ),
+                                                                                content: const Text(
+                                                                                  'هل أنت متأكد من إلغاء هذا الطلب؟\nسيتم إرجاع جميع المنتجات إلى المخزن.',
+                                                                                  style: TextStyle(fontSize: 16),
+                                                                                  textAlign: TextAlign.center,
+                                                                                ),
+                                                                                actions: [
+                                                                                  Row(
+                                                                                    children: [
+                                                                                      Expanded(
+                                                                                        child: OutlinedButton(
+                                                                                          onPressed: () {
+                                                                                            Navigator.of(context).pop(false);
+                                                                                          },
+                                                                                          style: OutlinedButton.styleFrom(
+                                                                                            foregroundColor: Colors.grey,
+                                                                                            padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                                            side: const BorderSide(color: Colors.grey),
+                                                                                            shape: RoundedRectangleBorder(
+                                                                                              borderRadius: BorderRadius.circular(8),
+                                                                                            ),
+                                                                                          ),
+                                                                                          child: const Text('لا'),
+                                                                                        ),
+                                                                                      ),
+                                                                                      const SizedBox(width: 12),
+                                                                                      Expanded(
+                                                                                        child: ElevatedButton(
+                                                                                          onPressed: () {
+                                                                                            Navigator.of(context).pop(true);
+                                                                                          },
+                                                                                          style: ElevatedButton.styleFrom(
+                                                                                            backgroundColor: Colors.red,
+                                                                                            foregroundColor: Colors.white,
+                                                                                            padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                                            shape: RoundedRectangleBorder(
+                                                                                              borderRadius: BorderRadius.circular(8),
+                                                                                            ),
+                                                                                          ),
+                                                                                          child: const Text('نعم، ألغِ'),
+                                                                                        ),
+                                                                                      ),
+                                                                                    ],
+                                                                                  ),
+                                                                                ],
+                                                                              );
+                                                                            },
+                                                                          );
+
+                                                                          if (shouldCancel ==
+                                                                              true) {
+                                                                            // Cancel the invoice and return products to stock
+                                                                            try {
+                                                                              // Return products to stock
+                                                                              for (final item in _lastInvoiceItems) {
+                                                                                final productId = item['product_id'] as int;
+                                                                                final quantity = item['quantity'] as int;
+                                                                                await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
+                                                                              }
+
+                                                                              // Clear the last invoice items and current customer fields
+                                                                              setState(() {
+                                                                                _lastInvoiceItems.clear();
+                                                                                _lastType = 'cash';
+                                                                                _lastDueDate = null;
+                                                                                _lastCustomerName = '';
+                                                                                _lastCustomerPhone = '';
+                                                                                _lastCustomerAddress = '';
+                                                                                // Clear current customer fields
+                                                                                _customerName = '';
+                                                                                _customerPhone = '';
+                                                                                _customerAddress = '';
+                                                                                _dueDate = null;
+                                                                              });
+
+                                                                              Navigator.of(context).pop(); // Close the success dialog
+
+                                                                              // Show success message
+                                                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                                                const SnackBar(
+                                                                                  content: Text('تم إلغاء الطلب وإرجاع المنتجات إلى المخزن'),
+                                                                                  backgroundColor: Colors.green,
+                                                                                ),
+                                                                              );
+                                                                            } catch (e) {
+                                                                              Navigator.of(context).pop(); // Close the success dialog
+                                                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                                                SnackBar(
+                                                                                  content: Text('خطأ في إلغاء الطلب: $e'),
+                                                                                  backgroundColor: Colors.red,
+                                                                                ),
+                                                                              );
+                                                                            }
+                                                                          }
+                                                                        },
+                                                                        icon: const Icon(
+                                                                            Icons.cancel),
+                                                                        label: const Text(
+                                                                            'إلغاء الطلب'),
+                                                                        style: OutlinedButton
+                                                                            .styleFrom(
+                                                                          foregroundColor:
+                                                                              Colors.red,
+                                                                          padding: const EdgeInsets
+                                                                              .symmetric(
+                                                                              vertical: 12),
+                                                                          side:
+                                                                              const BorderSide(color: Colors.red),
+                                                                          shape:
+                                                                              RoundedRectangleBorder(
+                                                                            borderRadius:
+                                                                                BorderRadius.circular(8),
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                  );
                                                 },
                                           icon: const Icon(Icons.check_circle),
                                           label: const Text('إتمام البيع'),
@@ -1560,37 +2101,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: OutlinedButton.icon(
-                                          onPressed: _lastInvoiceItems.isEmpty
-                                              ? null
-                                              : () async {
-                                                  await _printInvoice(context);
-                                                },
-                                          icon: const Icon(Icons.print),
-                                          label: const Text('طباعة'),
-                                          style: OutlinedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 12),
-                                            side: BorderSide(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .primary),
-                                            foregroundColor: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                          ),
-                                        ),
-                                      ),
                                     ],
                                   ),
                                 ],
                               ),
                             ),
 
-                            // Last Invoice Display
-                            if (_lastInvoiceItems.isNotEmpty) ...[
+                            // Last Invoice Display - Removed to show in center dialog instead
+                            if (false && _lastInvoiceItems.isNotEmpty) ...[
                               const SizedBox(height: 12),
                               Container(
                                 margin: const EdgeInsets.all(8),
@@ -2012,11 +2530,17 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   void _addToCart(Map<String, Object?> p) {
+    // Check if product is already in cart
     final existing = _cart.indexWhere((e) => e['product_id'] == p['id']);
     if (existing >= 0) {
-      _incrementQty(existing);
+      // Product already in cart, don't add again
+      // User can adjust quantity using +/- buttons in cart
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'المنتج موجود بالفعل في السلة. استخدم أزرار الزيادة والنقصان لتعديل الكمية')));
       return;
     }
+
     final currentStock = (p['quantity'] as int? ?? 0);
     if (currentStock <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2025,15 +2549,18 @@ class _SalesScreenState extends State<SalesScreen> {
     }
     // Reserve one immediately
     context.read<DatabaseService>().adjustProductQuantity(p['id'] as int, -1);
-    setState(() => _cart.add({
-          'product_id': p['id'],
-          'name': p['name'],
-          'price': p['price'],
-          'cost': p['cost'],
-          'quantity': 1,
-          'available': currentStock - 1,
-          'barcode': p['barcode'],
-        }));
+    setState(() {
+      _cart.add({
+        'product_id': p['id'],
+        'name': p['name'],
+        'price': p['price'],
+        'cost': p['cost'],
+        'quantity': 1,
+        'available': currentStock - 1,
+        'barcode': p['barcode'],
+      });
+      _addedToCartProducts.add(p['id'] as int);
+    });
   }
 
   void _incrementQty(int index) {
@@ -2147,5 +2674,76 @@ class _SalesScreenState extends State<SalesScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildCustomerInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 70,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 8,
+              color: _lastType == 'credit'
+                  ? Colors.orange.shade700
+                  : Colors.blue.shade700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper methods for dynamic colors based on payment type
+  Color _getCustomerInfoBackgroundColor() {
+    switch (_type) {
+      case 'cash':
+        return Colors.green.shade50;
+      case 'installment':
+        return Colors.blue.shade50;
+      case 'credit':
+        return Colors.orange.shade50;
+      default:
+        return Colors.white;
+    }
+  }
+
+  Color _getCustomerInfoBorderColor() {
+    switch (_type) {
+      case 'cash':
+        return Colors.green.shade200;
+      case 'installment':
+        return Colors.blue.shade200;
+      case 'credit':
+        return Colors.orange.shade200;
+      default:
+        return Colors.grey.shade200;
+    }
+  }
+
+  Color _getCustomerInfoShadowColor() {
+    switch (_type) {
+      case 'cash':
+        return Colors.green.withOpacity(0.05);
+      case 'installment':
+        return Colors.blue.withOpacity(0.05);
+      case 'credit':
+        return Colors.orange.withOpacity(0.05);
+      default:
+        return Colors.grey.withOpacity(0.05);
+    }
   }
 }
