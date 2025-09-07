@@ -71,6 +71,7 @@ class InvoicePdf {
     String pageFormat = 'thermal_80', // افتراضي طابعة حرارية 80mm
     bool showLogo = true,
     bool showBarcode = true,
+    String? invoiceNumber, // رقم الفاتورة من قاعدة البيانات
   }) async {
     print('=== بدء إنشاء PDF ===');
     print('عدد المنتجات: ${items.length}');
@@ -80,7 +81,7 @@ class InvoicePdf {
 
     final doc = pw.Document();
     final date = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
-    final invoiceNumber = _generateInvoiceNumber();
+    final finalInvoiceNumber = invoiceNumber ?? _generateInvoiceNumber();
 
     // تحميل الخط العربي
     final arabicFont = await _loadArabicFont();
@@ -105,7 +106,7 @@ class InvoicePdf {
         shopName,
         phone,
         address,
-        invoiceNumber,
+        finalInvoiceNumber,
         date,
         paymentType,
         dueDate,
@@ -199,7 +200,7 @@ class InvoicePdf {
                         // Footer
                         if (isLastPage) ...[
                           pw.SizedBox(height: 8),
-                          _buildFooter(format, arabicFont),
+                          _buildFooter(format, arabicFont, invoiceNumber),
                         ],
                       ],
                     ),
@@ -277,7 +278,7 @@ class InvoicePdf {
                       ],
 
                       // Footer - تذييل الفاتورة
-                      _buildFooter(format, arabicFont),
+                      _buildFooter(format, arabicFont, invoiceNumber),
                     ],
                   ),
                 ),
@@ -703,7 +704,8 @@ class InvoicePdf {
   }
 
   // بناء تذييل الفاتورة
-  static pw.Widget _buildFooter(PdfPageFormat format, pw.Font arabicFont) {
+  static pw.Widget _buildFooter(
+      PdfPageFormat format, pw.Font arabicFont, String invoiceNumber) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
@@ -737,7 +739,7 @@ class InvoicePdf {
 
         // رقم الفاتورة في التذييل
         pw.Text(
-          'رقم الفاتورة: ${_generateInvoiceNumber()}',
+          'رقم الفاتورة: $invoiceNumber',
           style: _getArabicTextStyle(arabicFont, _getFontSize(format, 7),
               color: PdfColors.grey600),
           textAlign: pw.TextAlign.center,

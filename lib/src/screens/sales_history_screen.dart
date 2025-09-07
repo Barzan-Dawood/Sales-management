@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
+import '../services/print_service.dart';
 import '../utils/format.dart';
 import 'package:intl/intl.dart';
 
@@ -19,6 +20,14 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   List<Map<String, Object?>> _sales = [];
   bool _isLoading = false;
 
+  // متغيرات التحديد الجماعي
+  bool _isSelectionMode = false;
+  Set<int> _selectedSales = <int>{};
+
+  // متغيرات الترتيب
+  bool _sortDescending =
+      true; // true = من الأحدث للأقدم، false = من الأقدم للأحدث
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +43,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         to: _toDate,
         type: _selectedType.isEmpty ? null : _selectedType,
         query: _query.isEmpty ? null : _query,
+        sortDescending: _sortDescending,
       );
       setState(() => _sales = sales);
     } catch (e) {
@@ -76,20 +86,102 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     _loadSales();
   }
 
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      if (!_isSelectionMode) {
+        _selectedSales.clear();
+      }
+    });
+  }
+
+  void _selectAll() {
+    setState(() {
+      _selectedSales = _sales.map((sale) => sale['id'] as int).toSet();
+    });
+  }
+
+  void _deselectAll() {
+    setState(() {
+      _selectedSales.clear();
+    });
+  }
+
+  void _toggleSaleSelection(int saleId) {
+    setState(() {
+      if (_selectedSales.contains(saleId)) {
+        _selectedSales.remove(saleId);
+      } else {
+        _selectedSales.add(saleId);
+      }
+    });
+  }
+
+  void _toggleSortOrder() {
+    setState(() {
+      _sortDescending = !_sortDescending;
+    });
+    _loadSales();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('تاريخ المبيعات'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        title: Text(_isSelectionMode
+            ? 'تم تحديد ${_selectedSales.length} من ${_sales.length}'
+            : 'تاريخ المبيعات'),
+        backgroundColor: _isSelectionMode
+            ? Colors.red.shade600
+            : Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadSales,
-            tooltip: 'تحديث',
-          ),
-        ],
+        actions: _isSelectionMode
+            ? [
+                // أزرار وضع التحديد
+                if (_selectedSales.length < _sales.length)
+                  IconButton(
+                    icon: const Icon(Icons.select_all),
+                    onPressed: _selectAll,
+                    tooltip: 'تحديد الكل',
+                  ),
+                if (_selectedSales.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: _deselectAll,
+                    tooltip: 'إلغاء التحديد',
+                  ),
+                if (_selectedSales.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: _confirmBulkDelete,
+                    tooltip: 'حذف المحدد',
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: _toggleSelectionMode,
+                  tooltip: 'إلغاء وضع التحديد',
+                ),
+              ]
+            : [
+                // أزرار الوضع العادي
+                IconButton(
+                  icon: Icon(_sortDescending
+                      ? Icons.arrow_downward
+                      : Icons.arrow_upward),
+                  onPressed: _toggleSortOrder,
+                  tooltip: _sortDescending ? 'ترتيب تصاعدي' : 'ترتيب تنازلي',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.checklist),
+                  onPressed: _toggleSelectionMode,
+                  tooltip: 'وضع التحديد',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _loadSales,
+                  tooltip: 'تحديث',
+                ),
+              ],
       ),
       body: Column(
         children: [
@@ -115,7 +207,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                     flex: 3,
                     child: TextField(
                       decoration: InputDecoration(
-                        hintText: 'البحث في المبيعات...',
+                        hintText:
+                            'البحث في المبيعات والعملاء وأرقام الفواتير...',
                         prefixIcon: const Icon(Icons.search, size: 20),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -256,6 +349,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     final type = sale['type'] as String;
     final createdAt = DateTime.parse(sale['created_at'] as String);
     final customerName = sale['customer_name'] as String?;
+    final isSelected = _selectedSales.contains(saleId);
 
     Color typeColor;
     IconData typeIcon;
@@ -286,25 +380,29 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isSelected ? typeColor.withOpacity(0.1) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: typeColor.withOpacity(0.08),
+            color: isSelected
+                ? typeColor.withOpacity(0.2)
+                : typeColor.withOpacity(0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
             spreadRadius: 0,
           ),
         ],
         border: Border.all(
-          color: typeColor.withOpacity(0.15),
-          width: 1,
+          color: isSelected ? typeColor : typeColor.withOpacity(0.15),
+          width: isSelected ? 2 : 1,
         ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showSaleDetails(saleId),
+          onTap: _isSelectionMode
+              ? () => _toggleSaleSelection(saleId)
+              : null, // لا تفعل شيئاً في الوضع العادي
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -313,6 +411,15 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                 // Header Row
                 Row(
                   children: [
+                    // Checkbox في وضع التحديد
+                    if (_isSelectionMode) ...[
+                      Checkbox(
+                        value: isSelected,
+                        onChanged: (value) => _toggleSaleSelection(saleId),
+                        activeColor: typeColor,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     // Icon
                     Container(
                       padding: const EdgeInsets.all(8),
@@ -379,32 +486,32 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                 Row(
                   children: [
                     // Customer
-                    if (customerName != null) ...[
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.person,
-                              size: 12,
-                              color: Colors.blue.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                customerName,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.blue.shade700,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.person,
+                            size: 12,
+                            color: Colors.blue.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              customerName ?? 'عميل عام',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: customerName != null
+                                    ? Colors.blue.shade700
+                                    : Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                    ],
+                    ),
+                    const SizedBox(width: 8),
                     // Amount
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -432,75 +539,102 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
                 const SizedBox(height: 10),
 
-                // Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
+                // Action Buttons (تظهر فقط في الوضع العادي)
+                if (!_isSelectionMode) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: typeColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: typeColor.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _showSaleDetails(saleId),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.visibility,
+                                    color: typeColor,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'التفاصيل',
+                                    style: TextStyle(
+                                      color: typeColor,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
                         height: 32,
+                        width: 32,
                         decoration: BoxDecoration(
-                          color: typeColor.withOpacity(0.1),
+                          color: Colors.blue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: typeColor.withOpacity(0.3),
+                            color: Colors.blue.withOpacity(0.3),
                             width: 1,
                           ),
                         ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: () => _showSaleDetails(saleId),
+                            onTap: () => _printInvoice(saleId),
                             borderRadius: BorderRadius.circular(8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.visibility,
-                                  color: typeColor,
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'التفاصيل',
-                                  style: TextStyle(
-                                    color: typeColor,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
+                            child: const Icon(
+                              Icons.print,
+                              color: Colors.blue,
+                              size: 16,
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      height: 32,
-                      width: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.red.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _confirmDeleteSale(saleId),
+                      const SizedBox(width: 4),
+                      Container(
+                        height: 32,
+                        width: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          child: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                            size: 16,
+                          border: Border.all(
+                            color: Colors.red.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _confirmDeleteSale(saleId),
+                            borderRadius: BorderRadius.circular(8),
+                            child: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -548,13 +682,29 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'تفاصيل الفاتورة #$saleId',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'تفاصيل الفاتورة #$saleId',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (saleDetails['customer_name'] != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                saleDetails['customer_name'] as String,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       IconButton(
@@ -731,6 +881,190 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في حذف الفاتورة: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _printInvoice(int saleId) async {
+    try {
+      final db = context.read<DatabaseService>();
+      final saleDetails = await db.getSaleDetails(saleId);
+      final saleItems = await db.getSaleItems(saleId);
+
+      if (saleDetails == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لم يتم العثور على تفاصيل الفاتورة'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // تحويل عناصر المبيعات إلى تنسيق مناسب للطباعة
+      final items = saleItems
+          .map((item) => {
+                'name': item['product_name'],
+                'price': item['price'],
+                'quantity': item['quantity'],
+                'cost': item['cost'] ?? 0,
+              })
+          .toList();
+
+      // طباعة الفاتورة مع رقم الفاتورة الصحيح
+      final success = await PrintService.quickPrint(
+        shopName: 'متجرنا', // يمكن جعل هذا قابل للتخصيص
+        phone: null,
+        address: null,
+        items: items,
+        paymentType: saleDetails['type'] as String,
+        customerName: saleDetails['customer_name'] as String?,
+        customerPhone: saleDetails['customer_phone'] as String?,
+        customerAddress: null,
+        dueDate: saleDetails['due_date'] != null
+            ? DateTime.parse(saleDetails['due_date'] as String)
+            : null,
+        invoiceNumber:
+            saleId.toString(), // استخدام رقم الفاتورة من قاعدة البيانات
+        context: context,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم طباعة الفاتورة #$saleId بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('فشل في طباعة الفاتورة'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في طباعة الفاتورة: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmBulkDelete() async {
+    if (_selectedSales.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد الحذف الجماعي'),
+        content: Text(
+            'هل أنت متأكد من حذف ${_selectedSales.length} فاتورة؟\n\nسيتم إرجاع المنتجات إلى المخزون.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _bulkDeleteSales();
+    }
+  }
+
+  Future<void> _bulkDeleteSales() async {
+    if (_selectedSales.isEmpty) return;
+
+    try {
+      final db = context.read<DatabaseService>();
+      int successCount = 0;
+      int failCount = 0;
+
+      // إظهار مؤشر التحميل
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('جاري حذف الفواتير...'),
+            ],
+          ),
+        ),
+      );
+
+      // حذف كل فاتورة على حدة
+      for (final saleId in _selectedSales) {
+        try {
+          final success = await db.deleteSale(saleId);
+          if (success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (e) {
+          failCount++;
+          print('خطأ في حذف الفاتورة $saleId: $e');
+        }
+      }
+
+      // إغلاق مؤشر التحميل
+      if (mounted) Navigator.pop(context);
+
+      if (!mounted) return;
+
+      // إظهار النتيجة
+      String message;
+      if (failCount == 0) {
+        message = 'تم حذف $successCount فاتورة بنجاح';
+      } else if (successCount == 0) {
+        message = 'فشل في حذف جميع الفواتير';
+      } else {
+        message = 'تم حذف $successCount فاتورة، فشل في حذف $failCount فاتورة';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: failCount == 0 ? Colors.green : Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      // إعادة تحميل القائمة وإلغاء وضع التحديد
+      setState(() {
+        _selectedSales.clear();
+        _isSelectionMode = false;
+      });
+      _loadSales();
+    } catch (e) {
+      // إغلاق مؤشر التحميل إذا كان مفتوحاً
+      if (mounted) Navigator.pop(context);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في الحذف الجماعي: $e'),
           backgroundColor: Colors.red,
         ),
       );

@@ -418,24 +418,23 @@ class DatabaseService {
         profit += (price - cost) * qty;
       }
       int? ensuredCustomerId = customerId;
-      if (type == 'credit') {
-        // Ensure we have a customer for credit sales
-        if (ensuredCustomerId == null &&
-            (customerName?.trim().isNotEmpty == true)) {
-          // Try to find by name/phone; if not found, create
-          final existing = await txn.query('customers',
-              where: 'name = ? AND IFNULL(phone, "") = IFNULL(?, "")',
-              whereArgs: [customerName!.trim(), customerPhone?.trim()]);
-          if (existing.isNotEmpty) {
-            ensuredCustomerId = existing.first['id'] as int;
-          } else {
-            ensuredCustomerId = await txn.insert('customers', {
-              'name': customerName.trim(),
-              'phone': customerPhone?.trim(),
-              'address': customerAddress?.trim(),
-              'total_debt': 0,
-            });
-          }
+
+      // إنشاء عميل لجميع أنواع المبيعات إذا تم إدخال اسم العميل
+      if (ensuredCustomerId == null &&
+          (customerName?.trim().isNotEmpty == true)) {
+        // Try to find by name/phone; if not found, create
+        final existing = await txn.query('customers',
+            where: 'name = ? AND IFNULL(phone, "") = IFNULL(?, "")',
+            whereArgs: [customerName!.trim(), customerPhone?.trim()]);
+        if (existing.isNotEmpty) {
+          ensuredCustomerId = existing.first['id'] as int;
+        } else {
+          ensuredCustomerId = await txn.insert('customers', {
+            'name': customerName.trim(),
+            'phone': customerPhone?.trim(),
+            'address': customerAddress?.trim(),
+            'total_debt': 0,
+          });
         }
       }
 
@@ -528,6 +527,7 @@ class DatabaseService {
     DateTime? to,
     String? type,
     String? query,
+    bool sortDescending = true,
   }) async {
     String whereClause = '';
     List<dynamic> whereArgs = [];
@@ -545,9 +545,9 @@ class DatabaseService {
 
     if (query != null && query.trim().isNotEmpty) {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
-      whereClause += '(c.name LIKE ? OR p.name LIKE ?)';
+      whereClause += '(c.name LIKE ? OR p.name LIKE ? OR s.id LIKE ?)';
       final likeQuery = '%${query.trim()}%';
-      whereArgs.addAll([likeQuery, likeQuery]);
+      whereArgs.addAll([likeQuery, likeQuery, likeQuery]);
     }
 
     final sales = await _db.rawQuery('''
@@ -562,7 +562,7 @@ class DatabaseService {
       LEFT JOIN products p ON si.product_id = p.id
       ${whereClause.isNotEmpty ? 'WHERE $whereClause' : ''}
       GROUP BY s.id
-      ORDER BY s.created_at DESC
+      ORDER BY s.id ${sortDescending ? 'DESC' : 'ASC'}
     ''', whereArgs);
 
     return sales;

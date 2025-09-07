@@ -21,6 +21,7 @@ class _SalesScreenState extends State<SalesScreen> {
   String _type = 'cash';
   List<Map<String, Object?>> _lastInvoiceItems = [];
   String _lastType = 'cash';
+  int? _lastInvoiceId; // رقم آخر فاتورة تم إنشاؤها
   final Set<int> _addedToCartProducts = {}; // Track products added to cart
   final TextEditingController _searchController = TextEditingController();
 
@@ -1419,7 +1420,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     return;
                                                   }
 
-                                                  await db.createSale(
+                                                  final saleId =
+                                                      await db.createSale(
                                                     type: _type == 'cash'
                                                         ? 'cash'
                                                         : _type == 'installment'
@@ -1443,6 +1445,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             Object?>.from(e))
                                                         .toList();
                                                     _lastType = _type;
+                                                    _lastInvoiceId =
+                                                        saleId; // حفظ رقم الفاتورة
 
                                                     // Save customer info for last invoice
                                                     _lastDueDate = _dueDate;
@@ -1969,6 +1973,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                 customerPhone: _lastCustomerPhone.isNotEmpty ? _lastCustomerPhone : null,
                                                                                 customerAddress: _lastCustomerAddress.isNotEmpty ? _lastCustomerAddress : null,
                                                                                 dueDate: _lastDueDate,
+                                                                                invoiceNumber: _lastInvoiceId?.toString(), // تمرير رقم الفاتورة
                                                                                 context: context,
                                                                               );
 
@@ -2032,6 +2037,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                               customerPhone: _lastCustomerPhone.isNotEmpty ? _lastCustomerPhone : null,
                                                                               customerAddress: _lastCustomerAddress.isNotEmpty ? _lastCustomerAddress : null,
                                                                               dueDate: _lastDueDate,
+                                                                              invoiceNumber: _lastInvoiceId?.toString(), // تمرير رقم الفاتورة
                                                                               context: context,
                                                                             );
 
@@ -2824,6 +2830,7 @@ class _SalesScreenState extends State<SalesScreen> {
       pageFormat: printOptions['pageFormat'] as String,
       showLogo: printOptions['showLogo'] as bool,
       showBarcode: printOptions['showBarcode'] as bool,
+      invoiceNumber: _lastInvoiceId?.toString(), // تمرير رقم الفاتورة
       context: context,
     );
 

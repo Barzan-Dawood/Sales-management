@@ -26,6 +26,7 @@ class PrintService {
     String? pageFormat,
     bool? showLogo,
     bool? showBarcode,
+    String? invoiceNumber, // رقم الفاتورة من قاعدة البيانات
     BuildContext? context,
   }) async {
     try {
@@ -64,6 +65,7 @@ class PrintService {
         pageFormat: pageFormat ?? _savedPageFormat,
         showLogo: showLogo ?? _savedShowLogo,
         showBarcode: showBarcode ?? _savedShowBarcode,
+        invoiceNumber: invoiceNumber,
       );
 
       print('تم إنشاء PDF بنجاح، حجم الملف: ${pdfData.length} بايت');
@@ -361,6 +363,7 @@ class PrintService {
     String? customerPhone,
     String? customerAddress,
     DateTime? dueDate,
+    String? invoiceNumber, // رقم الفاتورة من قاعدة البيانات
     BuildContext? context,
   }) async {
     print('=== بدء الطباعة السريعة ===');
@@ -395,6 +398,7 @@ class PrintService {
       pageFormat: _savedPageFormat,
       showLogo: _savedShowLogo,
       showBarcode: _savedShowBarcode,
+      invoiceNumber: invoiceNumber,
       context: context,
     );
   }
@@ -413,6 +417,7 @@ class PrintService {
     String? pageFormat,
     bool? showLogo,
     bool? showBarcode,
+    String? invoiceNumber, // رقم الفاتورة من قاعدة البيانات
     BuildContext? context,
   }) async {
     try {
@@ -437,6 +442,7 @@ class PrintService {
         pageFormat: pageFormat ?? _savedPageFormat,
         showLogo: showLogo ?? _savedShowLogo,
         showBarcode: showBarcode ?? _savedShowBarcode,
+        invoiceNumber: invoiceNumber,
       );
 
       print('تم إنشاء PDF بنجاح، حجم الملف: ${pdfData.length} بايت');
@@ -461,6 +467,7 @@ class PrintService {
     String? pageFormat,
     bool? showLogo,
     bool? showBarcode,
+    String? invoiceNumber, // رقم الفاتورة من قاعدة البيانات
     required BuildContext context,
   }) async {
     try {
@@ -477,6 +484,7 @@ class PrintService {
         pageFormat: pageFormat ?? _savedPageFormat,
         showLogo: showLogo ?? _savedShowLogo,
         showBarcode: showBarcode ?? _savedShowBarcode,
+        invoiceNumber: invoiceNumber,
       );
 
       await Printing.layoutPdf(
