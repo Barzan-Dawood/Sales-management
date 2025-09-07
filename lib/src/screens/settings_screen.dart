@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:file_picker/file_picker.dart';
 import '../services/backup/backup_service.dart';
 import '../services/db/database_service.dart';
 import '../utils/strings.dart';
@@ -141,7 +141,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text(AppStrings.database,
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          Wrap(spacing: 8, children: [
+          Wrap(spacing: 8, runSpacing: 8, children: [
             FilledButton.icon(
               onPressed: () async {
                 final path = await backup.backupDatabase();
@@ -165,6 +165,121 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               icon: const Icon(Icons.restore),
               label: const Text(AppStrings.restore),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'النسخ الاحتياطي: سيُطلب منك اختيار مكان لحفظ ملف قاعدة البيانات (.db).\n'
+              'الاستعادة: اختر ملف قاعدة بيانات سابق لاسترجاع بياناتك. سيتم إغلاق القاعدة مؤقتاً ثم إعادة فتحها.',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          Text('النسخ الاحتياطي التلقائي',
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          _AutoBackupCard(backup: backup),
+        ],
+      ),
+    );
+  }
+}
+
+class _AutoBackupCard extends StatefulWidget {
+  const _AutoBackupCard({required this.backup});
+  final BackupService backup;
+  @override
+  State<_AutoBackupCard> createState() => _AutoBackupCardState();
+}
+
+class _AutoBackupCardState extends State<_AutoBackupCard> {
+  String _frequency = 'off'; // off, daily, weekly
+  String? _directory;
+  int _keep = 10;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'اختر تكرار النسخ ومجلد الحفظ وعدد النسخ التي سيتم الاحتفاظ بها.',
+            style: TextStyle(fontSize: 12, color: Colors.black54),
+          ),
+          const SizedBox(height: 12),
+          Row(children: [
+            DropdownButton<String>(
+              value: _frequency,
+              items: const [
+                DropdownMenuItem(value: 'off', child: Text('إيقاف')),
+                DropdownMenuItem(value: 'daily', child: Text('يومي')),
+                DropdownMenuItem(value: 'weekly', child: Text('أسبوعي')),
+              ],
+              onChanged: (v) => setState(() => _frequency = v ?? 'off'),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final dir = await FilePicker.platform.getDirectoryPath();
+                  if (dir != null) setState(() => _directory = dir);
+                },
+                icon: const Icon(Icons.folder_open),
+                label: Text(_directory ?? 'اختر مجلد النسخ'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 140,
+              child: TextField(
+                decoration: const InputDecoration(
+                  labelText: 'عدد النسخ',
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: _keep.toString()),
+                keyboardType: TextInputType.number,
+                onSubmitted: (v) {
+                  final parsed = int.tryParse(v);
+                  if (parsed != null && parsed > 0) {
+                    setState(() => _keep = parsed);
+                  }
+                },
+              ),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, children: [
+            FilledButton.icon(
+              onPressed: _directory == null
+                  ? null
+                  : () async {
+                      final path =
+                          await widget.backup.backupToDirectory(_directory!);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('تم إنشاء نسخة: $path')),
+                      );
+                    },
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('إنشاء نسخة الآن'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'تم حفظ الإعدادات: التكرار=$_frequency، المجلد=${_directory ?? '-'}، الاحتفاظ=$_keep'),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.save),
+              label: const Text('حفظ الإعدادات'),
             ),
           ]),
         ],

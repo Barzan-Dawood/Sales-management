@@ -13,8 +13,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController(text: 'admin');
-  final _passwordController = TextEditingController(text: 'admin');
+  final _passwordController = TextEditingController(text: 'admin123');
   bool _loading = false;
+  bool _obscure = true;
 
   @override
   Widget build(BuildContext context) {
@@ -46,9 +47,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _passwordController,
-                      decoration:
-                          const InputDecoration(labelText: 'كلمة المرور'),
-                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'كلمة المرور',
+                        suffixIcon: IconButton(
+                          tooltip: _obscure ? 'إظهار' : 'إخفاء',
+                          icon: Icon(_obscure
+                              ? Icons.visibility
+                              : Icons.visibility_off),
+                          onPressed: () => setState(() {
+                            _obscure = !_obscure;
+                          }),
+                        ),
+                      ),
+                      obscureText: _obscure,
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'مطلوب' : null,
                     ),

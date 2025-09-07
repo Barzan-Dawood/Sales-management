@@ -9,7 +9,7 @@ class DatabaseService {
   static const String _dbName = 'pos_office.db';
   static const int _dbVersion = 6;
 
-  late final Database _db;
+  late Database _db;
   late String _dbPath;
 
   Database get database => _db;
@@ -25,6 +25,7 @@ class DatabaseService {
       onCreate: (db, version) async {
         await _createSchema(db);
         await _seedData(db);
+        await _createIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         // Add migrations here as schema evolves
@@ -44,8 +45,13 @@ class DatabaseService {
           await _migrateToV6(db);
         }
         await _ensureCategorySchemaOn(db);
+        await _createIndexes(db);
       },
     );
+    // Enforce foreign keys and ensure indexes on every open
+    await _db.execute('PRAGMA foreign_keys = ON');
+    await _createIndexes(_db);
+    await _ensureAdminPlainCredentials();
     // Ensure new tables/columns exist even if version didn't change
     await _ensureCategorySchemaOn(_db);
   }
@@ -53,6 +59,8 @@ class DatabaseService {
   Future<void> reopen() async {
     await _db.close();
     _db = await openDatabase(_dbPath, version: _dbVersion);
+    await _db.execute('PRAGMA foreign_keys = ON');
+    await _createIndexes(_db);
     await _ensureCategorySchemaOn(_db);
   }
 
@@ -77,6 +85,67 @@ class DatabaseService {
     ''');
     await db.execute('DROP TABLE sales_old');
     await db.execute('PRAGMA foreign_keys=on');
+  }
+
+  Future<void> _ensureAdminPlainCredentials() async {
+    try {
+      final users = await _db.query('users',
+          where: 'username = ?', whereArgs: ['admin'], limit: 1);
+      const desired = 'admin123';
+      if (users.isEmpty) {
+        await _db.insert('users', {
+          'name': 'Administrator',
+          'username': 'admin',
+          'password': desired,
+          'role': 'manager',
+          'active': 1,
+        });
+        return;
+      }
+      final current = (users.first['password'] ?? '').toString();
+      if (current != desired) {
+        await _db.update('users', {'password': desired},
+            where: 'id = ?', whereArgs: [users.first['id']]);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  Future<void> _createIndexes(Database db) async {
+    // Products
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)');
+
+    // Sales
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_id)');
+    await db
+        .execute('CREATE INDEX IF NOT EXISTS idx_sales_type ON sales(type)');
+
+    // Sale items
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sale_items_product ON sale_items(product_id)');
+
+    // Customers
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)');
+
+    // Payments
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date)');
   }
 
   Future<void> _createSchema(Database db) async {
@@ -263,13 +332,30 @@ class DatabaseService {
   }
 
   Future<void> _seedData(Database db) async {
-    await db.insert('users', {
-      'name': 'Administrator',
-      'username': 'admin',
-      'password': 'admin', // For demo; replace with hash in production
-      'role': 'manager',
-      'active': 1,
-    });
+    // Ensure an admin user exists with a plain password as requested
+    final existing = await db.query('users',
+        where: 'username = ?', whereArgs: ['admin'], limit: 1);
+    const plain = 'admin123';
+    if (existing.isEmpty) {
+      await db.insert('users', {
+        'name': 'Administrator',
+        'username': 'admin',
+        'password': plain,
+        'role': 'manager',
+        'active': 1,
+      });
+    } else {
+      await db.update(
+          'users',
+          {
+            'name': existing.first['name'] ?? 'Administrator',
+            'password': plain,
+            'role': 'manager',
+            'active': 1,
+          },
+          where: 'username = ?',
+          whereArgs: ['admin']);
+    }
   }
 
   // Simple helpers for common queries used early in development

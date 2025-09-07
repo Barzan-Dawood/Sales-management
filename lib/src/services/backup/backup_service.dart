@@ -23,6 +23,16 @@ class BackupService {
     return output;
   }
 
+  /// إنشاء نسخة احتياطية مباشرة داخل مجلد محدد بدون حوار
+  Future<String> backupToDirectory(String directoryPath) async {
+    final dbPath = _db.databasePath;
+    final fileName = 'backup_${DateTime.now().millisecondsSinceEpoch}.db';
+    final output = p.join(directoryPath, fileName);
+    await File(output).parent.create(recursive: true);
+    await File(dbPath).copy(output);
+    return output;
+  }
+
   Future<String?> restoreDatabase() async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: false,
@@ -38,5 +48,3 @@ class BackupService {
     return p.basename(source);
   }
 }
-
-
