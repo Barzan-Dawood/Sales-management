@@ -1,9 +1,8 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../services/db/database_service.dart';
-import 'products/products_screen.dart';
+import 'category_products_screen.dart';
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
@@ -92,12 +91,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                           iconData: iconData,
                           onTap: () {
                             Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => Scaffold(
-                                appBar: AppBar(
-                                    title: Text(
-                                        c['name']?.toString() ?? 'المنتجات')),
-                                body: ProductsScreen(
-                                    initialCategoryId: c['id'] as int),
+                              builder: (_) => CategoryProductsScreen(
+                                categoryId: c['id'] as int,
+                                categoryName: c['name']?.toString() ?? 'القسم',
+                                categoryColor: color,
                               ),
                             ));
                           },
@@ -115,37 +112,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
           )
         ],
-      ),
-    );
-  }
-
-  Widget _circleIconBtn({
-    required String tooltip,
-    required Color color,
-    required Color iconColor,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3)),
-            ],
-          ),
-          child: Icon(icon, color: iconColor, size: 18),
-        ),
       ),
     );
   }

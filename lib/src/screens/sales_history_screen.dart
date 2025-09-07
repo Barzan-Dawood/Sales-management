@@ -183,161 +183,176 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                 ),
               ],
       ),
-      body: Column(
-        children: [
-          // Filters Section
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Padding(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.grey.shade50,
+              Colors.white,
+            ],
+          ),
+        ),
+        child: Column(
+          children: [
+            // Filters Section - محسن
+            Container(
+              margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Search Field
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText:
-                            'البحث في المبيعات والعملاء وأرقام الفواتير...',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        isDense: true,
-                      ),
-                      onChanged: (value) {
-                        setState(() => _query = value);
-                        _loadSales();
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Payment Type Filter
-                  Expanded(
-                    flex: 2,
-                    child: DropdownButtonFormField<String>(
-                      initialValue:
-                          _selectedType.isEmpty ? null : _selectedType,
-                      decoration: InputDecoration(
-                        hintText: 'نوع الدفع',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        isDense: true,
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'cash',
-                          child: Text('نقدي', style: TextStyle(fontSize: 12)),
-                        ),
-                        DropdownMenuItem(
-                          value: 'credit',
-                          child: Text('أجل', style: TextStyle(fontSize: 12)),
-                        ),
-                        DropdownMenuItem(
-                          value: 'installment',
-                          child: Text('أقساط', style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setState(() => _selectedType = value ?? '');
-                        _loadSales();
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Date Range Filter
-                  Expanded(
-                    flex: 2,
-                    child: OutlinedButton.icon(
-                      onPressed: _selectDateRange,
-                      icon: const Icon(Icons.date_range, size: 16),
-                      label: Text(
-                        _fromDate != null && _toDate != null
-                            ? '${DateFormat('MM/dd').format(_fromDate!)} - ${DateFormat('MM/dd').format(_toDate!)}'
-                            : 'الفترة',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 10,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-            ),
-          ),
-          // Sales List
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _sales.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_long,
-                              size: 64,
-                              color: Colors.grey.shade400,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'لا توجد مبيعات',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    color: Colors.grey.shade600,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'لم يتم العثور على أي مبيعات تطابق المعايير المحددة',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Colors.grey.shade500,
-                                  ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    // Search Field
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText:
+                              'البحث في المبيعات والعملاء وأرقام الفواتير...',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          isDense: true,
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _sales.length,
-                        itemBuilder: (context, index) {
-                          final sale = _sales[index];
-                          return _buildCompactSaleCard(sale);
+                        onChanged: (value) {
+                          setState(() => _query = value);
+                          _loadSales();
                         },
                       ),
-          ),
-        ],
+                    ),
+                    const SizedBox(width: 8),
+                    // Payment Type Filter
+                    Expanded(
+                      flex: 2,
+                      child: DropdownButtonFormField<String>(
+                        initialValue:
+                            _selectedType.isEmpty ? null : _selectedType,
+                        decoration: InputDecoration(
+                          hintText: 'نوع الدفع',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          isDense: true,
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'cash',
+                            child: Text('نقدي', style: TextStyle(fontSize: 12)),
+                          ),
+                          DropdownMenuItem(
+                            value: 'credit',
+                            child: Text('أجل', style: TextStyle(fontSize: 12)),
+                          ),
+                          DropdownMenuItem(
+                            value: 'installment',
+                            child:
+                                Text('أقساط', style: TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() => _selectedType = value ?? '');
+                          _loadSales();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Date Range Filter
+                    Expanded(
+                      flex: 2,
+                      child: OutlinedButton.icon(
+                        onPressed: _selectDateRange,
+                        icon: const Icon(Icons.date_range, size: 16),
+                        label: Text(
+                          _fromDate != null && _toDate != null
+                              ? '${DateFormat('MM/dd').format(_fromDate!)} - ${DateFormat('MM/dd').format(_toDate!)}'
+                              : 'الفترة',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 10,
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Sales List
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _sales.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.receipt_long,
+                                size: 64,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'لا توجد مبيعات',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
+                                      color: Colors.grey.shade600,
+                                    ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'لم يتم العثور على أي مبيعات تطابق المعايير المحددة',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Colors.grey.shade500,
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                          itemCount: _sales.length,
+                          itemBuilder: (context, index) {
+                            final sale = _sales[index];
+                            return _buildCompactSaleCard(sale);
+                          },
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -378,37 +393,35 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: isSelected ? typeColor.withOpacity(0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: isSelected ? typeColor.withOpacity(0.08) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: isSelected
-                ? typeColor.withOpacity(0.2)
-                : typeColor.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+                ? typeColor.withOpacity(0.15)
+                : Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
             spreadRadius: 0,
           ),
         ],
         border: Border.all(
-          color: isSelected ? typeColor : typeColor.withOpacity(0.15),
-          width: isSelected ? 2 : 1,
+          color: isSelected ? typeColor : Colors.grey.shade200,
+          width: isSelected ? 1.5 : 0.5,
         ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: _isSelectionMode
-              ? () => _toggleSaleSelection(saleId)
-              : null, // لا تفعل شيئاً في الوضع العادي
-          borderRadius: BorderRadius.circular(16),
+          onTap: _isSelectionMode ? () => _toggleSaleSelection(saleId) : null,
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             child: Column(
               children: [
-                // Header Row
+                // Header Row - Compact
                 Row(
                   children: [
                     // Checkbox في وضع التحديد
@@ -417,89 +430,90 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         value: isSelected,
                         onChanged: (value) => _toggleSaleSelection(saleId),
                         activeColor: typeColor,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                     ],
-                    // Icon
+                    // Icon - أصغر
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: typeColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         typeIcon,
                         color: typeColor,
-                        size: 18,
+                        size: 16,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    // Sale info
+                    const SizedBox(width: 8),
+                    // Sale info - مضغوط
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'فاتورة #$saleId',
+                            '#$saleId',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: typeColor,
                             ),
                           ),
-                          const SizedBox(height: 2),
                           Text(
-                            DateFormat('MM/dd - HH:mm').format(createdAt),
+                            DateFormat('MM/dd HH:mm').format(createdAt),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10,
                               color: Colors.grey.shade600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    // Type badge
+                    // Type badge - أصغر
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 6,
+                        vertical: 2,
                       ),
                       decoration: BoxDecoration(
                         color: typeColor,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         typeText,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
-                          fontSize: 10,
+                          fontSize: 9,
                         ),
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
 
-                // Info Row
+                // Info Row - Compact
                 Row(
                   children: [
-                    // Customer
+                    // Customer - مضغوط
                     Expanded(
+                      flex: 2,
                       child: Row(
                         children: [
                           Icon(
-                            Icons.person,
-                            size: 12,
+                            Icons.person_outline,
+                            size: 11,
                             color: Colors.blue.shade600,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
                           Expanded(
                             child: Text(
                               customerName ?? 'عميل عام',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 10,
                                 color: customerName != null
                                     ? Colors.blue.shade700
                                     : Colors.grey.shade600,
@@ -511,69 +525,73 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    // Amount
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          Formatters.currencyIQD(total),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
+                    const SizedBox(width: 6),
+                    // Amount - مضغوط
+                    Expanded(
+                      flex: 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            Formatters.currencyIQD(total),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
                           ),
-                        ),
-                        Text(
-                          'ربح: ${Formatters.currencyIQD(profit)}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: profit > 0 ? Colors.blue : Colors.red,
-                            fontWeight: FontWeight.w500,
+                          Text(
+                            'ربح: ${Formatters.currencyIQD(profit)}',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: profit > 0 ? Colors.blue : Colors.red,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
 
-                // Action Buttons (تظهر فقط في الوضع العادي)
+                // Action Buttons - Compact (تظهر فقط في الوضع العادي)
                 if (!_isSelectionMode) ...[
                   Row(
                     children: [
+                      // زر التفاصيل - مضغوط
                       Expanded(
                         child: Container(
-                          height: 32,
+                          height: 28,
                           decoration: BoxDecoration(
-                            color: typeColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            color: typeColor.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: typeColor.withOpacity(0.3),
-                              width: 1,
+                              color: typeColor.withOpacity(0.2),
+                              width: 0.5,
                             ),
                           ),
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () => _showSaleDetails(saleId),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    Icons.visibility,
+                                    Icons.visibility_outlined,
                                     color: typeColor,
-                                    size: 14,
+                                    size: 12,
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 3),
                                   Text(
                                     'التفاصيل',
                                     style: TextStyle(
                                       color: typeColor,
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 11,
+                                      fontSize: 10,
                                     ),
                                   ),
                                 ],
@@ -583,51 +601,53 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         ),
                       ),
                       const SizedBox(width: 4),
+                      // زر الطباعة - مضغوط
                       Container(
-                        height: 32,
-                        width: 32,
+                        height: 28,
+                        width: 28,
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.blue.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: Colors.blue.withOpacity(0.3),
-                            width: 1,
+                            color: Colors.blue.withOpacity(0.2),
+                            width: 0.5,
                           ),
                         ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: () => _printInvoice(saleId),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                             child: const Icon(
-                              Icons.print,
+                              Icons.print_outlined,
                               color: Colors.blue,
-                              size: 16,
+                              size: 14,
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 4),
+                      // زر الحذف - مضغوط
                       Container(
-                        height: 32,
-                        width: 32,
+                        height: 28,
+                        width: 28,
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.red.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: Colors.red.withOpacity(0.3),
-                            width: 1,
+                            color: Colors.red.withOpacity(0.2),
+                            width: 0.5,
                           ),
                         ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: () => _confirmDeleteSale(saleId),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                             child: const Icon(
                               Icons.delete_outline,
                               color: Colors.red,
-                              size: 16,
+                              size: 14,
                             ),
                           ),
                         ),
