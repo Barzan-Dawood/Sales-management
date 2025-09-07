@@ -39,79 +39,86 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   @override
   Widget build(BuildContext context) {
     final db = context.read<DatabaseService>();
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        children: [
-          Row(children: [
-            Expanded(
-              child: TextField(
-                decoration: _pill(context, 'بحث عن قسم', Icons.search),
-                onChanged: (v) => setState(() => _query = v),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(children: [
+              FilledButton.icon(
+                  onPressed: () => _openEditor(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('إضافة قسم')),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  textAlign: TextAlign.right,
+                  textDirection: TextDirection.rtl,
+                  decoration: _pill(context, 'بحث عن قسم', Icons.search),
+                  onChanged: (v) => setState(() => _query = v),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-                onPressed: () => _openEditor(),
-                icon: const Icon(Icons.add),
-                label: const Text('إضافة قسم')),
-          ]),
-          const SizedBox(height: 12),
-          Expanded(
-            child: FutureBuilder<List<Map<String, Object?>>>(
-              future: db.getCategories(query: _query),
-              builder: (context, snap) {
-                if (!snap.hasData)
-                  return const Center(child: CircularProgressIndicator());
-                final items = snap.data!;
-                if (items.isEmpty)
-                  return const Center(child: Text('لا توجد أقسام'));
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    return GridView.builder(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 4, horizontal: 4),
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 420,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 3.2,
-                      ),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final c = items[index];
-                        final color = Color((c['color'] as int?) ?? 0xFF607D8B);
-                        final iconData = IconData(
-                            (c['icon'] as int?) ?? Icons.folder.codePoint,
-                            fontFamily: 'MaterialIcons');
-                        return _FancyCategoryCard(
-                          name: c['name']?.toString() ?? '',
-                          color: color,
-                          iconData: iconData,
-                          onTap: () {
-                            Navigator.of(context).push(MaterialPageRoute(
-                              builder: (_) => CategoryProductsScreen(
-                                categoryId: c['id'] as int,
-                                categoryName: c['name']?.toString() ?? 'القسم',
-                                categoryColor: color,
-                              ),
-                            ));
-                          },
-                          onEdit: () => _openEditor(category: c),
-                          onDelete: () => _delete(c['id'] as int),
-                          countFuture: db.database.rawQuery(
-                              'SELECT COUNT(*) c FROM products WHERE category_id = ?',
-                              [c['id']]).then((r) => (r.first['c'] as int)),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          )
-        ],
+            ]),
+            const SizedBox(height: 12),
+            Expanded(
+              child: FutureBuilder<List<Map<String, Object?>>>(
+                future: db.getCategories(query: _query),
+                builder: (context, snap) {
+                  if (!snap.hasData)
+                    return const Center(child: CircularProgressIndicator());
+                  final items = snap.data!;
+                  if (items.isEmpty)
+                    return const Center(child: Text('لا توجد أقسام'));
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      return GridView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 4),
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 420,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 3.2,
+                        ),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final c = items[index];
+                          final color =
+                              Color((c['color'] as int?) ?? 0xFF607D8B);
+                          final iconData = IconData(
+                              (c['icon'] as int?) ?? Icons.folder.codePoint,
+                              fontFamily: 'MaterialIcons');
+                          return _FancyCategoryCard(
+                            name: c['name']?.toString() ?? '',
+                            color: color,
+                            iconData: iconData,
+                            onTap: () {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => CategoryProductsScreen(
+                                  categoryId: c['id'] as int,
+                                  categoryName:
+                                      c['name']?.toString() ?? 'القسم',
+                                  categoryColor: color,
+                                ),
+                              ));
+                            },
+                            onEdit: () => _openEditor(category: c),
+                            onDelete: () => _delete(c['id'] as int),
+                            countFuture: db.database.rawQuery(
+                                'SELECT COUNT(*) c FROM products WHERE category_id = ?',
+                                [c['id']]).then((r) => (r.first['c'] as int)),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
@@ -150,92 +157,98 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => StatefulBuilder(builder: (context, setStateDialog) {
-        return Dialog(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(category == null ? 'إضافة قسم' : 'تعديل قسم',
-                              style: Theme.of(context).textTheme.titleLarge),
-                          const Spacer(),
-                          IconButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              icon: const Icon(Icons.close)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: name,
-                        decoration: _pill(context, 'اسم القسم', Icons.category),
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'مطلوب' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      Text('الأيقونة',
-                          style: Theme.of(context).textTheme.labelLarge),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final ic in _iconOptions)
-                            ChoiceChip(
-                              label: Icon(ic),
-                              selected: selectedIcon == ic.codePoint,
-                              onSelected: (_) => setStateDialog(
-                                  () => selectedIcon = ic.codePoint),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Text('اللون',
-                          style: Theme.of(context).textTheme.labelLarge),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          for (final col in _colorOptions)
-                            GestureDetector(
-                              onTap: () => setStateDialog(
-                                  () => selectedColor = col.value),
-                              child: CircleAvatar(
-                                radius: 16,
-                                backgroundColor: col,
-                                child: selectedColor == col.value
-                                    ? const Icon(Icons.check,
-                                        color: Colors.white, size: 16)
-                                    : null,
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Dialog(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          children: [
+                            Text(category == null ? 'إضافة قسم' : 'تعديل قسم',
+                                style: Theme.of(context).textTheme.titleLarge),
+                            const Spacer(),
+                            IconButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                icon: const Icon(Icons.close)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: name,
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                          decoration:
+                              _pill(context, 'اسم القسم', Icons.category),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'مطلوب' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        Text('الأيقونة',
+                            style: Theme.of(context).textTheme.labelLarge),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final ic in _iconOptions)
+                              ChoiceChip(
+                                label: Icon(ic),
+                                selected: selectedIcon == ic.codePoint,
+                                onSelected: (_) => setStateDialog(
+                                    () => selectedIcon = ic.codePoint),
                               ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text('اللون',
+                            style: Theme.of(context).textTheme.labelLarge),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            for (final col in _colorOptions)
+                              GestureDetector(
+                                onTap: () => setStateDialog(
+                                    () => selectedColor = col.value),
+                                child: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: col,
+                                  child: selectedColor == col.value
+                                      ? const Icon(Icons.check,
+                                          color: Colors.white, size: 16)
+                                      : null,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            FilledButton(
+                              onPressed: () {
+                                if (!formKey.currentState!.validate()) return;
+                                Navigator.pop(context, true);
+                              },
+                              child: const Text('حفظ'),
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('إلغاء')),
-                          const Spacer(),
-                          FilledButton(
-                            onPressed: () {
-                              if (!formKey.currentState!.validate()) return;
-                              Navigator.pop(context, true);
-                            },
-                            child: const Text('حفظ'),
-                          ),
-                        ],
-                      )
-                    ],
+                            const Spacer(),
+                            TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('إلغاء')),
+                          ],
+                        )
+                      ],
+                    ),
                   ),
                 ),
               ),

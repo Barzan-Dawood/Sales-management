@@ -7,7 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
-  static const int _dbVersion = 5;
+  static const int _dbVersion = 6;
 
   late final Database _db;
   late String _dbPath;
@@ -39,6 +39,9 @@ class DatabaseService {
         }
         if (oldVersion < 5) {
           await _migrateToV5(db);
+        }
+        if (oldVersion < 6) {
+          await _migrateToV6(db);
         }
         await _ensureCategorySchemaOn(db);
       },
@@ -249,6 +252,16 @@ class DatabaseService {
     }
   }
 
+  Future<void> _migrateToV6(Database db) async {
+    // Add down_payment field to sales table for installments
+    try {
+      await db
+          .execute('ALTER TABLE sales ADD COLUMN down_payment REAL DEFAULT 0');
+    } catch (_) {
+      // column already exists
+    }
+  }
+
   Future<void> _seedData(Database db) async {
     await db.insert('users', {
       'name': 'Administrator',
@@ -385,7 +398,140 @@ class DatabaseService {
   Future<int> deleteExpense(int id) =>
       _db.delete('expenses', where: 'id = ?', whereArgs: [id]);
 
-  // Sales and installments (simplified)
+  // إدارة الأقساط
+  Future<List<Map<String, Object?>>> getInstallments({
+    int? customerId,
+    int? saleId,
+    bool overdueOnly = false,
+  }) async {
+    final where = <String>[];
+    final args = <Object?>[];
+
+    if (customerId != null) {
+      where.add('s.customer_id = ?');
+      args.add(customerId);
+    }
+
+    if (saleId != null) {
+      where.add('i.sale_id = ?');
+      args.add(saleId);
+    }
+
+    if (overdueOnly) {
+      where.add('i.due_date < ? AND i.paid = 0');
+      args.add(DateTime.now().toIso8601String());
+    }
+
+    final sql = '''
+      SELECT 
+        i.*,
+        s.customer_id,
+        c.name as customer_name,
+        c.phone as customer_phone,
+        s.total as sale_total,
+        s.type as sale_type
+      FROM installments i
+      JOIN sales s ON s.id = i.sale_id
+      JOIN customers c ON c.id = s.customer_id
+      ${where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : ''}
+      ORDER BY i.due_date ASC
+    ''';
+
+    return _db.rawQuery(sql, args);
+  }
+
+  Future<int> payInstallment(int installmentId, double amount,
+      {String? notes}) async {
+    return _db.transaction<int>((txn) async {
+      // الحصول على بيانات القسط
+      final installment = await txn.query(
+        'installments',
+        where: 'id = ?',
+        whereArgs: [installmentId],
+      );
+
+      if (installment.isEmpty) {
+        throw Exception('القسط غير موجود');
+      }
+
+      final installmentData = installment.first;
+      final saleId = installmentData['sale_id'] as int;
+      final customerId = await txn.query(
+        'sales',
+        columns: ['customer_id'],
+        where: 'id = ?',
+        whereArgs: [saleId],
+      );
+
+      if (customerId.isEmpty) {
+        throw Exception('البيع غير موجود');
+      }
+
+      final customerIdValue = customerId.first['customer_id'] as int;
+
+      // تحديث حالة القسط
+      await txn.update(
+        'installments',
+        {
+          'paid': 1,
+          'paid_at': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [installmentId],
+      );
+
+      // إضافة سجل الدفع
+      final paymentId = await txn.insert('payments', {
+        'customer_id': customerIdValue,
+        'amount': amount,
+        'payment_date': DateTime.now().toIso8601String(),
+        'notes': notes ?? 'دفع قسط',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      // تقليل دين العميل
+      await txn.rawUpdate(
+        'UPDATE customers SET total_debt = MAX(IFNULL(total_debt, 0) - ?, 0) WHERE id = ?',
+        [amount, customerIdValue],
+      );
+
+      return paymentId;
+    });
+  }
+
+  Future<Map<String, dynamic>> getInstallmentSummary(int customerId) async {
+    final installments = await getInstallments(customerId: customerId);
+
+    double totalInstallments = 0;
+    double paidInstallments = 0;
+    double overdueAmount = 0;
+    int overdueCount = 0;
+
+    for (final installment in installments) {
+      final amount = (installment['amount'] as num).toDouble();
+      final paid = (installment['paid'] as int) == 1;
+      final dueDate = DateTime.parse(installment['due_date'] as String);
+
+      totalInstallments += amount;
+
+      if (paid) {
+        paidInstallments += amount;
+      } else if (dueDate.isBefore(DateTime.now())) {
+        overdueAmount += amount;
+        overdueCount++;
+      }
+    }
+
+    return {
+      'totalInstallments': totalInstallments,
+      'paidInstallments': paidInstallments,
+      'remainingInstallments': totalInstallments - paidInstallments,
+      'overdueAmount': overdueAmount,
+      'overdueCount': overdueCount,
+    };
+  }
+
+  // Sales and installments (integrated system)
   Future<int> createSale(
       {int? customerId,
       String? customerName,
@@ -394,7 +540,11 @@ class DatabaseService {
       DateTime? dueDate,
       required String type,
       required List<Map<String, Object?>> items,
-      bool decrementStock = true}) async {
+      bool decrementStock = true,
+      // إضافة معاملات الأقساط
+      int? installmentCount,
+      double? downPayment,
+      DateTime? firstInstallmentDate}) async {
     return _db.transaction<int>((txn) async {
       double total = 0;
       double profit = 0;
@@ -445,7 +595,10 @@ class DatabaseService {
         'type': type,
         'created_at': DateTime.now().toIso8601String(),
         'due_date': dueDate?.toIso8601String(),
+        'down_payment': downPayment ?? 0.0,
       });
+
+      // إضافة عناصر البيع
       for (final it in items) {
         await txn.insert('sale_items', {
           'sale_id': saleId,
@@ -460,11 +613,42 @@ class DatabaseService {
               [it['quantity'], it['product_id']]);
         }
       }
-      // Update customer debt if credit sale
-      if (type == 'credit' && ensuredCustomerId != null) {
-        await txn.rawUpdate(
-            'UPDATE customers SET total_debt = IFNULL(total_debt,0) + ? WHERE id = ?',
-            [total, ensuredCustomerId]);
+
+      // معالجة الديون والأقساط
+      if (ensuredCustomerId != null) {
+        if (type == 'credit') {
+          // دين مباشر - إضافة المبلغ كاملاً للديون
+          await txn.rawUpdate(
+              'UPDATE customers SET total_debt = IFNULL(total_debt,0) + ? WHERE id = ?',
+              [total, ensuredCustomerId]);
+        } else if (type == 'installment' &&
+            installmentCount != null &&
+            installmentCount > 0) {
+          // بيع بالأقساط
+          final downPaymentAmount = downPayment ?? 0.0;
+          final remainingAmount = total - downPaymentAmount;
+          final installmentAmount = remainingAmount / installmentCount;
+
+          // إضافة المبلغ المتبقي للديون
+          await txn.rawUpdate(
+              'UPDATE customers SET total_debt = IFNULL(total_debt,0) + ? WHERE id = ?',
+              [remainingAmount, ensuredCustomerId]);
+
+          // إنشاء الأقساط
+          DateTime currentDate = firstInstallmentDate ?? DateTime.now();
+          for (int i = 0; i < installmentCount; i++) {
+            await txn.insert('installments', {
+              'sale_id': saleId,
+              'due_date': currentDate.toIso8601String(),
+              'amount': installmentAmount,
+              'paid': 0,
+              'paid_at': null,
+            });
+            // إضافة شهر للأقساط الشهرية
+            currentDate = DateTime(
+                currentDate.year, currentDate.month + 1, currentDate.day);
+          }
+        }
       }
 
       return saleId;
@@ -656,7 +840,7 @@ class DatabaseService {
     });
   }
 
-  // Receivables and credit tracking
+  // Receivables and credit tracking (includes installments)
   Future<List<Map<String, Object?>>> receivablesByCustomer(
       {String? query}) async {
     final where = <String>[];
@@ -675,16 +859,34 @@ class DatabaseService {
         IFNULL((
           SELECT SUM(s.total) FROM sales s 
           WHERE s.customer_id = c.id AND s.type = 'credit'
-        ), 0) AS computed_debt,
+        ), 0) AS credit_debt,
+        IFNULL((
+          SELECT SUM(s.total - COALESCE(s.down_payment, 0)) FROM sales s 
+          WHERE s.customer_id = c.id AND s.type = 'installment'
+        ), 0) AS installment_debt,
         (
           SELECT MIN(s2.due_date) FROM sales s2 
           WHERE s2.customer_id = c.id AND s2.type = 'credit' AND s2.due_date IS NOT NULL
-        ) AS next_due_date
+        ) AS next_credit_due_date,
+        (
+          SELECT MIN(i.due_date) FROM installments i
+          JOIN sales s ON s.id = i.sale_id
+          WHERE s.customer_id = c.id AND i.paid = 0
+        ) AS next_installment_due_date,
+        (
+          SELECT COUNT(*) FROM installments i
+          JOIN sales s ON s.id = i.sale_id
+          WHERE s.customer_id = c.id AND i.paid = 0 AND i.due_date < ?
+        ) AS overdue_installments_count
       FROM customers c
       WHERE IFNULL(c.total_debt, 0) > 0
       ${where.isNotEmpty ? 'AND ${where.join(' AND ')}' : ''}
-      ORDER BY (CASE WHEN next_due_date IS NULL THEN 1 ELSE 0 END), next_due_date ASC, c.name ASC
+      ORDER BY 
+        (CASE WHEN next_credit_due_date IS NULL AND next_installment_due_date IS NULL THEN 1 ELSE 0 END),
+        COALESCE(next_credit_due_date, next_installment_due_date) ASC,
+        c.name ASC
     ''';
+    args.insert(0, DateTime.now().toIso8601String());
     return _db.rawQuery(sql, args);
   }
 

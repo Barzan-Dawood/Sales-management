@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../services/db/database_service.dart';
 import '../services/print_service.dart';
 import '../utils/format.dart';
@@ -37,6 +36,11 @@ class _SalesScreenState extends State<SalesScreen> {
   String _customerName = '';
   String _customerPhone = '';
   String _customerAddress = '';
+
+  // Installment system variables
+  int? _installmentCount;
+  double? _downPayment;
+  DateTime? _firstInstallmentDate;
 
   // Last invoice credit info
   DateTime? _lastDueDate;
@@ -401,6 +405,93 @@ class _SalesScreenState extends State<SalesScreen> {
                                         : '📅 تاريخ الاستحقاق',
                                     style: TextStyle(
                                       color: _dueDate != null
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.6),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    // Installment fields - only show for installment payments
+                    if (_type == 'installment') ...[
+                      const SizedBox(width: 6),
+                      Expanded(
+                        flex: 1,
+                        child: TextField(
+                          decoration: pill('🔢 عدد الأقساط', Icons.numbers),
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => _installmentCount =
+                              v.isEmpty ? null : int.tryParse(v),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        flex: 1,
+                        child: TextField(
+                          decoration: pill('💰 المقدم (د.ع)', Icons.money),
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => _downPayment =
+                              v.isEmpty ? null : double.tryParse(v),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        flex: 1,
+                        child: InkWell(
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate:
+                                  DateTime.now().add(const Duration(days: 30)),
+                              firstDate: DateTime.now(),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (date != null) {
+                              setState(() => _firstInstallmentDate = date);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .dividerColor
+                                    .withOpacity(0.4),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _firstInstallmentDate != null
+                                        ? '${_firstInstallmentDate!.day}/${_firstInstallmentDate!.month}/${_firstInstallmentDate!.year}'
+                                        : '📅 تاريخ أول قسط',
+                                    style: TextStyle(
+                                      color: _firstInstallmentDate != null
                                           ? Theme.of(context)
                                               .colorScheme
                                               .onSurface
@@ -1420,6 +1511,54 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     return;
                                                   }
 
+                                                  // التحقق من صحة بيانات الأقساط
+                                                  if (_type == 'installment') {
+                                                    if (_installmentCount ==
+                                                            null ||
+                                                        _installmentCount! <=
+                                                            0) {
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                              'يرجى إدخال عدد الأقساط صحيح'),
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                        ),
+                                                      );
+                                                      return;
+                                                    }
+
+                                                    final totalAmount = _cart
+                                                        .fold<double>(0,
+                                                            (sum, item) {
+                                                      return sum +
+                                                          ((item['price']
+                                                                      as num)
+                                                                  .toDouble() *
+                                                              (item['quantity']
+                                                                      as num)
+                                                                  .toDouble());
+                                                    });
+
+                                                    if (_downPayment != null &&
+                                                        _downPayment! >=
+                                                            totalAmount) {
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                              'المقدم يجب أن يكون أقل من إجمالي المبلغ'),
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                        ),
+                                                      );
+                                                      return;
+                                                    }
+                                                  }
+
                                                   final saleId =
                                                       await db.createSale(
                                                     type: _type == 'cash'
@@ -1436,6 +1575,19 @@ class _SalesScreenState extends State<SalesScreen> {
                                                         _customerAddress,
                                                     dueDate: _type == 'credit'
                                                         ? _dueDate
+                                                        : null,
+                                                    // إضافة معاملات الأقساط
+                                                    installmentCount:
+                                                        _type == 'installment'
+                                                            ? _installmentCount
+                                                            : null,
+                                                    downPayment:
+                                                        _type == 'installment'
+                                                            ? _downPayment
+                                                            : null,
+                                                    firstInstallmentDate: _type ==
+                                                            'installment'
+                                                        ? _firstInstallmentDate
                                                         : null,
                                                   );
                                                   if (!mounted) return;
