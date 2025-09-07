@@ -401,7 +401,19 @@ class DatabaseService {
       for (final it in items) {
         final price = (it['price'] as num).toDouble();
         final cost = (it['cost'] as num).toDouble();
-        final qty = (it['quantity'] as num).toInt();
+        final quantity = (it['quantity'] as num).toDouble();
+
+        // فحص القيم للتأكد من أنها صحيحة
+        if (price.isNaN ||
+            price.isInfinite ||
+            quantity.isNaN ||
+            quantity.isInfinite) {
+          print(
+              'تحذير: قيمة غير صحيحة في قاعدة البيانات - السعر: $price, الكمية: $quantity');
+          continue;
+        }
+
+        final qty = quantity.toInt();
         total += price * qty;
         profit += (price - cost) * qty;
       }

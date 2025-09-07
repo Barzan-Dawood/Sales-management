@@ -4,9 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/db/database_service.dart';
+import '../services/print_service.dart';
 import '../utils/format.dart';
-import 'package:printing/printing.dart';
-import '../utils/invoice_pdf.dart';
 import '../utils/strings.dart';
 
 class SalesScreen extends StatefulWidget {
@@ -1946,7 +1945,130 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                         ),
                                                                         const SizedBox(
                                                                             width:
-                                                                                12),
+                                                                                8),
+                                                                        // زر الطباعة السريعة
+                                                                        Expanded(
+                                                                          child:
+                                                                              ElevatedButton.icon(
+                                                                            onPressed:
+                                                                                () async {
+                                                                              // طباعة سريعة بالإعدادات المحفوظة
+                                                                              final db = context.read<DatabaseService>();
+                                                                              final settings = await db.database.query('settings', limit: 1);
+                                                                              final shopName = (settings.isNotEmpty ? (settings.first['shop_name']?.toString() ?? AppStrings.defaultShopName) : AppStrings.defaultShopName);
+                                                                              final phone = (settings.isNotEmpty ? settings.first['phone']?.toString() : null);
+                                                                              final address = (settings.isNotEmpty ? settings.first['address']?.toString() : null);
+
+                                                                              final success = await PrintService.quickPrint(
+                                                                                shopName: shopName,
+                                                                                phone: phone,
+                                                                                address: address,
+                                                                                items: _lastInvoiceItems,
+                                                                                paymentType: _lastType,
+                                                                                customerName: _lastCustomerName.isNotEmpty ? _lastCustomerName : null,
+                                                                                customerPhone: _lastCustomerPhone.isNotEmpty ? _lastCustomerPhone : null,
+                                                                                customerAddress: _lastCustomerAddress.isNotEmpty ? _lastCustomerAddress : null,
+                                                                                dueDate: _lastDueDate,
+                                                                                context: context,
+                                                                              );
+
+                                                                              if (success && context.mounted) {
+                                                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                                                  const SnackBar(
+                                                                                    content: Text('تم طباعة الفاتورة بنجاح'),
+                                                                                    backgroundColor: Colors.green,
+                                                                                    duration: Duration(seconds: 2),
+                                                                                  ),
+                                                                                );
+                                                                              }
+                                                                            },
+                                                                            icon:
+                                                                                const Icon(Icons.flash_on, size: 18),
+                                                                            label:
+                                                                                const Text('طباعة سريعة'),
+                                                                            style:
+                                                                                ElevatedButton.styleFrom(
+                                                                              backgroundColor: Colors.purple.shade600,
+                                                                              foregroundColor: Colors.white,
+                                                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                                                              shape: RoundedRectangleBorder(
+                                                                                borderRadius: BorderRadius.circular(12),
+                                                                              ),
+                                                                              elevation: 2,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        const SizedBox(
+                                                                            width:
+                                                                                8),
+
+                                                                        // زر اختبار PDF
+                                                                        ElevatedButton
+                                                                            .icon(
+                                                                          onPressed:
+                                                                              () async {
+                                                                            final db =
+                                                                                context.read<DatabaseService>();
+                                                                            final settings =
+                                                                                await db.database.query('settings', limit: 1);
+                                                                            final shopName = (settings.isNotEmpty
+                                                                                ? (settings.first['shop_name']?.toString() ?? AppStrings.defaultShopName)
+                                                                                : AppStrings.defaultShopName);
+                                                                            final phone = (settings.isNotEmpty
+                                                                                ? settings.first['phone']?.toString()
+                                                                                : null);
+                                                                            final address = (settings.isNotEmpty
+                                                                                ? settings.first['address']?.toString()
+                                                                                : null);
+
+                                                                            final success =
+                                                                                await PrintService.testPdfGeneration(
+                                                                              shopName: shopName,
+                                                                              phone: phone,
+                                                                              address: address,
+                                                                              items: _lastInvoiceItems,
+                                                                              paymentType: _lastType,
+                                                                              customerName: _lastCustomerName.isNotEmpty ? _lastCustomerName : null,
+                                                                              customerPhone: _lastCustomerPhone.isNotEmpty ? _lastCustomerPhone : null,
+                                                                              customerAddress: _lastCustomerAddress.isNotEmpty ? _lastCustomerAddress : null,
+                                                                              dueDate: _lastDueDate,
+                                                                              context: context,
+                                                                            );
+
+                                                                            if (context.mounted) {
+                                                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                                                SnackBar(
+                                                                                  content: Text(success ? 'تم إنشاء PDF بنجاح' : 'فشل في إنشاء PDF'),
+                                                                                  backgroundColor: success ? Colors.green : Colors.red,
+                                                                                  duration: const Duration(seconds: 2),
+                                                                                ),
+                                                                              );
+                                                                            }
+                                                                          },
+                                                                          icon: const Icon(
+                                                                              Icons.bug_report,
+                                                                              size: 18),
+                                                                          label:
+                                                                              const Text('اختبار PDF'),
+                                                                          style:
+                                                                              ElevatedButton.styleFrom(
+                                                                            backgroundColor:
+                                                                                Colors.orange.shade600,
+                                                                            foregroundColor:
+                                                                                Colors.white,
+                                                                            padding:
+                                                                                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                                                            shape:
+                                                                                RoundedRectangleBorder(
+                                                                              borderRadius: BorderRadius.circular(8),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+
+                                                                        const SizedBox(
+                                                                            width:
+                                                                                8),
+
                                                                         // OK button
                                                                         Expanded(
                                                                           child:
@@ -2665,6 +2787,17 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> _printInvoice(BuildContext context) async {
+    print('=== بدء عملية طباعة الفاتورة ===');
+    print('عدد المنتجات في آخر فاتورة: ${_lastInvoiceItems.length}');
+    print('نوع الدفع: $_lastType');
+
+    // عرض خيارات الطباعة
+    final printOptions = await PrintService.showPrintOptionsDialog(context);
+    if (printOptions == null) {
+      print('تم إلغاء عملية الطباعة من قبل المستخدم');
+      return; // المستخدم ألغى العملية
+    }
+
     final db = context.read<DatabaseService>();
     final settings = await db.database.query('settings', limit: 1);
     final shopName = (settings.isNotEmpty
@@ -2675,17 +2808,36 @@ class _SalesScreenState extends State<SalesScreen> {
         (settings.isNotEmpty ? settings.first['phone']?.toString() : null);
     final address =
         (settings.isNotEmpty ? settings.first['address']?.toString() : null);
-    final pdfData = await InvoicePdf.generate(
+
+    // استخدام خدمة الطباعة الجديدة
+    final success = await PrintService.printInvoice(
       shopName: shopName,
       phone: phone,
       address: address,
       items: _lastInvoiceItems,
       paymentType: _lastType,
+      customerName: _lastCustomerName.isNotEmpty ? _lastCustomerName : null,
+      customerPhone: _lastCustomerPhone.isNotEmpty ? _lastCustomerPhone : null,
+      customerAddress:
+          _lastCustomerAddress.isNotEmpty ? _lastCustomerAddress : null,
+      dueDate: _lastDueDate,
+      pageFormat: printOptions['pageFormat'] as String,
+      showLogo: printOptions['showLogo'] as bool,
+      showBarcode: printOptions['showBarcode'] as bool,
+      context: context,
     );
-    try {
-      await Printing.layoutPdf(onLayout: (format) async => pdfData);
-    } catch (_) {
-      // ignore printing fallback here to keep UI responsive
+
+    if (success && context.mounted) {
+      print('تمت عملية الطباعة بنجاح');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم طباعة الفاتورة بنجاح'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      print('فشلت عملية الطباعة');
     }
   }
 
