@@ -36,41 +36,83 @@ Future<void> main() async {
         } else {
           print(
               'Some issues remain after normal cleanup: ${remainingIssues.join(', ')}');
-          print('Performing aggressive cleanup...');
-          await databaseService.aggressiveCleanup();
+          print('Performing comprehensive cleanup...');
+          await databaseService.comprehensiveCleanup();
 
           // Final check
           final finalIssues = await databaseService.checkDatabaseIntegrity();
           if (finalIssues.isEmpty) {
-            print('Aggressive cleanup completed successfully');
+            print('Comprehensive cleanup completed successfully');
           } else {
-            print('Some issues still remain: ${finalIssues.join(', ')}');
+            print(
+                'Some issues still remain, trying aggressive cleanup: ${finalIssues.join(', ')}');
+            await databaseService.aggressiveCleanup();
+
+            // Final final check
+            final finalFinalIssues =
+                await databaseService.checkDatabaseIntegrity();
+            if (finalFinalIssues.isEmpty) {
+              print('Aggressive cleanup completed successfully');
+            } else {
+              print('Some issues still remain: ${finalFinalIssues.join(', ')}');
+            }
           }
         }
       } catch (e) {
-        print('Normal cleanup failed, trying aggressive cleanup: $e');
+        print('Normal cleanup failed, trying comprehensive cleanup: $e');
         try {
-          await databaseService.aggressiveCleanup();
-          print('Aggressive cleanup completed');
-        } catch (aggressiveError) {
-          print('Aggressive cleanup also failed: $aggressiveError');
+          await databaseService.comprehensiveCleanup();
+          print('Comprehensive cleanup completed');
+        } catch (comprehensiveError) {
+          print(
+              'Comprehensive cleanup failed, trying aggressive cleanup: $comprehensiveError');
+          try {
+            await databaseService.aggressiveCleanup();
+            print('Aggressive cleanup completed');
+          } catch (aggressiveError) {
+            print('Aggressive cleanup also failed: $aggressiveError');
+          }
         }
       }
     }
   } catch (e) {
     print('Error initializing database: $e');
+
+    // تحسين رسائل الخطأ
+    String errorMessage = 'خطأ في تهيئة قاعدة البيانات';
+    if (e.toString().contains('database is locked')) {
+      errorMessage = 'قاعدة البيانات قيد الاستخدام، يرجى إعادة تشغيل التطبيق';
+    } else if (e.toString().contains('no such table')) {
+      errorMessage = 'خطأ في هيكل قاعدة البيانات، سيتم إعادة إنشاؤها';
+    } else if (e.toString().contains('disk I/O error')) {
+      errorMessage = 'خطأ في القرص، تحقق من مساحة التخزين';
+    } else {
+      errorMessage = 'خطأ في قاعدة البيانات: ${e.toString()}';
+    }
+
+    print('Database error: $errorMessage');
+
     // Try to perform emergency cleanup
     try {
       await databaseService.forceCleanup();
       print('Emergency cleanup completed');
     } catch (cleanupError) {
       print(
-          'Emergency cleanup failed, trying aggressive cleanup: $cleanupError');
+          'Emergency cleanup failed, trying comprehensive cleanup: $cleanupError');
       try {
-        await databaseService.aggressiveCleanup();
-        print('Emergency aggressive cleanup completed');
-      } catch (aggressiveError) {
-        print('Emergency aggressive cleanup also failed: $aggressiveError');
+        await databaseService.comprehensiveCleanup();
+        print('Emergency comprehensive cleanup completed');
+      } catch (comprehensiveError) {
+        print(
+            'Emergency comprehensive cleanup failed, trying aggressive cleanup: $comprehensiveError');
+        try {
+          await databaseService.aggressiveCleanup();
+          print('Emergency aggressive cleanup completed');
+        } catch (aggressiveError) {
+          print('Emergency aggressive cleanup also failed: $aggressiveError');
+          print(
+              'Critical database error - application may not function properly');
+        }
       }
     }
     rethrow;

@@ -205,7 +205,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'مرحباً بك في لوحة التحكم',
+                  'مرحباً بك في لوحة التحكم ( ROJ NET )',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,

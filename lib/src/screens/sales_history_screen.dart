@@ -76,16 +76,6 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     }
   }
 
-  void _clearFilters() {
-    setState(() {
-      _query = '';
-      _selectedType = '';
-      _fromDate = null;
-      _toDate = null;
-    });
-    _loadSales();
-  }
-
   void _toggleSelectionMode() {
     setState(() {
       _isSelectionMode = !_isSelectionMode;

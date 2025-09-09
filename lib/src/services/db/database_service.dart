@@ -122,6 +122,7 @@ class DatabaseService {
             print('Cleaned up orphaned $type: $name');
           } catch (e) {
             print('Error cleaning up $type $name: $e');
+            // Continue with other objects even if one fails
           }
         }
       }
@@ -192,6 +193,18 @@ class DatabaseService {
 
       // First, try the normal cleanup
       await _cleanupOrphanObjects(_db);
+
+      // Clean up orphaned records in sale_items
+      try {
+        await _db.execute('''
+          DELETE FROM sale_items 
+          WHERE sale_id NOT IN (SELECT id FROM sales)
+          OR product_id NOT IN (SELECT id FROM products)
+        ''');
+        print('Cleaned up orphaned sale_items records');
+      } catch (e) {
+        print('Error cleaning orphaned sale_items: $e');
+      }
 
       // If that doesn't work, completely rebuild sale_items
       try {
@@ -293,15 +306,26 @@ class DatabaseService {
         issues.add('Found orphaned sales_old table');
       }
 
-      // Check for objects referencing sales_old
+      // Check for objects referencing sales_old in main schema
       final salesOldRefs = await _db.rawQuery('''
         SELECT type, name FROM sqlite_master 
         WHERE type IN ('trigger', 'view', 'index') 
         AND IFNULL(sql,'') LIKE '%sales_old%'
       ''');
       if (salesOldRefs.isNotEmpty) {
-        issues
-            .add('Found ${salesOldRefs.length} objects referencing sales_old');
+        issues.add(
+            'Found ${salesOldRefs.length} objects referencing sales_old in main schema');
+      }
+
+      // Check for objects referencing sales_old in temp schema
+      final tempSalesOldRefs = await _db.rawQuery('''
+        SELECT type, name FROM sqlite_temp_master 
+        WHERE type IN ('trigger', 'view', 'index') 
+        AND IFNULL(sql,'') LIKE '%sales_old%'
+      ''');
+      if (tempSalesOldRefs.isNotEmpty) {
+        issues.add(
+            'Found ${tempSalesOldRefs.length} objects referencing sales_old in temp schema');
       }
 
       // Check if sale_items is a view instead of table
@@ -311,10 +335,40 @@ class DatabaseService {
         issues.add('sale_items is a view instead of a table');
       }
 
+      // Check if sale_items table exists
+      final saleItemsExists = await _db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='sale_items'");
+      if (saleItemsExists.isEmpty) {
+        issues.add('sale_items table is missing');
+      }
+
       // Check foreign key constraints
       final fkCheck = await _db.rawQuery('PRAGMA foreign_key_check');
       if (fkCheck.isNotEmpty) {
         issues.add('Found ${fkCheck.length} foreign key constraint violations');
+      }
+
+      // Check for orphaned records in sale_items
+      final orphanedSaleItems = await _db.rawQuery('''
+        SELECT COUNT(*) as count FROM sale_items si
+        LEFT JOIN sales s ON si.sale_id = s.id
+        WHERE s.id IS NULL
+      ''');
+      final orphanedCount = orphanedSaleItems.first['count'] as int;
+      if (orphanedCount > 0) {
+        issues.add('Found $orphanedCount orphaned sale_items records');
+      }
+
+      // Check for orphaned records in sale_items with products
+      final orphanedProductItems = await _db.rawQuery('''
+        SELECT COUNT(*) as count FROM sale_items si
+        LEFT JOIN products p ON si.product_id = p.id
+        WHERE p.id IS NULL
+      ''');
+      final orphanedProductCount = orphanedProductItems.first['count'] as int;
+      if (orphanedProductCount > 0) {
+        issues.add(
+            'Found $orphanedProductCount sale_items with missing products');
       }
     } catch (e) {
       issues.add('Error checking database integrity: $e');
@@ -917,7 +971,7 @@ class DatabaseService {
           await txn.execute('PRAGMA foreign_keys = OFF');
           await txn.execute('DROP TABLE IF EXISTS sales_old');
 
-          // حذف أي triggers أو views تشير إلى sales_old
+          // حذف أي triggers أو views تشير إلى sales_old من المخطط الرئيسي
           final orphanObjects = await txn.rawQuery('''
             SELECT type, name FROM sqlite_master 
             WHERE type IN ('trigger', 'view', 'index') 
@@ -947,6 +1001,40 @@ class DatabaseService {
                 print('Dropped orphaned $type: $name');
               } catch (e) {
                 print('Error dropping $type $name: $e');
+              }
+            }
+          }
+
+          // حذف أي triggers أو views تشير إلى sales_old من المخطط المؤقت
+          final tempOrphanObjects = await txn.rawQuery('''
+            SELECT type, name FROM sqlite_temp_master 
+            WHERE type IN ('trigger', 'view', 'index') 
+            AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
+          ''');
+
+          for (final row in tempOrphanObjects) {
+            final type = row['type']?.toString();
+            final name = row['name']?.toString();
+            if (type != null && name != null && name.isNotEmpty) {
+              try {
+                String dropCommand;
+                switch (type) {
+                  case 'view':
+                    dropCommand = 'DROP VIEW IF EXISTS $name';
+                    break;
+                  case 'index':
+                    dropCommand = 'DROP INDEX IF EXISTS $name';
+                    break;
+                  case 'trigger':
+                    dropCommand = 'DROP TRIGGER IF EXISTS $name';
+                    break;
+                  default:
+                    continue;
+                }
+                await txn.execute(dropCommand);
+                print('Dropped temp orphaned $type: $name');
+              } catch (e) {
+                print('Error dropping temp $type $name: $e');
               }
             }
           }
@@ -984,10 +1072,23 @@ class DatabaseService {
 
         // حذف الأقساط المرتبطة بالمبيعات
         for (final sale in sales) {
-          final deletedInstallments = await txn.delete('installments',
-              where: 'sale_id = ?', whereArgs: [sale['id']]);
-          print(
-              'Deleted $deletedInstallments installments for sale ${sale['id']}');
+          try {
+            final deletedInstallments = await txn.delete('installments',
+                where: 'sale_id = ?', whereArgs: [sale['id']]);
+            print(
+                'Deleted $deletedInstallments installments for sale ${sale['id']}');
+          } catch (e) {
+            print('Error deleting installments for sale ${sale['id']}: $e');
+            // محاولة بديلة - حذف مباشر
+            try {
+              await txn.execute(
+                  'DELETE FROM installments WHERE sale_id = ?', [sale['id']]);
+              print('Successfully deleted installments using direct SQL');
+            } catch (directError) {
+              print('Direct SQL deletion also failed: $directError');
+              // تجاهل الخطأ والمتابعة
+            }
+          }
         }
 
         // حذف المبيعات المرتبطة بالعميل
@@ -1896,5 +1997,122 @@ class DatabaseService {
         return false;
       }
     });
+  }
+
+  /// دالة شاملة لتنظيف قاعدة البيانات من المراجع القديمة
+  Future<void> comprehensiveCleanup() async {
+    try {
+      print('Starting comprehensive database cleanup...');
+
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      // حذف جدول sales_old إذا كان موجوداً
+      await _db.execute('DROP TABLE IF EXISTS sales_old');
+
+      // البحث عن جميع الكائنات التي تشير إلى sales_old في المخطط الرئيسي
+      final mainObjects = await _db.rawQuery('''
+        SELECT type, name, sql FROM sqlite_master 
+        WHERE type IN ('trigger', 'view', 'index', 'table') 
+        AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
+        ORDER BY type, name
+      ''');
+
+      print(
+          'Found ${mainObjects.length} objects in main schema referencing sales_old');
+
+      for (final row in mainObjects) {
+        final type = row['type']?.toString();
+        final name = row['name']?.toString();
+        if (type != null && name != null && name.isNotEmpty) {
+          try {
+            String dropCommand;
+            switch (type) {
+              case 'view':
+                dropCommand = 'DROP VIEW IF EXISTS $name';
+                break;
+              case 'index':
+                dropCommand = 'DROP INDEX IF EXISTS $name';
+                break;
+              case 'trigger':
+                dropCommand = 'DROP TRIGGER IF EXISTS $name';
+                break;
+              case 'table':
+                if (name == 'sales_old') {
+                  dropCommand = 'DROP TABLE IF EXISTS $name';
+                } else {
+                  continue; // Skip other tables
+                }
+                break;
+              default:
+                continue;
+            }
+            await _db.execute(dropCommand);
+            print('Dropped main schema $type: $name');
+          } catch (e) {
+            print('Error dropping main schema $type $name: $e');
+          }
+        }
+      }
+
+      // البحث عن جميع الكائنات التي تشير إلى sales_old في المخطط المؤقت
+      final tempObjects = await _db.rawQuery('''
+        SELECT type, name, sql FROM sqlite_temp_master 
+        WHERE type IN ('trigger', 'view', 'index', 'table') 
+        AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
+        ORDER BY type, name
+      ''');
+
+      print(
+          'Found ${tempObjects.length} objects in temp schema referencing sales_old');
+
+      for (final row in tempObjects) {
+        final type = row['type']?.toString();
+        final name = row['name']?.toString();
+        if (type != null && name != null && name.isNotEmpty) {
+          try {
+            String dropCommand;
+            switch (type) {
+              case 'view':
+                dropCommand = 'DROP VIEW IF EXISTS $name';
+                break;
+              case 'index':
+                dropCommand = 'DROP INDEX IF EXISTS $name';
+                break;
+              case 'trigger':
+                dropCommand = 'DROP TRIGGER IF EXISTS $name';
+                break;
+              case 'table':
+                if (name == 'sales_old') {
+                  dropCommand = 'DROP TABLE IF EXISTS $name';
+                } else {
+                  continue; // Skip other tables
+                }
+                break;
+              default:
+                continue;
+            }
+            await _db.execute(dropCommand);
+            print('Dropped temp schema $type: $name');
+          } catch (e) {
+            print('Error dropping temp schema $type $name: $e');
+          }
+        }
+      }
+
+      // إعادة تمكين المفاتيح الخارجية
+      await _db.execute('PRAGMA foreign_keys = ON');
+
+      // إعادة إنشاء الفهارس
+      await _createIndexes(_db);
+
+      // التأكد من وجود الجداول الأساسية
+      await _ensureCategorySchemaOn(_db);
+
+      print('Comprehensive cleanup completed successfully');
+    } catch (e) {
+      await _db.execute('PRAGMA foreign_keys = ON');
+      print('Error during comprehensive cleanup: $e');
+      rethrow;
+    }
   }
 }

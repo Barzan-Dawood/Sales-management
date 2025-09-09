@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:barcode_widget/barcode_widget.dart';
-
 import '../../services/db/database_service.dart';
 import '../../utils/format.dart';
 
@@ -756,77 +755,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  Widget _summaryChip(String title, String value, Color color, IconData icon) {
-    return Container(
-      width: 110,
-      height: 64,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon with background circle
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 12,
-            ),
-          ),
-          const SizedBox(width: 6),
-          // Value and Title in column
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 9,
-                  color: color.withOpacity(0.8),
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _iconGradButton({
     required String tooltip,
     required List<Color> colors,
@@ -861,38 +789,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
             child: Icon(icon, color: Colors.white, size: 18),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _barcodeChip(String code) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade100, Colors.blue.shade200],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.blue.shade300, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Text(
-        code.isEmpty ? '—' : code,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: Colors.blue.shade800,
-          fontFamily: 'monospace',
-        ),
-        textAlign: TextAlign.center,
       ),
     );
   }

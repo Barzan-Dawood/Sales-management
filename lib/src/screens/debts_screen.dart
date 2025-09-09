@@ -1479,10 +1479,27 @@ class _DebtsScreenState extends State<DebtsScreen>
                 } catch (e) {
                   print('Error deleting customer: $e');
                   Navigator.pop(context);
+
+                  // تحسين رسائل الخطأ
+                  String errorMessage = 'خطأ في حذف العميل';
+                  if (e.toString().contains('FOREIGN KEY constraint failed')) {
+                    errorMessage =
+                        'لا يمكن حذف العميل لأنه مرتبط بفواتير أو مدفوعات';
+                  } else if (e.toString().contains('database is locked')) {
+                    errorMessage =
+                        'قاعدة البيانات قيد الاستخدام، حاول مرة أخرى';
+                  } else if (e.toString().contains('no such table')) {
+                    errorMessage =
+                        'خطأ في قاعدة البيانات، يرجى إعادة تشغيل التطبيق';
+                  } else {
+                    errorMessage = 'خطأ في حذف العميل: ${e.toString()}';
+                  }
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('خطأ في حذف العميل: $e'),
+                      content: Text(errorMessage),
                       backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 4),
                     ),
                   );
                 }

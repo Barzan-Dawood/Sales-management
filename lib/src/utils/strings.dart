@@ -1,6 +1,6 @@
 class AppStrings {
   // App Information
-  static const String appTitle = 'ROJ NET - نظام نقاط البيع';
+  static const String appTitle = 'ROJ NET';
   static const String appName = 'ROJ NET';
 
   // Store Information

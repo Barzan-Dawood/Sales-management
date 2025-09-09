@@ -2070,11 +2070,24 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                 Navigator.of(context).pop();
 
                                                                                 // Show error message
+                                                                                String errorMessage = 'خطأ في طباعة الفاتورة';
+                                                                                if (e.toString().contains('No such file or directory')) {
+                                                                                  errorMessage = 'خطأ: ملف الخط العربي غير موجود';
+                                                                                } else if (e.toString().contains('Permission denied')) {
+                                                                                  errorMessage = 'خطأ: لا توجد صلاحية للطباعة';
+                                                                                } else if (e.toString().contains('Device not found')) {
+                                                                                  errorMessage = 'خطأ: الطابعة غير متصلة';
+                                                                                } else if (e.toString().contains('Out of paper')) {
+                                                                                  errorMessage = 'خطأ: نفدت الورق من الطابعة';
+                                                                                } else {
+                                                                                  errorMessage = 'خطأ في طباعة الفاتورة: ${e.toString()}';
+                                                                                }
+
                                                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                                                   SnackBar(
-                                                                                    content: Text('خطأ في طباعة الفاتورة: $e'),
+                                                                                    content: Text(errorMessage),
                                                                                     backgroundColor: Colors.red,
-                                                                                    duration: const Duration(seconds: 3),
+                                                                                    duration: const Duration(seconds: 4),
                                                                                   ),
                                                                                 );
                                                                               }
