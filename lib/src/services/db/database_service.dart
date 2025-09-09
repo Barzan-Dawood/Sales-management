@@ -1398,6 +1398,43 @@ class DatabaseService {
         } catch (_) {}
       }
 
+      // تنظيف إضافي للتأكد من عدم وجود مراجع لـ sales_old
+      try {
+        // البحث عن أي triggers أو views تحتوي على sales_old
+        final problematicObjects = await txn.rawQuery('''
+          SELECT name, type, sql FROM sqlite_master 
+          WHERE (sql LIKE '%sales_old%' OR name LIKE '%sales_old%')
+          AND type IN ('trigger', 'view', 'index')
+        ''');
+
+        for (final obj in problematicObjects) {
+          final name = obj['name']?.toString();
+          final type = obj['type']?.toString();
+          if (name != null && name.isNotEmpty) {
+            try {
+              switch (type) {
+                case 'trigger':
+                  await txn.execute('DROP TRIGGER IF EXISTS $name');
+                  print('Dropped problematic trigger in createSale: $name');
+                  break;
+                case 'view':
+                  await txn.execute('DROP VIEW IF EXISTS $name');
+                  print('Dropped problematic view in createSale: $name');
+                  break;
+                case 'index':
+                  await txn.execute('DROP INDEX IF EXISTS $name');
+                  print('Dropped problematic index in createSale: $name');
+                  break;
+              }
+            } catch (e) {
+              print('Error dropping $type $name in createSale: $e');
+            }
+          }
+        }
+      } catch (e) {
+        print('Error during sales_old cleanup in createSale: $e');
+      }
+
       double total = 0;
       double profit = 0;
       for (final it in items) {
@@ -1491,6 +1528,30 @@ class DatabaseService {
           await txn.rawUpdate(
               'UPDATE customers SET total_debt = IFNULL(total_debt,0) + ? WHERE id = ?',
               [remainingAmount, ensuredCustomerId]);
+
+          // تنظيف إضافي قبل إنشاء الأقساط
+          try {
+            // البحث عن أي triggers تحتوي على sales_old
+            final problematicTriggers = await txn.rawQuery('''
+              SELECT name FROM sqlite_master 
+              WHERE type = 'trigger' 
+              AND (sql LIKE '%sales_old%' OR name LIKE '%sales_old%')
+            ''');
+
+            for (final trigger in problematicTriggers) {
+              final name = trigger['name']?.toString();
+              if (name != null && name.isNotEmpty) {
+                try {
+                  await txn.execute('DROP TRIGGER IF EXISTS $name');
+                  print('Dropped problematic trigger: $name');
+                } catch (e) {
+                  print('Error dropping trigger $name: $e');
+                }
+              }
+            }
+          } catch (e) {
+            print('Error during trigger cleanup: $e');
+          }
 
           // إنشاء الأقساط
           DateTime currentDate = firstInstallmentDate ?? DateTime.now();
@@ -2114,5 +2175,244 @@ class DatabaseService {
       print('Error during comprehensive cleanup: $e');
       rethrow;
     }
+  }
+
+  // دالة تعديل القسط
+  Future<void> updateInstallment(
+      int installmentId, double newAmount, DateTime newDueDate) async {
+    await _db.update(
+      'installments',
+      {
+        'amount': newAmount,
+        'due_date': newDueDate.toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [installmentId],
+    );
+  }
+
+  // دالة حذف القسط
+  Future<void> deleteInstallment(int installmentId) async {
+    await _db.transaction((txn) async {
+      // الحصول على بيانات القسط
+      final installment = await txn.query(
+        'installments',
+        where: 'id = ?',
+        whereArgs: [installmentId],
+      );
+
+      if (installment.isNotEmpty) {
+        final saleId = installment.first['sale_id'] as int;
+        final amount = (installment.first['amount'] as num).toDouble();
+
+        // الحصول على بيانات البيع
+        final sale = await txn.query(
+          'sales',
+          where: 'id = ?',
+          whereArgs: [saleId],
+        );
+
+        if (sale.isNotEmpty) {
+          final customerId = sale.first['customer_id'] as int;
+
+          // إضافة المبلغ إلى دين العميل
+          await txn.rawUpdate(
+            'UPDATE customers SET total_debt = IFNULL(total_debt, 0) + ? WHERE id = ?',
+            [amount, customerId],
+          );
+        }
+      }
+
+      // حذف القسط
+      await txn.delete(
+        'installments',
+        where: 'id = ?',
+        whereArgs: [installmentId],
+      );
+    });
+  }
+
+  // دالة الحصول على الأقساط المتأخرة
+  Future<List<Map<String, dynamic>>> getOverdueInstallments() async {
+    final now = DateTime.now().toIso8601String();
+    return _db.rawQuery('''
+      SELECT 
+        i.*,
+        s.customer_id,
+        c.name as customer_name,
+        c.phone as customer_phone,
+        c.address as customer_address,
+        julianday('now') - julianday(i.due_date) as days_overdue
+      FROM installments i
+      JOIN sales s ON i.sale_id = s.id
+      JOIN customers c ON s.customer_id = c.id
+      WHERE i.paid = 0 
+      AND i.due_date < ?
+      ORDER BY i.due_date ASC
+    ''', [now]);
+  }
+
+  // دالة الحصول على الأقساط المستحقة هذا الشهر
+  Future<List<Map<String, dynamic>>> getCurrentMonthInstallments() async {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1).toIso8601String();
+    final endOfMonth = DateTime(now.year, now.month + 1, 0).toIso8601String();
+
+    return _db.rawQuery('''
+      SELECT 
+        i.*,
+        s.customer_id,
+        c.name as customer_name,
+        c.phone as customer_phone,
+        c.address as customer_address
+      FROM installments i
+      JOIN sales s ON i.sale_id = s.id
+      JOIN customers c ON s.customer_id = c.id
+      WHERE i.paid = 0 
+      AND i.due_date >= ? 
+      AND i.due_date <= ?
+      ORDER BY i.due_date ASC
+    ''', [startOfMonth, endOfMonth]);
+  }
+
+  // دالة تنظيف شاملة لجميع triggers
+  Future<void> cleanupAllTriggers() async {
+    await _db.transaction((txn) async {
+      try {
+        // البحث عن جميع triggers
+        final allTriggers = await txn.rawQuery('''
+          SELECT name, sql FROM sqlite_master 
+          WHERE type = 'trigger'
+        ''');
+
+        for (final trigger in allTriggers) {
+          final name = trigger['name']?.toString();
+          final sql = trigger['sql']?.toString();
+
+          if (name != null && sql != null) {
+            // حذف triggers التي تحتوي على sales_old أو أي مراجع مشكلة
+            if (sql.contains('sales_old') ||
+                sql.contains('main.sales_old') ||
+                name.contains('sales_old')) {
+              try {
+                await txn.execute('DROP TRIGGER IF EXISTS $name');
+                print('Dropped problematic trigger: $name');
+              } catch (e) {
+                print('Error dropping trigger $name: $e');
+              }
+            }
+          }
+        }
+
+        print('Trigger cleanup completed');
+      } catch (e) {
+        print('Error during trigger cleanup: $e');
+        rethrow;
+      }
+    });
+  }
+
+  // دالة تنظيف شاملة لجميع مراجع sales_old
+  Future<void> comprehensiveSalesOldCleanup() async {
+    await _db.transaction((txn) async {
+      try {
+        // تعطيل المفاتيح الخارجية مؤقتاً
+        await txn.execute('PRAGMA foreign_keys = OFF');
+
+        // حذف جدول sales_old إذا كان موجوداً
+        await txn.execute('DROP TABLE IF EXISTS sales_old');
+
+        // البحث عن جميع الكائنات التي تحتوي على مراجع لـ sales_old
+        final allObjects = await txn.rawQuery('''
+          SELECT name, type, sql FROM sqlite_master 
+          WHERE (sql LIKE '%sales_old%' OR name LIKE '%sales_old%')
+          AND type IN ('trigger', 'view', 'index')
+          UNION ALL
+          SELECT name, type, sql FROM sqlite_temp_master 
+          WHERE (sql LIKE '%sales_old%' OR name LIKE '%sales_old%')
+          AND type IN ('trigger', 'view', 'index')
+        ''');
+
+        for (final obj in allObjects) {
+          final name = obj['name']?.toString();
+          final type = obj['type']?.toString();
+          if (name != null && name.isNotEmpty) {
+            try {
+              switch (type) {
+                case 'trigger':
+                  await txn.execute('DROP TRIGGER IF EXISTS $name');
+                  print('Dropped trigger: $name');
+                  break;
+                case 'view':
+                  await txn.execute('DROP VIEW IF EXISTS $name');
+                  print('Dropped view: $name');
+                  break;
+                case 'index':
+                  await txn.execute('DROP INDEX IF EXISTS $name');
+                  print('Dropped index: $name');
+                  break;
+              }
+            } catch (e) {
+              print('Error dropping $type $name: $e');
+            }
+          }
+        }
+
+        // إعادة تفعيل المفاتيح الخارجية
+        await txn.execute('PRAGMA foreign_keys = ON');
+
+        print('Comprehensive sales_old cleanup completed');
+      } catch (e) {
+        // التأكد من إعادة تفعيل المفاتيح الخارجية حتى لو فشل التنظيف
+        try {
+          await txn.execute('PRAGMA foreign_keys = ON');
+        } catch (_) {}
+        print('Error during comprehensive sales_old cleanup: $e');
+        rethrow;
+      }
+    });
+  }
+
+  // دالة الحصول على إحصائيات الأقساط
+  Future<Map<String, dynamic>> getInstallmentStatistics() async {
+    final now = DateTime.now().toIso8601String();
+
+    final totalInstallments = await _db.rawQuery('''
+      SELECT COUNT(*) as count, SUM(amount) as total
+      FROM installments
+    ''');
+
+    final paidInstallments = await _db.rawQuery('''
+      SELECT COUNT(*) as count, SUM(amount) as total
+      FROM installments
+      WHERE paid = 1
+    ''');
+
+    final unpaidInstallments = await _db.rawQuery('''
+      SELECT COUNT(*) as count, SUM(amount) as total
+      FROM installments
+      WHERE paid = 0
+    ''');
+
+    final overdueInstallments = await _db.rawQuery('''
+      SELECT COUNT(*) as count, SUM(amount) as total
+      FROM installments
+      WHERE paid = 0 AND due_date < ?
+    ''', [now]);
+
+    return {
+      'total_count': (totalInstallments.first['count'] as int),
+      'total_amount':
+          (totalInstallments.first['total'] as num?)?.toDouble() ?? 0.0,
+      'paid_count': (paidInstallments.first['count'] as int),
+      'paid_amount':
+          (paidInstallments.first['total'] as num?)?.toDouble() ?? 0.0,
+      'unpaid_count': (unpaidInstallments.first['count'] as int),
+      'unpaid_amount':
+          (unpaidInstallments.first['total'] as num?)?.toDouble() ?? 0.0,
+      'overdue_count': (overdueInstallments.first['count'] as int),
+      'overdue_amount':
+          (overdueInstallments.first['total'] as num?)?.toDouble() ?? 0.0,
+    };
   }
 }

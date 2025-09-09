@@ -355,6 +355,64 @@ class _SalesScreenState extends State<SalesScreen> {
                         onChanged: (v) => _customerAddress = v,
                       ),
                     ),
+                    // ملاحظة توضيحية لمعلومات العميل
+                    if (_type == 'cash') ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.info_outline,
+                                size: 16, color: Colors.blue.shade600),
+                            const SizedBox(width: 4),
+                            Text(
+                              'اختياري',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    // ملاحظة توضيحية للبيع الآجل
+                    if (_type == 'credit' || _type == 'installment') ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.warning_amber_outlined,
+                                size: 16, color: Colors.orange.shade600),
+                            const SizedBox(width: 4),
+                            Text(
+                              'مطلوب',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     // Due Date field - only show for credit payments
                     if (_type == 'credit') ...[
                       const SizedBox(width: 6),
@@ -1474,26 +1532,29 @@ class _SalesScreenState extends State<SalesScreen> {
                                           onPressed: _cart.isEmpty
                                               ? null
                                               : () async {
-                                                  // Validate customer information requirements
-                                                  if (_customerName
-                                                          .trim()
-                                                          .isEmpty ||
-                                                      _customerPhone
-                                                          .trim()
-                                                          .isEmpty ||
-                                                      _customerAddress
-                                                          .trim()
-                                                          .isEmpty) {
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
-                                                            const SnackBar(
-                                                      content: Text(
-                                                          'يرجى ملء جميع معلومات العميل'),
-                                                      backgroundColor:
-                                                          Colors.red,
-                                                    ));
-                                                    return;
+                                                  // Validate customer information requirements only for credit sales
+                                                  if (_type == 'credit' ||
+                                                      _type == 'installment') {
+                                                    if (_customerName
+                                                            .trim()
+                                                            .isEmpty ||
+                                                        _customerPhone
+                                                            .trim()
+                                                            .isEmpty ||
+                                                        _customerAddress
+                                                            .trim()
+                                                            .isEmpty) {
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                              const SnackBar(
+                                                        content: Text(
+                                                            'يرجى ملء جميع معلومات العميل للبيع الآجل'),
+                                                        backgroundColor:
+                                                            Colors.red,
+                                                      ));
+                                                      return;
+                                                    }
                                                   }
 
                                                   // Additional validation for credit sales
@@ -1568,11 +1629,36 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             : 'credit',
                                                     items: _cart,
                                                     decrementStock: false,
-                                                    customerName: _customerName,
-                                                    customerPhone:
-                                                        _customerPhone,
-                                                    customerAddress:
-                                                        _customerAddress,
+                                                    customerName: (_type ==
+                                                                'credit' ||
+                                                            _type ==
+                                                                'installment')
+                                                        ? _customerName
+                                                        : _customerName
+                                                                .trim()
+                                                                .isNotEmpty
+                                                            ? _customerName
+                                                            : null,
+                                                    customerPhone: (_type ==
+                                                                'credit' ||
+                                                            _type ==
+                                                                'installment')
+                                                        ? _customerPhone
+                                                        : _customerPhone
+                                                                .trim()
+                                                                .isNotEmpty
+                                                            ? _customerPhone
+                                                            : null,
+                                                    customerAddress: (_type ==
+                                                                'credit' ||
+                                                            _type ==
+                                                                'installment')
+                                                        ? _customerAddress
+                                                        : _customerAddress
+                                                                .trim()
+                                                                .isNotEmpty
+                                                            ? _customerAddress
+                                                            : null,
                                                     dueDate: _type == 'credit'
                                                         ? _dueDate
                                                         : null,

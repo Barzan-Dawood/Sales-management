@@ -20,6 +20,14 @@ Future<void> main() async {
   try {
     await databaseService.initialize();
 
+    // تنظيف إضافي للتأكد من عدم وجود مراجع لـ sales_old
+    try {
+      await databaseService.comprehensiveSalesOldCleanup();
+      await databaseService.cleanupAllTriggers();
+    } catch (e) {
+      print('Error during sales_old cleanup: $e');
+    }
+
     // Check database integrity and perform cleanup if needed
     final issues = await databaseService.checkDatabaseIntegrity();
     if (issues.isNotEmpty) {

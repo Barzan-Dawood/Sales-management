@@ -17,10 +17,15 @@ class _DebtsScreenState extends State<DebtsScreen>
   late TabController _tabController;
   int _refreshKey = 0; // مفتاح لإعادة تحميل البيانات
 
+  // فلترة الأقساط
+  String _installmentFilter = 'all'; // all, paid, unpaid, overdue
+  DateTime? _fromDate;
+  DateTime? _toDate;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -188,6 +193,10 @@ class _DebtsScreenState extends State<DebtsScreen>
                     icon: Icon(Icons.people, size: 20),
                     text: 'جميع العملاء',
                   ),
+                  Tab(
+                    icon: Icon(Icons.analytics, size: 20),
+                    text: 'التقارير',
+                  ),
                 ],
               ),
             ),
@@ -205,6 +214,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                   _buildFullyPaidCustomersTab(db),
                   // تبويب جميع العملاء
                   _buildAllCustomersTab(db),
+                  // تبويب التقارير
+                  _buildReportsTab(db),
                 ],
               ),
             ),
@@ -333,39 +344,152 @@ class _DebtsScreenState extends State<DebtsScreen>
   }
 
   Widget _buildInstallmentsTab(DatabaseService db) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      key: ValueKey('installments_$_refreshKey'),
-      future: db.getInstallments(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final installments = snapshot.data!;
-        final filteredInstallments = installments.where((installment) {
-          final customerName =
-              installment['customer_name']?.toString().toLowerCase() ?? '';
-          final phone =
-              installment['customer_phone']?.toString().toLowerCase() ?? '';
-          final query = _searchQuery.toLowerCase();
-          return customerName.contains(query) || phone.contains(query);
-        }).toList();
-
-        if (filteredInstallments.isEmpty) {
-          return const Center(
-            child: Text('لا يوجد أقساط'),
-          );
-        }
-
-        return ListView.builder(
+    return Column(
+      children: [
+        // شريط الفلترة
+        Container(
           padding: const EdgeInsets.all(16),
-          itemCount: filteredInstallments.length,
-          itemBuilder: (context, index) {
-            final installment = filteredInstallments[index];
-            return _buildInstallmentCard(context, installment, db);
-          },
-        );
-      },
+          color: Colors.grey.shade50,
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _installmentFilter,
+                      decoration: const InputDecoration(
+                        labelText: 'فلترة الأقساط',
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'all', child: Text('جميع الأقساط')),
+                        DropdownMenuItem(
+                            value: 'paid', child: Text('المدفوعة')),
+                        DropdownMenuItem(
+                            value: 'unpaid', child: Text('غير المدفوعة')),
+                        DropdownMenuItem(
+                            value: 'overdue', child: Text('المتأخرة')),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _installmentFilter = value ?? 'all';
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => _showDateRangeDialog(),
+                    icon: const Icon(Icons.date_range),
+                    tooltip: 'فلترة بالتاريخ',
+                  ),
+                ],
+              ),
+              if (_fromDate != null || _toDate != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (_fromDate != null)
+                      Chip(
+                        label: Text(
+                            'من: ${_fromDate!.day}/${_fromDate!.month}/${_fromDate!.year}'),
+                        onDeleted: () {
+                          setState(() {
+                            _fromDate = null;
+                          });
+                        },
+                      ),
+                    if (_toDate != null)
+                      Chip(
+                        label: Text(
+                            'إلى: ${_toDate!.day}/${_toDate!.month}/${_toDate!.year}'),
+                        onDeleted: () {
+                          setState(() {
+                            _toDate = null;
+                          });
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+
+        // قائمة الأقساط
+        Expanded(
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            key: ValueKey('installments_$_refreshKey'),
+            future: db.getInstallments(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final installments = snapshot.data!;
+              final filteredInstallments = installments.where((installment) {
+                // فلترة بالبحث
+                final customerName =
+                    installment['customer_name']?.toString().toLowerCase() ??
+                        '';
+                final phone =
+                    installment['customer_phone']?.toString().toLowerCase() ??
+                        '';
+                final query = _searchQuery.toLowerCase();
+                final matchesSearch =
+                    customerName.contains(query) || phone.contains(query);
+
+                if (!matchesSearch) return false;
+
+                // فلترة بالحالة
+                final isPaid = (installment['paid'] as int) == 1;
+                final dueDate = DateTime.parse(installment['due_date']);
+                final isOverdue = dueDate.isBefore(DateTime.now()) && !isPaid;
+
+                switch (_installmentFilter) {
+                  case 'paid':
+                    return isPaid;
+                  case 'unpaid':
+                    return !isPaid;
+                  case 'overdue':
+                    return isOverdue;
+                  default:
+                    return true;
+                }
+              }).where((installment) {
+                // فلترة بالتاريخ
+                if (_fromDate == null && _toDate == null) return true;
+
+                final dueDate = DateTime.parse(installment['due_date']);
+
+                if (_fromDate != null && dueDate.isBefore(_fromDate!))
+                  return false;
+                if (_toDate != null && dueDate.isAfter(_toDate!)) return false;
+
+                return true;
+              }).toList();
+
+              if (filteredInstallments.isEmpty) {
+                return const Center(
+                  child: Text('لا يوجد أقساط تطابق الفلترة المحددة'),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: filteredInstallments.length,
+                itemBuilder: (context, index) {
+                  final installment = filteredInstallments[index];
+                  return _buildInstallmentCard(context, installment, db);
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -408,6 +532,389 @@ class _DebtsScreenState extends State<DebtsScreen>
           },
         );
       },
+    );
+  }
+
+  Widget _buildReportsTab(DatabaseService db) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // إحصائيات الأقساط
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'إحصائيات الأقساط',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FutureBuilder<Map<String, dynamic>>(
+                    future: db.getInstallmentStatistics(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final stats = snapshot.data!;
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  'إجمالي الأقساط',
+                                  '${stats['total_count']}',
+                                  Formatters.currencyIQD(stats['total_amount']),
+                                  Colors.blue,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildStatCard(
+                                  'المدفوعة',
+                                  '${stats['paid_count']}',
+                                  Formatters.currencyIQD(stats['paid_amount']),
+                                  Colors.green,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  'غير المدفوعة',
+                                  '${stats['unpaid_count']}',
+                                  Formatters.currencyIQD(
+                                      stats['unpaid_amount']),
+                                  Colors.orange,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildStatCard(
+                                  'المتأخرة',
+                                  '${stats['overdue_count']}',
+                                  Formatters.currencyIQD(
+                                      stats['overdue_amount']),
+                                  Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // الأقساط المتأخرة
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'الأقساط المتأخرة',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: db.getOverdueInstallments(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final overdueInstallments = snapshot.data!;
+
+                      if (overdueInstallments.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'لا توجد أقساط متأخرة',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: overdueInstallments.length,
+                        itemBuilder: (context, index) {
+                          final installment = overdueInstallments[index];
+                          final daysOverdue =
+                              (installment['days_overdue'] as num).toInt();
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            color: Colors.red.shade50,
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.red.shade100,
+                                child: Icon(
+                                  Icons.warning,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                installment['customer_name'] ?? 'غير محدد',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      'المبلغ: ${Formatters.currencyIQD(installment['amount'])}'),
+                                  Text('متأخر $daysOverdue يوم'),
+                                ],
+                              ),
+                              trailing: Text(
+                                '${DateTime.parse(installment['due_date']).day}/${DateTime.parse(installment['due_date']).month}/${DateTime.parse(installment['due_date']).year}',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // الأقساط المستحقة هذا الشهر
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'الأقساط المستحقة هذا الشهر',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: db.getCurrentMonthInstallments(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final currentMonthInstallments = snapshot.data!;
+
+                      if (currentMonthInstallments.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'لا توجد أقساط مستحقة هذا الشهر',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: currentMonthInstallments.length,
+                        itemBuilder: (context, index) {
+                          final installment = currentMonthInstallments[index];
+                          final dueDate =
+                              DateTime.parse(installment['due_date']);
+                          final isOverdue = dueDate.isBefore(DateTime.now());
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            color: isOverdue
+                                ? Colors.orange.shade50
+                                : Colors.blue.shade50,
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: isOverdue
+                                    ? Colors.orange.shade100
+                                    : Colors.blue.shade100,
+                                child: Icon(
+                                  isOverdue ? Icons.warning : Icons.schedule,
+                                  color:
+                                      isOverdue ? Colors.orange : Colors.blue,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                installment['customer_name'] ?? 'غير محدد',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(
+                                  'المبلغ: ${Formatters.currencyIQD(installment['amount'])}'),
+                              trailing: Text(
+                                '${dueDate.day}/${dueDate.month}/${dueDate.year}',
+                                style: TextStyle(
+                                  color:
+                                      isOverdue ? Colors.orange : Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+      String title, String count, String amount, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            count,
+            style: TextStyle(
+              fontSize: 16,
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            amount,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // دالة عرض نافذة اختيار نطاق التاريخ
+  void _showDateRangeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('فلترة بالتاريخ'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('من تاريخ'),
+                subtitle: Text(_fromDate != null
+                    ? '${_fromDate!.day}/${_fromDate!.month}/${_fromDate!.year}'
+                    : 'لم يتم تحديد تاريخ'),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _fromDate ?? DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (date != null) {
+                    setState(() {
+                      _fromDate = date;
+                    });
+                  }
+                },
+              ),
+              ListTile(
+                title: const Text('إلى تاريخ'),
+                subtitle: Text(_toDate != null
+                    ? '${_toDate!.day}/${_toDate!.month}/${_toDate!.year}'
+                    : 'لم يتم تحديد تاريخ'),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _toDate ?? DateTime.now(),
+                    firstDate: _fromDate ?? DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (date != null) {
+                    setState(() {
+                      _toDate = date;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _fromDate = null;
+                  _toDate = null;
+                });
+                Navigator.pop(context);
+              },
+              child: const Text('مسح الفلترة'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('تطبيق'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -465,27 +972,51 @@ class _DebtsScreenState extends State<DebtsScreen>
               ),
           ],
         ),
-        trailing: isPaid
-            ? const Icon(Icons.check_circle, color: Colors.green)
-            : PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'pay') {
-                    _showPayInstallmentDialog(context, installment, db);
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'pay',
-                    child: Row(
-                      children: [
-                        Icon(Icons.payment, color: Colors.blue),
-                        SizedBox(width: 8),
-                        Text('دفع القسط'),
-                      ],
-                    ),
-                  ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'pay' && !isPaid) {
+              _showPayInstallmentDialog(context, installment, db);
+            } else if (value == 'edit') {
+              _editInstallment(context, installment, db);
+            } else if (value == 'delete') {
+              _deleteInstallment(context, installment, db);
+            }
+          },
+          itemBuilder: (context) => [
+            if (!isPaid) ...[
+              const PopupMenuItem(
+                value: 'pay',
+                child: Row(
+                  children: [
+                    Icon(Icons.payment, size: 16, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('دفع القسط'),
+                  ],
+                ),
+              ),
+            ],
+            const PopupMenuItem(
+              value: 'edit',
+              child: Row(
+                children: [
+                  Icon(Icons.edit, size: 16, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Text('تعديل القسط'),
                 ],
               ),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete, size: 16, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('حذف القسط'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -580,6 +1111,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                   _showAddDebtDialog(context, db, customer: customer);
                 } else if (value == 'add_installment') {
                   _showAddInstallmentDialog(context, db, customer: customer);
+                } else if (value == 'print_statement') {
+                  _printCustomerStatement(context, customer, db);
                 } else if (value == 'delete') {
                   _showDeleteCustomerDialog(context, customer, db);
                 }
@@ -623,6 +1156,17 @@ class _DebtsScreenState extends State<DebtsScreen>
                       SizedBox(width: 8),
                       Text('إضافة دين بالأقساط',
                           style: TextStyle(color: Colors.purple)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'print_statement',
+                  child: Row(
+                    children: [
+                      Icon(Icons.print, size: 16, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('طباعة كشف حساب',
+                          style: TextStyle(color: Colors.blue)),
                     ],
                   ),
                 ),
@@ -1511,5 +2055,276 @@ class _DebtsScreenState extends State<DebtsScreen>
         ),
       ),
     );
+  }
+
+  // دالة تعديل القسط
+  void _editInstallment(
+    BuildContext context,
+    Map<String, dynamic> installment,
+    DatabaseService db,
+  ) {
+    final amountController = TextEditingController(
+      text: (installment['amount'] as num).toString(),
+    );
+    final dueDateController = TextEditingController(
+      text: installment['due_date'].toString().split(' ')[0],
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('تعديل القسط'),
+          content: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: amountController,
+                  decoration: const InputDecoration(
+                    labelText: 'مبلغ القسط',
+                    border: OutlineInputBorder(),
+                    prefixText: 'د.ع ',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: dueDateController,
+                  decoration: const InputDecoration(
+                    labelText: 'تاريخ الاستحقاق',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  readOnly: true,
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.parse(installment['due_date']),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (date != null) {
+                      dueDateController.text = date.toString().split(' ')[0];
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (amountController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('يرجى إدخال مبلغ القسط'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                try {
+                  await db.updateInstallment(
+                    installment['id'],
+                    double.parse(amountController.text),
+                    DateTime.parse(dueDateController.text),
+                  );
+
+                  Navigator.pop(context);
+                  _refreshData();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('تم تعديل القسط بنجاح'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('خطأ في تعديل القسط: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('حفظ'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // دالة حذف القسط
+  void _deleteInstallment(
+    BuildContext context,
+    Map<String, dynamic> installment,
+    DatabaseService db,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('حذف القسط'),
+          content: Text(
+            'هل أنت متأكد من حذف قسط ${Formatters.currencyIQD(installment['amount'])} للعميل ${installment['customer_name']}؟',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await db.deleteInstallment(installment['id']);
+                  Navigator.pop(context);
+                  _refreshData();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('تم حذف القسط بنجاح'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('خطأ في حذف القسط: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('حذف'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // دالة طباعة كشف حساب العميل
+  void _printCustomerStatement(
+    BuildContext context,
+    Map<String, dynamic> customer,
+    DatabaseService db,
+  ) async {
+    try {
+      // إظهار مؤشر التحميل
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // الحصول على بيانات العميل والمدفوعات
+      final customerId = customer['id'];
+      final payments = await db.getCustomerPayments(customerId: customerId);
+      final debtData = await _getCustomerDebtData(customerId, db);
+
+      // إغلاق مؤشر التحميل
+      Navigator.pop(context);
+
+      // إنشاء كشف الحساب
+      final statement = _generateCustomerStatement(
+        customer,
+        payments,
+        debtData,
+      );
+
+      // طباعة كشف الحساب
+      await _printStatement(statement);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم طباعة كشف الحساب بنجاح'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // إغلاق مؤشر التحميل في حالة الخطأ
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في طباعة كشف الحساب: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // دالة إنشاء كشف الحساب
+  String _generateCustomerStatement(
+    Map<String, dynamic> customer,
+    List<Map<String, dynamic>> payments,
+    Map<String, dynamic> debtData,
+  ) {
+    final buffer = StringBuffer();
+
+    buffer.writeln('=' * 50);
+    buffer.writeln('كشف حساب العميل');
+    buffer.writeln('=' * 50);
+    buffer.writeln();
+
+    buffer.writeln('اسم العميل: ${customer['name'] ?? 'غير محدد'}');
+    buffer.writeln('رقم الهاتف: ${customer['phone'] ?? 'غير محدد'}');
+    buffer.writeln('العنوان: ${customer['address'] ?? 'غير محدد'}');
+    buffer.writeln(
+        'تاريخ الطباعة: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}');
+    buffer.writeln();
+
+    buffer.writeln('-' * 50);
+    buffer.writeln('ملخص الحساب');
+    buffer.writeln('-' * 50);
+    buffer.writeln(
+        'إجمالي الدين: ${Formatters.currencyIQD(debtData['totalDebt'])}');
+    buffer.writeln(
+        'إجمالي المدفوع: ${Formatters.currencyIQD(debtData['totalPaid'])}');
+    buffer.writeln(
+        'المتبقي: ${Formatters.currencyIQD(debtData['remainingDebt'])}');
+    buffer.writeln();
+
+    if (payments.isNotEmpty) {
+      buffer.writeln('-' * 50);
+      buffer.writeln('سجل المدفوعات');
+      buffer.writeln('-' * 50);
+
+      for (final payment in payments) {
+        buffer.writeln('التاريخ: ${payment['payment_date']}');
+        buffer.writeln('المبلغ: ${Formatters.currencyIQD(payment['amount'])}');
+        buffer.writeln('الوصف: ${payment['description'] ?? 'دفعة'}');
+        buffer.writeln();
+      }
+    }
+
+    buffer.writeln('=' * 50);
+    buffer.writeln('نهاية كشف الحساب');
+    buffer.writeln('=' * 50);
+
+    return buffer.toString();
+  }
+
+  // دالة طباعة كشف الحساب
+  Future<void> _printStatement(String statement) async {
+    // في التطبيق الحقيقي، يمكن استخدام مكتبة الطباعة
+    // هنا سنعرض النص في نافذة منبثقة للعرض
+    print('كشف الحساب:');
+    print(statement);
   }
 }
