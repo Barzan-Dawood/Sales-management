@@ -44,6 +44,8 @@ class DatabaseService {
         if (oldVersion < 6) {
           await _migrateToV6(db);
         }
+        // Ensure no legacy triggers/views remain that reference old temp tables
+        await _cleanupOrphanObjects(db);
         await _ensureCategorySchemaOn(db);
         await _createIndexes(db);
       },
@@ -51,9 +53,12 @@ class DatabaseService {
     // Enforce foreign keys and ensure indexes on every open
     await _db.execute('PRAGMA foreign_keys = ON');
     await _createIndexes(_db);
+    await _cleanupOrphanObjects(_db);
     await _ensureAdminPlainCredentials();
     // Ensure new tables/columns exist even if version didn't change
     await _ensureCategorySchemaOn(_db);
+    // Clean up any sales_old references
+    await cleanupSalesOldReferences();
   }
 
   Future<void> reopen() async {
@@ -61,7 +66,357 @@ class DatabaseService {
     _db = await openDatabase(_dbPath, version: _dbVersion);
     await _db.execute('PRAGMA foreign_keys = ON');
     await _createIndexes(_db);
+    await _cleanupOrphanObjects(_db);
     await _ensureCategorySchemaOn(_db);
+    await cleanupSalesOldReferences();
+  }
+
+  /// Force a complete cleanup of orphaned database objects
+  /// This method can be called to resolve database corruption issues
+  Future<void> forceCleanup() async {
+    try {
+      await _cleanupOrphanObjects(_db);
+      await _createIndexes(_db);
+      await _ensureCategorySchemaOn(_db);
+    } catch (e) {
+      print('Error during force cleanup: $e');
+      rethrow;
+    }
+  }
+
+  /// Clean up sales_old references specifically
+  Future<void> cleanupSalesOldReferences() async {
+    try {
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      // Drop sales_old table if exists
+      await _db.execute('DROP TABLE IF EXISTS sales_old');
+
+      // Find and drop all objects referencing sales_old
+      final orphanObjects = await _db.rawQuery('''
+        SELECT type, name FROM sqlite_master 
+        WHERE type IN ('trigger', 'view', 'index') 
+        AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
+      ''');
+
+      for (final row in orphanObjects) {
+        final type = row['type']?.toString();
+        final name = row['name']?.toString();
+        if (type != null && name != null && name.isNotEmpty) {
+          try {
+            String dropCommand;
+            switch (type) {
+              case 'view':
+                dropCommand = 'DROP VIEW IF EXISTS $name';
+                break;
+              case 'index':
+                dropCommand = 'DROP INDEX IF EXISTS $name';
+                break;
+              case 'trigger':
+                dropCommand = 'DROP TRIGGER IF EXISTS $name';
+                break;
+              default:
+                continue;
+            }
+            await _db.execute(dropCommand);
+            print('Cleaned up orphaned $type: $name');
+          } catch (e) {
+            print('Error cleaning up $type $name: $e');
+          }
+        }
+      }
+
+      await _db.execute('PRAGMA foreign_keys = ON');
+      print('Sales_old cleanup completed');
+    } catch (e) {
+      await _db.execute('PRAGMA foreign_keys = ON');
+      print('Error during sales_old cleanup: $e');
+      rethrow;
+    }
+  }
+
+  /// Debug function to check customer deletion status
+  Future<Map<String, dynamic>> debugCustomerDeletion(int customerId) async {
+    final result = <String, dynamic>{};
+
+    try {
+      // Check if customer exists
+      final customer = await _db
+          .query('customers', where: 'id = ?', whereArgs: [customerId]);
+      result['customer_exists'] = customer.isNotEmpty;
+
+      if (customer.isNotEmpty) {
+        result['customer_data'] = customer.first;
+      }
+
+      // Check related sales
+      final sales = await _db
+          .query('sales', where: 'customer_id = ?', whereArgs: [customerId]);
+      result['sales_count'] = sales.length;
+      result['sales_data'] = sales;
+
+      // Check related payments
+      final payments = await _db
+          .query('payments', where: 'customer_id = ?', whereArgs: [customerId]);
+      result['payments_count'] = payments.length;
+      result['payments_data'] = payments;
+
+      // Check related installments
+      final installments = await _db.rawQuery('''
+        SELECT i.* FROM installments i
+        JOIN sales s ON s.id = i.sale_id
+        WHERE s.customer_id = ?
+      ''', [customerId]);
+      result['installments_count'] = installments.length;
+      result['installments_data'] = installments;
+
+      // Check related sale_items
+      final saleItems = await _db.rawQuery('''
+        SELECT si.* FROM sale_items si
+        JOIN sales s ON s.id = si.sale_id
+        WHERE s.customer_id = ?
+      ''', [customerId]);
+      result['sale_items_count'] = saleItems.length;
+      result['sale_items_data'] = saleItems;
+    } catch (e) {
+      result['error'] = e.toString();
+    }
+
+    return result;
+  }
+
+  /// Aggressive cleanup that rebuilds sale_items table if necessary
+  Future<void> aggressiveCleanup() async {
+    try {
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      // First, try the normal cleanup
+      await _cleanupOrphanObjects(_db);
+
+      // If that doesn't work, completely rebuild sale_items
+      try {
+        // Check if sale_items exists and is corrupted
+        final saleItemsCheck = await _db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='sale_items'");
+
+        if (saleItemsCheck.isNotEmpty) {
+          // Backup existing data
+          final existingData = await _db.rawQuery('SELECT * FROM sale_items');
+
+          // Drop and recreate the table
+          await _db.execute('DROP TABLE sale_items');
+
+          // Recreate with proper structure
+          await _db.execute('''
+            CREATE TABLE sale_items (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              sale_id INTEGER NOT NULL,
+              product_id INTEGER NOT NULL,
+              price REAL NOT NULL,
+              cost REAL NOT NULL,
+              quantity INTEGER NOT NULL,
+              FOREIGN KEY(sale_id) REFERENCES sales(id),
+              FOREIGN KEY(product_id) REFERENCES products(id)
+            );
+          ''');
+
+          // Restore data if any
+          if (existingData.isNotEmpty) {
+            for (final row in existingData) {
+              await _db.insert('sale_items', {
+                'sale_id': row['sale_id'],
+                'product_id': row['product_id'],
+                'price': row['price'],
+                'cost': row['cost'],
+                'quantity': row['quantity'],
+              });
+            }
+          }
+        }
+      } catch (e) {
+        print('Error rebuilding sale_items: $e');
+      }
+
+      // Ensure all core tables exist
+      await _db.execute('''
+        CREATE TABLE IF NOT EXISTS sales (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER,
+          total REAL NOT NULL,
+          profit REAL NOT NULL DEFAULT 0,
+          type TEXT NOT NULL CHECK(type IN ('cash','installment','credit')),
+          created_at TEXT NOT NULL,
+          due_date TEXT,
+          down_payment REAL DEFAULT 0,
+          FOREIGN KEY(customer_id) REFERENCES customers(id)
+        );
+      ''');
+
+      await _db.execute('''
+        CREATE TABLE IF NOT EXISTS sale_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sale_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          price REAL NOT NULL,
+          cost REAL NOT NULL,
+          quantity INTEGER NOT NULL,
+          FOREIGN KEY(sale_id) REFERENCES sales(id),
+          FOREIGN KEY(product_id) REFERENCES products(id)
+        );
+      ''');
+
+      // Recreate indexes
+      await _createIndexes(_db);
+      await _ensureCategorySchemaOn(_db);
+
+      // Re-enable foreign keys
+      await _db.execute('PRAGMA foreign_keys = ON');
+    } catch (e) {
+      // Ensure foreign keys are re-enabled
+      try {
+        await _db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+      print('Error during aggressive cleanup: $e');
+      rethrow;
+    }
+  }
+
+  /// Check database integrity and return any issues found
+  Future<List<String>> checkDatabaseIntegrity() async {
+    final issues = <String>[];
+
+    try {
+      // Check for sales_old table
+      final salesOldCheck = await _db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='sales_old'");
+      if (salesOldCheck.isNotEmpty) {
+        issues.add('Found orphaned sales_old table');
+      }
+
+      // Check for objects referencing sales_old
+      final salesOldRefs = await _db.rawQuery('''
+        SELECT type, name FROM sqlite_master 
+        WHERE type IN ('trigger', 'view', 'index') 
+        AND IFNULL(sql,'') LIKE '%sales_old%'
+      ''');
+      if (salesOldRefs.isNotEmpty) {
+        issues
+            .add('Found ${salesOldRefs.length} objects referencing sales_old');
+      }
+
+      // Check if sale_items is a view instead of table
+      final saleItemsType = await _db.rawQuery(
+          "SELECT type FROM sqlite_master WHERE name='sale_items' LIMIT 1");
+      if (saleItemsType.isNotEmpty && saleItemsType.first['type'] == 'view') {
+        issues.add('sale_items is a view instead of a table');
+      }
+
+      // Check foreign key constraints
+      final fkCheck = await _db.rawQuery('PRAGMA foreign_key_check');
+      if (fkCheck.isNotEmpty) {
+        issues.add('Found ${fkCheck.length} foreign key constraint violations');
+      }
+    } catch (e) {
+      issues.add('Error checking database integrity: $e');
+    }
+
+    return issues;
+  }
+
+  /// Debug method to find all references to sales_old
+  Future<Map<String, dynamic>> debugSalesOldReferences() async {
+    final result = <String, dynamic>{};
+
+    try {
+      // Get all objects in main schema
+      final mainObjects = await _db.rawQuery('''
+        SELECT type, name, sql FROM sqlite_master 
+        WHERE IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%'
+        ORDER BY type, name
+      ''');
+      result['main_schema'] = mainObjects;
+
+      // Get all objects in temp schema
+      final tempObjects = await _db.rawQuery('''
+        SELECT type, name, sql FROM sqlite_temp_master 
+        WHERE IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%'
+        ORDER BY type, name
+      ''');
+      result['temp_schema'] = tempObjects;
+
+      // Get all triggers
+      final allTriggers = await _db.rawQuery('''
+        SELECT name, sql FROM sqlite_master WHERE type='trigger'
+        UNION ALL
+        SELECT name, sql FROM sqlite_temp_master WHERE type='trigger'
+      ''');
+      result['all_triggers'] = allTriggers;
+
+      // Get table info for sale_items
+      final saleItemsInfo = await _db.rawQuery('''
+        SELECT * FROM sqlite_master WHERE name='sale_items'
+      ''');
+      result['sale_items_info'] = saleItemsInfo;
+
+      // Get foreign key info
+      final fkInfo = await _db.rawQuery('PRAGMA foreign_key_list(sale_items)');
+      result['sale_items_fk'] = fkInfo;
+    } catch (e) {
+      result['error'] = e.toString();
+    }
+
+    return result;
+  }
+
+  /// Emergency method to completely reset sale_items table
+  /// Use this only if all other cleanup methods fail
+  Future<void> emergencyResetSaleItems() async {
+    try {
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      // Get all existing data
+      final existingData = await _db.rawQuery('SELECT * FROM sale_items');
+      print('Backing up ${existingData.length} sale_items records');
+
+      // Drop the table completely
+      await _db.execute('DROP TABLE IF EXISTS sale_items');
+
+      // Recreate with clean structure
+      await _db.execute('''
+        CREATE TABLE sale_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sale_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          price REAL NOT NULL,
+          cost REAL NOT NULL,
+          quantity INTEGER NOT NULL,
+          FOREIGN KEY(sale_id) REFERENCES sales(id),
+          FOREIGN KEY(product_id) REFERENCES products(id)
+        );
+      ''');
+
+      // Restore data
+      for (final row in existingData) {
+        await _db.insert('sale_items', {
+          'sale_id': row['sale_id'],
+          'product_id': row['product_id'],
+          'price': row['price'],
+          'cost': row['cost'],
+          'quantity': row['quantity'],
+        });
+      }
+
+      print('Restored ${existingData.length} sale_items records');
+
+      // Re-enable foreign keys
+      await _db.execute('PRAGMA foreign_keys = ON');
+    } catch (e) {
+      try {
+        await _db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+      print('Error during emergency reset: $e');
+      rethrow;
+    }
   }
 
   Future<void> _migrateToV2(Database db) async {
@@ -85,6 +440,118 @@ class DatabaseService {
     ''');
     await db.execute('DROP TABLE sales_old');
     await db.execute('PRAGMA foreign_keys=on');
+  }
+
+  Future<void> _cleanupOrphanObjects(Database db) async {
+    try {
+      // Disable foreign keys temporarily for cleanup
+      await db.execute('PRAGMA foreign_keys = OFF');
+
+      // Drop leftover temporary renamed table if present
+      try {
+        await db.execute('DROP TABLE IF EXISTS sales_old');
+      } catch (_) {}
+
+      // Get all database objects that might reference sales_old
+      final allObjects = await db.rawQuery('''
+        SELECT type, name, sql FROM sqlite_master 
+        WHERE type IN ('trigger', 'view', 'index', 'table') 
+        AND (IFNULL(sql,'') LIKE '%sales_old%' OR name = 'sales_old')
+        UNION ALL
+        SELECT type, name, sql FROM sqlite_temp_master 
+        WHERE type IN ('trigger', 'view', 'index', 'table') 
+        AND (IFNULL(sql,'') LIKE '%sales_old%' OR name = 'sales_old')
+      ''');
+
+      for (final row in allObjects) {
+        final type = row['type']?.toString();
+        final name = row['name']?.toString();
+        if (type != null && name != null && name.isNotEmpty) {
+          try {
+            String dropCommand;
+            switch (type) {
+              case 'view':
+                dropCommand = 'DROP VIEW IF EXISTS $name';
+                break;
+              case 'index':
+                dropCommand = 'DROP INDEX IF EXISTS $name';
+                break;
+              case 'trigger':
+                dropCommand = 'DROP TRIGGER IF EXISTS $name';
+                break;
+              case 'table':
+                if (name == 'sales_old') {
+                  dropCommand = 'DROP TABLE IF EXISTS $name';
+                } else {
+                  continue; // Skip other tables
+                }
+                break;
+              default:
+                continue;
+            }
+            await db.execute(dropCommand);
+          } catch (_) {}
+        }
+      }
+
+      // Drop any triggers on sale_items (we don't use triggers in current schema)
+      final saleItemsTriggers = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name='sale_items'");
+      for (final row in saleItemsTriggers) {
+        final name = row['name']?.toString();
+        if (name != null && name.isNotEmpty) {
+          try {
+            await db.execute('DROP TRIGGER IF EXISTS $name');
+          } catch (_) {}
+        }
+      }
+
+      // Ensure sale_items is a real table (not a leftover view)
+      final saleItemsObj = await db.rawQuery(
+          "SELECT type FROM sqlite_master WHERE name='sale_items' LIMIT 1");
+      if (saleItemsObj.isNotEmpty && saleItemsObj.first['type'] == 'view') {
+        try {
+          await db.execute('DROP VIEW IF EXISTS sale_items');
+        } catch (_) {}
+      }
+
+      // Re-ensure core tables exist with proper structure
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sales (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER,
+          total REAL NOT NULL,
+          profit REAL NOT NULL DEFAULT 0,
+          type TEXT NOT NULL CHECK(type IN ('cash','installment','credit')),
+          created_at TEXT NOT NULL,
+          due_date TEXT,
+          down_payment REAL DEFAULT 0,
+          FOREIGN KEY(customer_id) REFERENCES customers(id)
+        );
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sale_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sale_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          price REAL NOT NULL,
+          cost REAL NOT NULL,
+          quantity INTEGER NOT NULL,
+          FOREIGN KEY(sale_id) REFERENCES sales(id),
+          FOREIGN KEY(product_id) REFERENCES products(id)
+        );
+      ''');
+
+      // Re-enable foreign keys
+      await db.execute('PRAGMA foreign_keys = ON');
+    } catch (e) {
+      // Ensure foreign keys are re-enabled even if cleanup fails
+      try {
+        await db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+      // best-effort cleanup
+    }
   }
 
   Future<void> _ensureAdminPlainCredentials() async {
@@ -440,8 +907,106 @@ class DatabaseService {
     return _db.update('customers', values, where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<int> deleteCustomer(int id) =>
-      _db.delete('customers', where: 'id = ?', whereArgs: [id]);
+  Future<int> deleteCustomer(int id) async {
+    return _db.transaction<int>((txn) async {
+      try {
+        print('Starting deletion of customer ID: $id');
+
+        // تنظيف المراجع القديمة قبل البدء
+        try {
+          await txn.execute('PRAGMA foreign_keys = OFF');
+          await txn.execute('DROP TABLE IF EXISTS sales_old');
+
+          // حذف أي triggers أو views تشير إلى sales_old
+          final orphanObjects = await txn.rawQuery('''
+            SELECT type, name FROM sqlite_master 
+            WHERE type IN ('trigger', 'view', 'index') 
+            AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
+          ''');
+
+          for (final row in orphanObjects) {
+            final type = row['type']?.toString();
+            final name = row['name']?.toString();
+            if (type != null && name != null && name.isNotEmpty) {
+              try {
+                String dropCommand;
+                switch (type) {
+                  case 'view':
+                    dropCommand = 'DROP VIEW IF EXISTS $name';
+                    break;
+                  case 'index':
+                    dropCommand = 'DROP INDEX IF EXISTS $name';
+                    break;
+                  case 'trigger':
+                    dropCommand = 'DROP TRIGGER IF EXISTS $name';
+                    break;
+                  default:
+                    continue;
+                }
+                await txn.execute(dropCommand);
+                print('Dropped orphaned $type: $name');
+              } catch (e) {
+                print('Error dropping $type $name: $e');
+              }
+            }
+          }
+
+          await txn.execute('PRAGMA foreign_keys = ON');
+        } catch (e) {
+          print('Error during cleanup: $e');
+          await txn.execute('PRAGMA foreign_keys = ON');
+        }
+
+        // التحقق من وجود العميل أولاً
+        final customerExists = await txn.query('customers',
+            columns: ['id'], where: 'id = ?', whereArgs: [id]);
+        if (customerExists.isEmpty) {
+          print('Customer with ID $id does not exist');
+          return 0;
+        }
+
+        // أولاً، الحصول على معرفات المبيعات المرتبطة بالعميل
+        final sales = await txn.query('sales',
+            columns: ['id'], where: 'customer_id = ?', whereArgs: [id]);
+        print('Found ${sales.length} sales for customer $id');
+
+        // حذف عناصر المبيعات المرتبطة
+        for (final sale in sales) {
+          final deletedItems = await txn.delete('sale_items',
+              where: 'sale_id = ?', whereArgs: [sale['id']]);
+          print('Deleted $deletedItems sale_items for sale ${sale['id']}');
+        }
+
+        // حذف المدفوعات المرتبطة بالعميل
+        final deletedPayments = await txn
+            .delete('payments', where: 'customer_id = ?', whereArgs: [id]);
+        print('Deleted $deletedPayments payments for customer $id');
+
+        // حذف الأقساط المرتبطة بالمبيعات
+        for (final sale in sales) {
+          final deletedInstallments = await txn.delete('installments',
+              where: 'sale_id = ?', whereArgs: [sale['id']]);
+          print(
+              'Deleted $deletedInstallments installments for sale ${sale['id']}');
+        }
+
+        // حذف المبيعات المرتبطة بالعميل
+        final deletedSales = await txn
+            .delete('sales', where: 'customer_id = ?', whereArgs: [id]);
+        print('Deleted $deletedSales sales for customer $id');
+
+        // حذف العميل نفسه
+        final deletedRows =
+            await txn.delete('customers', where: 'id = ?', whereArgs: [id]);
+        print('Deleted $deletedRows customers with ID $id');
+
+        return deletedRows;
+      } catch (e) {
+        print('Error deleting customer: $e');
+        rethrow;
+      }
+    });
+  }
 
   // Suppliers
   Future<List<Map<String, Object?>>> getSuppliers({String? query}) async {
@@ -632,6 +1197,106 @@ class DatabaseService {
       double? downPayment,
       DateTime? firstInstallmentDate}) async {
     return _db.transaction<int>((txn) async {
+      // Defensive cleanup to neutralize legacy objects referencing sales_old
+      try {
+        // Disable foreign keys temporarily for cleanup
+        await txn.execute('PRAGMA foreign_keys = OFF');
+
+        // Drop the sales_old table if it exists
+        await txn.execute('DROP TABLE IF EXISTS sales_old');
+
+        // Get all objects that reference sales_old from both main and temp schemas
+        final allObjects = await txn.rawQuery('''
+          SELECT type, name FROM sqlite_master 
+          WHERE type IN ('trigger', 'view', 'index') 
+          AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
+          UNION ALL
+          SELECT type, name FROM sqlite_temp_master 
+          WHERE type IN ('trigger', 'view', 'index') 
+          AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
+        ''');
+
+        for (final row in allObjects) {
+          final type = row['type']?.toString();
+          final name = row['name']?.toString();
+          if (type != null && name != null && name.isNotEmpty) {
+            try {
+              String dropCommand;
+              switch (type) {
+                case 'view':
+                  dropCommand = 'DROP VIEW IF EXISTS $name';
+                  break;
+                case 'index':
+                  dropCommand = 'DROP INDEX IF EXISTS $name';
+                  break;
+                case 'trigger':
+                  dropCommand = 'DROP TRIGGER IF EXISTS $name';
+                  break;
+                default:
+                  continue;
+              }
+              await txn.execute(dropCommand);
+            } catch (_) {}
+          }
+        }
+
+        // Drop any triggers on sale_items that might reference old tables
+        final siTriggers = await txn.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name='sale_items'");
+        for (final row in siTriggers) {
+          final name = row['name']?.toString();
+          if (name != null && name.isNotEmpty) {
+            try {
+              await txn.execute('DROP TRIGGER IF EXISTS $name');
+            } catch (_) {}
+          }
+        }
+
+        // Ensure sale_items is not a VIEW
+        final siType = await txn.rawQuery(
+            "SELECT type FROM sqlite_master WHERE name='sale_items' LIMIT 1");
+        if (siType.isNotEmpty && (siType.first['type']?.toString() == 'view')) {
+          try {
+            await txn.execute('DROP VIEW IF EXISTS sale_items');
+          } catch (_) {}
+        }
+
+        // Re-ensure core tables exist
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id INTEGER,
+            total REAL NOT NULL,
+            profit REAL NOT NULL DEFAULT 0,
+            type TEXT NOT NULL CHECK(type IN ('cash','installment','credit')),
+            created_at TEXT NOT NULL,
+            due_date TEXT,
+            down_payment REAL DEFAULT 0,
+            FOREIGN KEY(customer_id) REFERENCES customers(id)
+          );
+        ''');
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS sale_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sale_id INTEGER NOT NULL,
+            product_id INTEGER NOT NULL,
+            price REAL NOT NULL,
+            cost REAL NOT NULL,
+            quantity INTEGER NOT NULL,
+            FOREIGN KEY(sale_id) REFERENCES sales(id),
+            FOREIGN KEY(product_id) REFERENCES products(id)
+          );
+        ''');
+
+        // Re-enable foreign keys
+        await txn.execute('PRAGMA foreign_keys = ON');
+      } catch (e) {
+        // Ensure foreign keys are re-enabled even if cleanup fails
+        try {
+          await txn.execute('PRAGMA foreign_keys = ON');
+        } catch (_) {}
+      }
+
       double total = 0;
       double profit = 0;
       for (final it in items) {
@@ -686,17 +1351,23 @@ class DatabaseService {
 
       // إضافة عناصر البيع
       for (final it in items) {
-        await txn.insert('sale_items', {
-          'sale_id': saleId,
-          'product_id': it['product_id'],
-          'price': it['price'],
-          'cost': it['cost'],
-          'quantity': it['quantity'],
-        });
-        if (decrementStock) {
-          await txn.rawUpdate(
-              'UPDATE products SET quantity = quantity - ? WHERE id = ?',
-              [it['quantity'], it['product_id']]);
+        try {
+          await txn.insert('sale_items', {
+            'sale_id': saleId,
+            'product_id': it['product_id'],
+            'price': it['price'],
+            'cost': it['cost'],
+            'quantity': it['quantity'],
+          });
+          if (decrementStock) {
+            await txn.rawUpdate(
+                'UPDATE products SET quantity = quantity - ? WHERE id = ?',
+                [it['quantity'], it['product_id']]);
+          }
+        } catch (e) {
+          print('Error inserting sale item: $e');
+          print('Sale ID: $saleId, Product ID: ${it['product_id']}');
+          rethrow;
         }
       }
 

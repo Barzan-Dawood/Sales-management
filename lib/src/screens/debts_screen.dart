@@ -15,6 +15,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   late TabController _tabController;
+  int _refreshKey = 0; // مفتاح لإعادة تحميل البيانات
 
   @override
   void initState() {
@@ -29,29 +30,45 @@ class _DebtsScreenState extends State<DebtsScreen>
     super.dispose();
   }
 
+  // دالة لإعادة تحميل البيانات
+  void _refreshData() {
+    setState(() {
+      _refreshKey++;
+    });
+  }
+
   Future<Map<String, dynamic>> _getCustomerDebtData(
       int customerId, DatabaseService db) async {
     try {
-      final receivables = await db.receivablesByCustomer();
-      final customerReceivables =
-          receivables.where((r) => r['customer_id'] == customerId).toList();
+      // الحصول على بيانات العميل مباشرة
+      final customers = await db.getCustomers();
+      final customer = customers.firstWhere(
+        (c) => c['id'] == customerId,
+        orElse: () => {'total_debt': 0.0},
+      );
 
-      double totalDebt = 0;
+      // الحصول على المدفوعات
+      final payments = await db.getCustomerPayments(customerId: customerId);
       double totalPaid = 0;
-
-      for (final receivable in customerReceivables) {
-        totalDebt += (receivable['total_debt'] as num).toDouble();
-        totalPaid += (receivable['paid_amount'] as num).toDouble();
+      for (final payment in payments) {
+        totalPaid += (payment['amount'] as num).toDouble();
       }
 
+      // total_debt في جدول العملاء يحتوي على المتبقي بعد المدفوعات
+      // لذلك نحتاج لحساب إجمالي الدين الأصلي
+      final remainingDebt = (customer['total_debt'] as num).toDouble();
+      final originalDebt = remainingDebt + totalPaid;
+
       return {
-        'totalDebt': totalDebt,
+        'totalDebt': originalDebt,
         'totalPaid': totalPaid,
+        'remainingDebt': remainingDebt,
       };
     } catch (e) {
       return {
         'totalDebt': 0.0,
         'totalPaid': 0.0,
+        'remainingDebt': 0.0,
       };
     }
   }
@@ -119,7 +136,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       Expanded(
                         child: _buildSimpleStatCard(
                           'إجمالي الديون',
-                          Formatters.currencyIQD(stats['totalDebts'] ?? 0),
+                          Formatters.currencyIQD(stats['total_debt'] ?? 0),
                           Colors.red,
                         ),
                       ),
@@ -127,7 +144,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       Expanded(
                         child: _buildSimpleStatCard(
                           'المدفوع',
-                          Formatters.currencyIQD(stats['totalPaid'] ?? 0),
+                          Formatters.currencyIQD(stats['total_payments'] ?? 0),
                           Colors.green,
                         ),
                       ),
@@ -135,7 +152,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                       Expanded(
                         child: _buildSimpleStatCard(
                           'المتبقي',
-                          Formatters.currencyIQD(stats['totalRemaining'] ?? 0),
+                          Formatters.currencyIQD((stats['total_debt'] ?? 0) -
+                              (stats['total_payments'] ?? 0)),
                           Colors.orange,
                         ),
                       ),
@@ -230,6 +248,7 @@ class _DebtsScreenState extends State<DebtsScreen>
 
   Widget _buildDebtorsTab(DatabaseService db) {
     return FutureBuilder<List<Map<String, dynamic>>>(
+      key: ValueKey('debtors_$_refreshKey'),
       future: db.getCustomers(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -272,6 +291,7 @@ class _DebtsScreenState extends State<DebtsScreen>
 
   Widget _buildFullyPaidCustomersTab(DatabaseService db) {
     return FutureBuilder<List<Map<String, dynamic>>>(
+      key: ValueKey('fully_paid_$_refreshKey'),
       future: db.getCustomers(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -314,6 +334,7 @@ class _DebtsScreenState extends State<DebtsScreen>
 
   Widget _buildInstallmentsTab(DatabaseService db) {
     return FutureBuilder<List<Map<String, dynamic>>>(
+      key: ValueKey('installments_$_refreshKey'),
       future: db.getInstallments(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -350,6 +371,7 @@ class _DebtsScreenState extends State<DebtsScreen>
 
   Widget _buildAllCustomersTab(DatabaseService db) {
     return FutureBuilder<List<Map<String, dynamic>>>(
+      key: ValueKey('all_customers_$_refreshKey'),
       future: db.getCustomers(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -480,6 +502,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 1,
       child: FutureBuilder<Map<String, dynamic>>(
+        key: ValueKey('customer_debt_${customer['id']}_$_refreshKey'),
         future: _getCustomerDebtData(customer['id'], db),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -490,9 +513,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           }
 
           final debtData = snapshot.data!;
-          final totalDebt = debtData['totalDebt'] ?? 0.0;
-          final totalPaid = debtData['totalPaid'] ?? 0.0;
-          final remaining = totalDebt - totalPaid;
+          final remaining = debtData['remainingDebt'] ?? 0.0;
 
           // تصفية حسب نوع التبويب
           if (showOnlyDebtors && remaining <= 0) {
@@ -692,7 +713,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                                       ),
                                     ),
                                     subtitle: Text(
-                                      'التاريخ: ${payment['date']}',
+                                      'التاريخ: ${payment['payment_date']}',
                                     ),
                                     trailing: IconButton(
                                       icon: const Icon(Icons.delete,
@@ -847,7 +868,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                       );
 
                       Navigator.pop(context);
-                      setState(() {});
+                      // إعادة تحميل البيانات
+                      _refreshData();
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('تم إضافة الدفعة بنجاح')),
@@ -884,7 +906,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                 try {
                   await db.deletePayment(paymentId);
                   Navigator.pop(context);
-                  setState(() {});
+                  // إعادة تحميل البيانات
+                  _refreshData();
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('تم حذف الدفعة بنجاح')),
@@ -1082,7 +1105,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                     );
 
                     Navigator.pop(context);
-                    setState(() {});
+                    // إعادة تحميل البيانات
+                    _refreshData();
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -1244,7 +1268,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                     );
 
                     Navigator.pop(context);
-                    setState(() {});
+                    // إعادة تحميل البيانات
+                    _refreshData();
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -1340,7 +1365,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                   );
 
                   Navigator.pop(context);
-                  setState(() {});
+                  // إعادة تحميل البيانات
+                  _refreshData();
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -1408,26 +1434,50 @@ class _DebtsScreenState extends State<DebtsScreen>
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // حذف المدفوعات أولاً
-                  final payments =
-                      await db.getCustomerPayments(customerId: customer['id']);
-                  for (final payment in payments) {
-                    await db.deletePayment(payment['id'] as int);
+                  print(
+                      'Attempting to delete customer: ${customer['id']} - ${customer['name']}');
+
+                  // التحقق من وجود العميل قبل المحاولة
+                  final customers = await db.getCustomers();
+                  final customerExists =
+                      customers.any((c) => c['id'] == customer['id']);
+                  print('Customer exists before deletion: $customerExists');
+
+                  // حذف العميل (سيحذف جميع البيانات المرتبطة تلقائياً)
+                  final deletedRows = await db.deleteCustomer(customer['id']);
+
+                  print('Delete result: $deletedRows rows deleted');
+
+                  // التحقق من وجود العميل بعد المحاولة
+                  final customersAfter = await db.getCustomers();
+                  final customerExistsAfter =
+                      customersAfter.any((c) => c['id'] == customer['id']);
+                  print('Customer exists after deletion: $customerExistsAfter');
+
+                  if (deletedRows > 0) {
+                    Navigator.pop(context);
+                    // إعادة تحميل البيانات
+                    _refreshData();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content:
+                            Text('تم حذف العميل ${customer['name']} بنجاح'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            'لم يتم العثور على العميل أو حدث خطأ في الحذف'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
                   }
-
-                  // حذف العميل
-                  await db.deleteCustomer(customer['id']);
-
-                  Navigator.pop(context);
-                  setState(() {});
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('تم حذف العميل ${customer['name']} بنجاح'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
                 } catch (e) {
+                  print('Error deleting customer: $e');
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

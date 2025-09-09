@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -282,6 +283,154 @@ class _AutoBackupCardState extends State<_AutoBackupCard> {
               label: const Text('حفظ الإعدادات'),
             ),
           ]),
+
+          // Debug section
+          if (kDebugMode) ...[
+            const Divider(),
+            const Text(
+              'أدوات التطوير',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    await context.read<DatabaseService>().forceCleanup();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('تم تنظيف قاعدة البيانات')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('خطأ في التنظيف: $e')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.cleaning_services),
+                label: const Text('تنظيف قاعدة البيانات'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    await context
+                        .read<DatabaseService>()
+                        .cleanupSalesOldReferences();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('تم تنظيف مراجع sales_old')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('خطأ في تنظيف sales_old: $e')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.delete_sweep),
+                label: const Text('إصلاح خطأ sales_old'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    final db = context.read<DatabaseService>();
+                    final customers = await db.getCustomers();
+                    if (customers.isNotEmpty) {
+                      final testCustomer = customers.first;
+                      print(
+                          'Testing deletion of customer: ${testCustomer['id']} - ${testCustomer['name']}');
+
+                      final deletedRows =
+                          await db.deleteCustomer(testCustomer['id'] as int);
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'اختبار الحذف: تم حذف $deletedRows صفوف للعميل ${testCustomer['name']}'),
+                            backgroundColor:
+                                deletedRows > 0 ? Colors.green : Colors.orange,
+                          ),
+                        );
+                      }
+                    } else {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('لا توجد عملاء لاختبار الحذف'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('خطأ في اختبار الحذف: $e')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.bug_report),
+                label: const Text('اختبار حذف عميل'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    await context.read<DatabaseService>().aggressiveCleanup();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('تم التنظيف الشامل لقاعدة البيانات')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('خطأ في التنظيف الشامل: $e')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.build),
+                label: const Text('تنظيف شامل'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    final issues = await context
+                        .read<DatabaseService>()
+                        .checkDatabaseIntegrity();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                'مشاكل قاعدة البيانات: ${issues.isEmpty ? 'لا توجد' : issues.join(', ')}')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text('خطأ في فحص قاعدة البيانات: $e')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.health_and_safety),
+                label: const Text('فحص سلامة القاعدة'),
+              ),
+            ]),
+          ],
         ],
       ),
     );
