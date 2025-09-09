@@ -48,6 +48,9 @@ class _SalesScreenState extends State<SalesScreen> {
   String _lastCustomerPhone = '';
   String _lastCustomerAddress = '';
 
+  // Print settings
+  String _selectedPrintType = 'thermal_80'; // نوع الطباعة المختار
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -2107,75 +2110,77 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                     // Primary action buttons row
                                                                     Row(
                                                                       children: [
-                                                                        // Print button
+                                                                        // زر اختيار نوع الطباعة
                                                                         Expanded(
                                                                           child:
                                                                               ElevatedButton.icon(
                                                                             onPressed:
                                                                                 () async {
-                                                                              // Show loading indicator while printing
-                                                                              showDialog(
-                                                                                context: context,
-                                                                                barrierDismissible: false,
-                                                                                builder: (BuildContext context) {
-                                                                                  return const Center(
-                                                                                    child: Card(
-                                                                                      child: Padding(
-                                                                                        padding: EdgeInsets.all(20),
-                                                                                        child: Column(
-                                                                                          mainAxisSize: MainAxisSize.min,
-                                                                                          children: [
-                                                                                            CircularProgressIndicator(),
-                                                                                            SizedBox(height: 16),
-                                                                                            Text('جاري طباعة الفاتورة...'),
-                                                                                          ],
-                                                                                        ),
-                                                                                      ),
+                                                                              // عرض حوار اختيار نوع الطباعة
+                                                                              final result = await _showPrintTypeDialog(context);
+                                                                              if (result != null) {
+                                                                                setState(() {
+                                                                                  _selectedPrintType = result;
+                                                                                });
+                                                                                if (context.mounted) {
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                                                    SnackBar(
+                                                                                      content: Text('تم اختيار نوع الطباعة: $result'),
+                                                                                      backgroundColor: Colors.blue,
+                                                                                      duration: const Duration(seconds: 2),
                                                                                     ),
                                                                                   );
-                                                                                },
-                                                                              );
-
+                                                                                }
+                                                                              }
+                                                                            },
+                                                                            icon:
+                                                                                const Icon(Icons.settings, size: 20),
+                                                                            label:
+                                                                                const Text('نوع الطباعة'),
+                                                                            style:
+                                                                                ElevatedButton.styleFrom(
+                                                                              backgroundColor: Colors.blue.shade600,
+                                                                              foregroundColor: Colors.white,
+                                                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                                                              shape: RoundedRectangleBorder(
+                                                                                borderRadius: BorderRadius.circular(12),
+                                                                              ),
+                                                                              elevation: 2,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        const SizedBox(
+                                                                            width:
+                                                                                8),
+                                                                        // زر الطباعة
+                                                                        Expanded(
+                                                                          child:
+                                                                              ElevatedButton.icon(
+                                                                            onPressed:
+                                                                                () async {
                                                                               try {
-                                                                                // Print invoice without closing the success dialog
+                                                                                // طباعة بالإعدادات المختارة
                                                                                 await _printInvoice(context);
 
-                                                                                // Close loading dialog
-                                                                                Navigator.of(context).pop();
-
-                                                                                // Show success message
-                                                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                                                  const SnackBar(
-                                                                                    content: Text('تم طباعة الفاتورة بنجاح'),
-                                                                                    backgroundColor: Colors.green,
-                                                                                    duration: Duration(seconds: 2),
-                                                                                  ),
-                                                                                );
-                                                                              } catch (e) {
-                                                                                // Close loading dialog
-                                                                                Navigator.of(context).pop();
-
-                                                                                // Show error message
-                                                                                String errorMessage = 'خطأ في طباعة الفاتورة';
-                                                                                if (e.toString().contains('No such file or directory')) {
-                                                                                  errorMessage = 'خطأ: ملف الخط العربي غير موجود';
-                                                                                } else if (e.toString().contains('Permission denied')) {
-                                                                                  errorMessage = 'خطأ: لا توجد صلاحية للطباعة';
-                                                                                } else if (e.toString().contains('Device not found')) {
-                                                                                  errorMessage = 'خطأ: الطابعة غير متصلة';
-                                                                                } else if (e.toString().contains('Out of paper')) {
-                                                                                  errorMessage = 'خطأ: نفدت الورق من الطابعة';
-                                                                                } else {
-                                                                                  errorMessage = 'خطأ في طباعة الفاتورة: ${e.toString()}';
+                                                                                if (context.mounted) {
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                                                    const SnackBar(
+                                                                                      content: Text('تم طباعة الفاتورة بنجاح'),
+                                                                                      backgroundColor: Colors.green,
+                                                                                      duration: Duration(seconds: 2),
+                                                                                    ),
+                                                                                  );
                                                                                 }
-
-                                                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                                                  SnackBar(
-                                                                                    content: Text(errorMessage),
-                                                                                    backgroundColor: Colors.red,
-                                                                                    duration: const Duration(seconds: 4),
-                                                                                  ),
-                                                                                );
+                                                                              } catch (e) {
+                                                                                if (context.mounted) {
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                                                    SnackBar(
+                                                                                      content: Text('خطأ في الطباعة: ${e.toString()}'),
+                                                                                      backgroundColor: Colors.red,
+                                                                                      duration: const Duration(seconds: 3),
+                                                                                    ),
+                                                                                  );
+                                                                                }
                                                                               }
                                                                             },
                                                                             icon:
@@ -2198,130 +2203,6 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                             ),
                                                                           ),
                                                                         ),
-                                                                        const SizedBox(
-                                                                            width:
-                                                                                8),
-                                                                        // زر الطباعة السريعة
-                                                                        Expanded(
-                                                                          child:
-                                                                              ElevatedButton.icon(
-                                                                            onPressed:
-                                                                                () async {
-                                                                              // طباعة سريعة بالإعدادات المحفوظة
-                                                                              final db = context.read<DatabaseService>();
-                                                                              final settings = await db.database.query('settings', limit: 1);
-                                                                              final shopName = (settings.isNotEmpty ? (settings.first['shop_name']?.toString() ?? AppStrings.defaultShopName) : AppStrings.defaultShopName);
-                                                                              final phone = (settings.isNotEmpty ? settings.first['phone']?.toString() : null);
-                                                                              final address = (settings.isNotEmpty ? settings.first['address']?.toString() : null);
-
-                                                                              final success = await PrintService.quickPrint(
-                                                                                shopName: shopName,
-                                                                                phone: phone,
-                                                                                address: address,
-                                                                                items: _lastInvoiceItems,
-                                                                                paymentType: _lastType,
-                                                                                customerName: _lastCustomerName.isNotEmpty ? _lastCustomerName : null,
-                                                                                customerPhone: _lastCustomerPhone.isNotEmpty ? _lastCustomerPhone : null,
-                                                                                customerAddress: _lastCustomerAddress.isNotEmpty ? _lastCustomerAddress : null,
-                                                                                dueDate: _lastDueDate,
-                                                                                invoiceNumber: _lastInvoiceId?.toString(), // تمرير رقم الفاتورة
-                                                                                context: context,
-                                                                              );
-
-                                                                              if (success && context.mounted) {
-                                                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                                                  const SnackBar(
-                                                                                    content: Text('تم طباعة الفاتورة بنجاح'),
-                                                                                    backgroundColor: Colors.green,
-                                                                                    duration: Duration(seconds: 2),
-                                                                                  ),
-                                                                                );
-                                                                              }
-                                                                            },
-                                                                            icon:
-                                                                                const Icon(Icons.flash_on, size: 18),
-                                                                            label:
-                                                                                const Text('طباعة سريعة'),
-                                                                            style:
-                                                                                ElevatedButton.styleFrom(
-                                                                              backgroundColor: Colors.purple.shade600,
-                                                                              foregroundColor: Colors.white,
-                                                                              padding: const EdgeInsets.symmetric(vertical: 14),
-                                                                              shape: RoundedRectangleBorder(
-                                                                                borderRadius: BorderRadius.circular(12),
-                                                                              ),
-                                                                              elevation: 2,
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                        const SizedBox(
-                                                                            width:
-                                                                                8),
-
-                                                                        // زر اختبار PDF
-                                                                        ElevatedButton
-                                                                            .icon(
-                                                                          onPressed:
-                                                                              () async {
-                                                                            final db =
-                                                                                context.read<DatabaseService>();
-                                                                            final settings =
-                                                                                await db.database.query('settings', limit: 1);
-                                                                            final shopName = (settings.isNotEmpty
-                                                                                ? (settings.first['shop_name']?.toString() ?? AppStrings.defaultShopName)
-                                                                                : AppStrings.defaultShopName);
-                                                                            final phone = (settings.isNotEmpty
-                                                                                ? settings.first['phone']?.toString()
-                                                                                : null);
-                                                                            final address = (settings.isNotEmpty
-                                                                                ? settings.first['address']?.toString()
-                                                                                : null);
-
-                                                                            final success =
-                                                                                await PrintService.testPdfGeneration(
-                                                                              shopName: shopName,
-                                                                              phone: phone,
-                                                                              address: address,
-                                                                              items: _lastInvoiceItems,
-                                                                              paymentType: _lastType,
-                                                                              customerName: _lastCustomerName.isNotEmpty ? _lastCustomerName : null,
-                                                                              customerPhone: _lastCustomerPhone.isNotEmpty ? _lastCustomerPhone : null,
-                                                                              customerAddress: _lastCustomerAddress.isNotEmpty ? _lastCustomerAddress : null,
-                                                                              dueDate: _lastDueDate,
-                                                                              invoiceNumber: _lastInvoiceId?.toString(), // تمرير رقم الفاتورة
-                                                                              context: context,
-                                                                            );
-
-                                                                            if (context.mounted) {
-                                                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                                                SnackBar(
-                                                                                  content: Text(success ? 'تم إنشاء PDF بنجاح' : 'فشل في إنشاء PDF'),
-                                                                                  backgroundColor: success ? Colors.green : Colors.red,
-                                                                                  duration: const Duration(seconds: 2),
-                                                                                ),
-                                                                              );
-                                                                            }
-                                                                          },
-                                                                          icon: const Icon(
-                                                                              Icons.bug_report,
-                                                                              size: 18),
-                                                                          label:
-                                                                              const Text('اختبار PDF'),
-                                                                          style:
-                                                                              ElevatedButton.styleFrom(
-                                                                            backgroundColor:
-                                                                                Colors.orange.shade600,
-                                                                            foregroundColor:
-                                                                                Colors.white,
-                                                                            padding:
-                                                                                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                                                            shape:
-                                                                                RoundedRectangleBorder(
-                                                                              borderRadius: BorderRadius.circular(8),
-                                                                            ),
-                                                                          ),
-                                                                        ),
-
                                                                         const SizedBox(
                                                                             width:
                                                                                 8),
@@ -3043,17 +2924,92 @@ class _SalesScreenState extends State<SalesScreen> {
     context.read<DatabaseService>().adjustProductQuantity(productId, 1);
   }
 
+  // دالة عرض حوار اختيار نوع الطباعة
+  Future<String?> _showPrintTypeDialog(BuildContext context) async {
+    return await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.print,
+                color: Theme.of(context).colorScheme.primary,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              const Text('اختيار نوع الطباعة'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'اختر نوع الورق المناسب للطباعة:',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 20),
+
+              // طابعة حرارية 58mm
+              ListTile(
+                leading: const Icon(Icons.receipt, color: Colors.orange),
+                title: const Text('طابعة حرارية 58mm'),
+                subtitle: const Text('مناسبة للفواتير الصغيرة'),
+                onTap: () {
+                  Navigator.of(context).pop('thermal_58');
+                },
+              ),
+
+              // طابعة حرارية 80mm
+              ListTile(
+                leading: const Icon(Icons.receipt_long, color: Colors.blue),
+                title: const Text('طابعة حرارية 80mm'),
+                subtitle: const Text('مناسبة للفواتير العادية'),
+                onTap: () {
+                  Navigator.of(context).pop('thermal_80');
+                },
+              ),
+
+              // ورقة A5
+              ListTile(
+                leading: const Icon(Icons.description, color: Colors.green),
+                title: const Text('ورقة A5'),
+                subtitle: const Text('مناسبة للفواتير المتوسطة'),
+                onTap: () {
+                  Navigator.of(context).pop('a5');
+                },
+              ),
+
+              // ورقة A4
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf, color: Colors.purple),
+                title: const Text('ورقة A4'),
+                subtitle: const Text('مناسبة للفواتير التفصيلية'),
+                onTap: () {
+                  Navigator.of(context).pop('a4');
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('إلغاء'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _printInvoice(BuildContext context) async {
     print('=== بدء عملية طباعة الفاتورة ===');
     print('عدد المنتجات في آخر فاتورة: ${_lastInvoiceItems.length}');
     print('نوع الدفع: $_lastType');
-
-    // عرض خيارات الطباعة
-    final printOptions = await PrintService.showPrintOptionsDialog(context);
-    if (printOptions == null) {
-      print('تم إلغاء عملية الطباعة من قبل المستخدم');
-      return; // المستخدم ألغى العملية
-    }
+    print('نوع الطباعة المختار: $_selectedPrintType');
 
     final db = context.read<DatabaseService>();
     final settings = await db.database.query('settings', limit: 1);
@@ -3066,7 +3022,7 @@ class _SalesScreenState extends State<SalesScreen> {
     final address =
         (settings.isNotEmpty ? settings.first['address']?.toString() : null);
 
-    // استخدام خدمة الطباعة الجديدة
+    // استخدام خدمة الطباعة مع نوع الطباعة المختار
     final success = await PrintService.printInvoice(
       shopName: shopName,
       phone: phone,
@@ -3078,9 +3034,9 @@ class _SalesScreenState extends State<SalesScreen> {
       customerAddress:
           _lastCustomerAddress.isNotEmpty ? _lastCustomerAddress : null,
       dueDate: _lastDueDate,
-      pageFormat: printOptions['pageFormat'] as String,
-      showLogo: printOptions['showLogo'] as bool,
-      showBarcode: printOptions['showBarcode'] as bool,
+      pageFormat: _selectedPrintType, // استخدام نوع الطباعة المختار
+      showLogo: true, // إظهار الشعار
+      showBarcode: true, // إظهار الباركود
       invoiceNumber: _lastInvoiceId?.toString(), // تمرير رقم الفاتورة
       context: context,
     );

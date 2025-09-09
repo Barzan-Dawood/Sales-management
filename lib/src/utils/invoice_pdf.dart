@@ -233,7 +233,8 @@ class InvoicePdf {
                               customerAddress,
                               paymentType,
                               dueDate,
-                              arabicFont),
+                              arabicFont,
+                              format: format),
                           pw.SizedBox(height: 8),
                         ],
 
@@ -244,7 +245,7 @@ class InvoicePdf {
                         if (isLastPage) ...[
                           pw.SizedBox(height: 8),
                           _buildTotalSection(total, arabicFont,
-                              allItems: items),
+                              allItems: items, format: format),
                           pw.SizedBox(height: 12),
                         ],
 
@@ -313,7 +314,8 @@ class InvoicePdf {
                             customerAddress,
                             paymentType,
                             dueDate,
-                            arabicFont),
+                            arabicFont,
+                            format: format),
                         pw.SizedBox(height: 8),
                       ],
 
@@ -324,7 +326,8 @@ class InvoicePdf {
 
                       // Total Section - قسم المجموع (في الصفحة الأخيرة فقط)
                       if (isLastPage) ...[
-                        _buildTotalSection(total, arabicFont, allItems: items),
+                        _buildTotalSection(total, arabicFont,
+                            allItems: items, format: format),
                         pw.SizedBox(height: 12),
                       ],
 
@@ -379,6 +382,85 @@ class InvoicePdf {
       String date,
       PdfPageFormat format,
       pw.Font arabicFont) {
+    // للطابعات الحرارية - رأس مبسط
+    if (format.width < 100) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(width: 0.5),
+          borderRadius: pw.BorderRadius.circular(2),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            // اسم المحل
+            pw.Text(
+              shopName,
+              style: _getArabicTextStyle(arabicFont, 8,
+                  fontWeight: pw.FontWeight.bold),
+              textAlign: pw.TextAlign.center,
+            ),
+
+            pw.SizedBox(height: 1),
+
+            // معلومات المحل في صف واحد
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                // العنوان (محاذاة لليمين)
+                if (address != null && address.isNotEmpty)
+                  pw.Expanded(
+                    child: pw.Text(
+                      address,
+                      style: _getArabicTextStyle(arabicFont, 6),
+                      textAlign: pw.TextAlign.right,
+                      maxLines: 1,
+                    ),
+                  ),
+
+                // رقم الفاتورة (محاذاة لليسار)
+                pw.Expanded(
+                  child: pw.Text(
+                    'فاتورة: $invoiceNumber',
+                    style: _getArabicTextStyle(arabicFont, 6,
+                        fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.left,
+                  ),
+                ),
+              ],
+            ),
+
+            pw.SizedBox(height: 1),
+
+            // رقم الهاتف والتاريخ في صف واحد
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                // رقم الهاتف (محاذاة لليمين)
+                if (phone != null && phone.isNotEmpty)
+                  pw.Expanded(
+                    child: pw.Text(
+                      phone,
+                      style: _getArabicTextStyle(arabicFont, 6),
+                      textAlign: pw.TextAlign.right,
+                    ),
+                  ),
+                // التاريخ (محاذاة لليسار)
+                pw.Expanded(
+                  child: pw.Text(
+                    date,
+                    style: _getArabicTextStyle(arabicFont, 6),
+                    textAlign: pw.TextAlign.left,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    // للأوراق الكبيرة - الرأس العادي
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: pw.BoxDecoration(
@@ -466,7 +548,8 @@ class InvoicePdf {
       String? customerAddress,
       String paymentType,
       DateTime? dueDate,
-      pw.Font arabicFont) {
+      pw.Font arabicFont,
+      {PdfPageFormat? format}) {
     // تحديد نوع الدفع
     String paymentText = '';
     PdfColor paymentColor = PdfColors.black;
@@ -485,6 +568,52 @@ class InvoicePdf {
         break;
     }
 
+    // للطابعات الحرارية - قسم مبسط
+    if (format != null && format.width < 100) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        decoration: pw.BoxDecoration(
+          color: PdfColors.grey100,
+          border: pw.Border.all(width: 0.5),
+          borderRadius: pw.BorderRadius.circular(2),
+        ),
+        child: pw.Column(
+          children: [
+            // معلومات العميل
+            if (customerName != null && customerName.isNotEmpty)
+              pw.Text('العميل: $customerName',
+                  style: _getArabicTextStyle(arabicFont, 6)),
+            if (customerPhone != null && customerPhone.isNotEmpty)
+              pw.Text('الهاتف: $customerPhone',
+                  style: _getArabicTextStyle(arabicFont, 6)),
+            if (customerAddress != null && customerAddress.isNotEmpty)
+              pw.Text('العنوان: $customerAddress',
+                  style: _getArabicTextStyle(arabicFont, 6)),
+
+            pw.SizedBox(height: 2),
+
+            // نوع الدفع
+            pw.Container(
+              padding:
+                  const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.white,
+                border: pw.Border.all(color: paymentColor, width: 1),
+                borderRadius: pw.BorderRadius.circular(2),
+              ),
+              child: pw.Text(
+                paymentText,
+                style: _getArabicTextStyle(arabicFont, 7,
+                    fontWeight: pw.FontWeight.bold, color: paymentColor),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // للأوراق الكبيرة - القسم العادي
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: pw.BoxDecoration(
@@ -589,23 +718,155 @@ class InvoicePdf {
     }
   }
 
+  // بناء تخطيط كاشير حقيقي للطابعات الحرارية
+  static pw.Widget _buildThermalItemsTable(List<Map<String, Object?>> items,
+      PdfPageFormat format, pw.Font arabicFont) {
+    print(
+        '🔥 استخدام تخطيط كاشير حقيقي للطابعات الحرارية - عرض: ${format.width}mm');
+    return pw.Column(
+      children: [
+        // خط فاصل علوي
+        pw.Container(
+          width: double.infinity,
+          height: 1,
+          color: PdfColors.black,
+          margin: const pw.EdgeInsets.only(bottom: 4),
+        ),
+
+        // المنتجات - تخطيط كاشير حقيقي
+        ...items.asMap().entries.map((entry) {
+          final index = entry.key;
+          final e = entry.value;
+          final name = e['name']?.toString() ?? '';
+          final quantity =
+              _cleanNumber(e['quantity'] as num, defaultValue: 0.0);
+          final price = _cleanNumber(e['price'] as num, defaultValue: 0.0);
+
+          final qty = quantity.isFinite ? quantity.toInt() : 0;
+          final lineTotal = price * qty;
+
+          // تقصير اسم المنتج للطابعات الحرارية
+          String shortName = name;
+          if (name.length > 20) {
+            shortName = '${name.substring(0, 20)}...';
+          }
+
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // اسم المنتج
+              pw.Text(
+                shortName,
+                style: _getArabicTextStyle(arabicFont, 7,
+                    fontWeight: pw.FontWeight.bold),
+                textAlign: pw.TextAlign.right,
+              ),
+
+              // الكمية والسعر في سطر واحد
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  // الكمية والسعر
+                  pw.Text(
+                    '$qty × ${NumberFormat.currency(
+                      locale: 'ar_IQ',
+                      symbol: '',
+                      decimalDigits: 0,
+                    ).format(price)}',
+                    style: _getArabicTextStyle(arabicFont, 6),
+                    textAlign: pw.TextAlign.right,
+                  ),
+                  // الإجمالي
+                  pw.Text(
+                    NumberFormat.currency(
+                      locale: 'ar_IQ',
+                      symbol: '',
+                      decimalDigits: 0,
+                    ).format(lineTotal),
+                    style: _getArabicTextStyle(arabicFont, 7,
+                        fontWeight: pw.FontWeight.bold),
+                    textAlign: pw.TextAlign.left,
+                  ),
+                ],
+              ),
+
+              // خط فاصل بين المنتجات
+              if (index < items.length - 1)
+                pw.Container(
+                  width: double.infinity,
+                  height: 0.5,
+                  color: PdfColors.grey400,
+                  margin: const pw.EdgeInsets.symmetric(vertical: 2),
+                ),
+            ],
+          );
+        }),
+
+        // خط فاصل سفلي
+        pw.Container(
+          width: double.infinity,
+          height: 1,
+          color: PdfColors.black,
+          margin: const pw.EdgeInsets.only(top: 4),
+        ),
+      ],
+    );
+  }
+
   // بناء جدول المنتجات العادي
   static pw.Widget _buildItemsTable(List<Map<String, Object?>> items,
       PdfPageFormat format, pw.Font arabicFont) {
+    // تحديد نوع الورق
+    final isThermalPrinter = format.width < 100; // طابعات حرارية صغيرة
+    final isMediumPaper =
+        format.width >= 100 && format.width < 200; // طابعات متوسطة
+
+    // للطابعات الحرارية - استخدام الجدول المبسط
+    if (isThermalPrinter) {
+      print(
+          '🔥 طابعة حرارية مكتشفة - عرض: ${format.width}mm - استخدام تخطيط كاشير');
+      return _buildThermalItemsTable(items, format, arabicFont);
+    }
+
+    // للأوراق الكبيرة والمتوسطة - استخدام الجدول الكامل
+    print('📄 ورقة كبيرة/متوسطة - عرض: ${format.width}mm - استخدام جدول كامل');
+    // تكييف أبعاد الأعمدة حسب حجم الورق
+    Map<int, pw.TableColumnWidth> columnWidths;
+    double fontSize;
+    double padding;
+
+    if (isMediumPaper) {
+      // طابعات متوسطة
+      columnWidths = {
+        0: pw.FlexColumnWidth(1.4), // الإجمالي
+        1: pw.FlexColumnWidth(1.4), // السعر
+        2: pw.FlexColumnWidth(1), // الكمية
+        3: pw.FlexColumnWidth(2.8), // المنتجات
+        4: pw.FlexColumnWidth(0.7), // التسلسل
+      };
+      fontSize = 8;
+      padding = 4;
+    } else {
+      // أوراق كبيرة
+      columnWidths = {
+        0: pw.FlexColumnWidth(1.5), // الإجمالي
+        1: pw.FlexColumnWidth(1.5), // السعر
+        2: pw.FlexColumnWidth(1), // الكمية
+        3: pw.FlexColumnWidth(3), // المنتجات
+        4: pw.FlexColumnWidth(0.8), // التسلسل
+      };
+      fontSize = 9;
+      padding = 6;
+    }
+
     return pw.Container(
       decoration: pw.BoxDecoration(
-        border: pw.Border.all(width: 0.5),
+        border: pw.Border.all(width: 1),
         borderRadius: pw.BorderRadius.circular(4),
       ),
       child: pw.Table(
-        border: pw.TableBorder.all(width: 0.3),
-        columnWidths: {
-          0: pw.FlexColumnWidth(1.5), // الإجمالي (أول عمود من اليمين)
-          1: pw.FlexColumnWidth(1.5), // السعر
-          2: pw.FlexColumnWidth(1), // الكمية
-          3: pw.FlexColumnWidth(3), // المنتجات
-          4: pw.FlexColumnWidth(0.8), // التسلسل (آخر عمود من اليمين)
-        },
+        border: pw.TableBorder.all(width: 0.5),
+        columnWidths: columnWidths,
         children: [
           // Header
           pw.TableRow(
@@ -613,55 +874,50 @@ class InvoicePdf {
             children: [
               // الإجمالي (أول عمود من اليمين)
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
                   'الإجمالي',
-                  style: _getArabicTextStyle(
-                      arabicFont, _getFontSize(format, 10),
+                  style: _getArabicTextStyle(arabicFont, fontSize,
                       fontWeight: pw.FontWeight.bold),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               // السعر
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
                   'السعر',
-                  style: _getArabicTextStyle(
-                      arabicFont, _getFontSize(format, 10),
+                  style: _getArabicTextStyle(arabicFont, fontSize,
                       fontWeight: pw.FontWeight.bold),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               // الكمية
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
                   'الكمية',
-                  style: _getArabicTextStyle(
-                      arabicFont, _getFontSize(format, 10),
+                  style: _getArabicTextStyle(arabicFont, fontSize,
                       fontWeight: pw.FontWeight.bold),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               // المنتجات
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
                   'المنتجات',
-                  style: _getArabicTextStyle(
-                      arabicFont, _getFontSize(format, 10),
+                  style: _getArabicTextStyle(arabicFont, fontSize,
                       fontWeight: pw.FontWeight.bold),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               // التسلسل (آخر عمود من اليمين)
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
-                  'تسلسل',
-                  style: _getArabicTextStyle(
-                      arabicFont, _getFontSize(format, 10),
+                  'ت',
+                  style: _getArabicTextStyle(arabicFont, fontSize,
                       fontWeight: pw.FontWeight.bold),
                   textAlign: pw.TextAlign.center,
                 ),
@@ -688,60 +944,56 @@ class InvoicePdf {
               children: [
                 // الإجمالي (أول عمود من اليمين)
                 pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
+                  padding: pw.EdgeInsets.all(padding),
                   child: pw.Text(
                     NumberFormat.currency(
                       locale: 'ar_IQ',
                       symbol: '',
                       decimalDigits: 0,
                     ).format(lineTotal),
-                    style: _getArabicTextStyle(
-                        arabicFont, _getFontSize(format, 9),
+                    style: _getArabicTextStyle(arabicFont, fontSize,
                         fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
                 // السعر
                 pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
+                  padding: pw.EdgeInsets.all(padding),
                   child: pw.Text(
                     NumberFormat.currency(
                       locale: 'ar_IQ',
                       symbol: '',
                       decimalDigits: 0,
                     ).format(price),
-                    style: _getArabicTextStyle(
-                        arabicFont, _getFontSize(format, 9)),
+                    style: _getArabicTextStyle(arabicFont, fontSize),
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
                 // الكمية
                 pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
+                  padding: pw.EdgeInsets.all(padding),
                   child: pw.Text(
                     qty.toString(),
-                    style: _getArabicTextStyle(
-                        arabicFont, _getFontSize(format, 9)),
+                    style: _getArabicTextStyle(arabicFont, fontSize),
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
                 // المنتجات
                 pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
+                  padding: pw.EdgeInsets.all(padding),
                   child: _buildSafeText(
                     name,
-                    _getArabicTextStyle(arabicFont, _getFontSize(format, 9)),
+                    _getArabicTextStyle(arabicFont, fontSize),
                     textAlign: pw.TextAlign.center,
                     maxLength: 25,
                   ),
                 ),
                 // التسلسل (آخر عمود من اليمين)
                 pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
+                  padding: pw.EdgeInsets.all(padding),
                   child: pw.Text(
                     (index + 1).toString(),
-                    style: _getArabicTextStyle(
-                        arabicFont, _getFontSize(format, 9),
+                    style: _getArabicTextStyle(arabicFont, fontSize,
                         fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.center,
                   ),
@@ -754,8 +1006,8 @@ class InvoicePdf {
     );
   }
 
-  // بناء قسم المجموع
-  static pw.Widget _buildTotalSection(double total, pw.Font arabicFont,
+  // بناء قسم المجموع مثل الكاشيرات الحقيقية للطابعات الحرارية
+  static pw.Widget _buildThermalTotalSection(double total, pw.Font arabicFont,
       {List<Map<String, Object?>>? allItems}) {
     // حساب مجموع الكمية
     int totalQuantity = 0;
@@ -767,6 +1019,120 @@ class InvoicePdf {
       }
     }
 
+    return pw.Column(
+      children: [
+        // خط فاصل علوي
+        pw.Container(
+          width: double.infinity,
+          height: 1,
+          color: PdfColors.black,
+          margin: const pw.EdgeInsets.only(bottom: 4),
+        ),
+
+        // مجموع الكمية
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              'إجمالي الكمية:',
+              style: _getArabicTextStyle(arabicFont, 7,
+                  fontWeight: pw.FontWeight.bold),
+              textAlign: pw.TextAlign.right,
+            ),
+            pw.Text(
+              '$totalQuantity قطعة',
+              style: _getArabicTextStyle(arabicFont, 7,
+                  fontWeight: pw.FontWeight.bold),
+              textAlign: pw.TextAlign.left,
+            ),
+          ],
+        ),
+
+        pw.SizedBox(height: 3),
+
+        // المجموع الكلي
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              'المجموع الكلي:',
+              style: _getArabicTextStyle(arabicFont, 8,
+                  fontWeight: pw.FontWeight.bold),
+              textAlign: pw.TextAlign.right,
+            ),
+            pw.Text(
+              NumberFormat.currency(
+                locale: 'ar_IQ',
+                symbol: AppStrings.currency,
+                decimalDigits: 0,
+              ).format(total),
+              style: _getArabicTextStyle(arabicFont, 10,
+                  fontWeight: pw.FontWeight.bold, color: PdfColors.red),
+              textAlign: pw.TextAlign.left,
+            ),
+          ],
+        ),
+
+        // خط فاصل سفلي
+        pw.Container(
+          width: double.infinity,
+          height: 1,
+          color: PdfColors.black,
+          margin: const pw.EdgeInsets.only(top: 4),
+        ),
+      ],
+    );
+  }
+
+  // بناء قسم المجموع
+  static pw.Widget _buildTotalSection(double total, pw.Font arabicFont,
+      {List<Map<String, Object?>>? allItems, PdfPageFormat? format}) {
+    // للطابعات الحرارية - استخدام القسم المبسط
+    if (format != null && format.width < 100) {
+      return _buildThermalTotalSection(total, arabicFont, allItems: allItems);
+    }
+
+    // حساب مجموع الكمية
+    int totalQuantity = 0;
+    if (allItems != null) {
+      for (final item in allItems) {
+        final quantity =
+            _cleanNumber(item['quantity'] as num, defaultValue: 0.0);
+        totalQuantity += quantity.isFinite ? quantity.toInt() : 0;
+      }
+    }
+
+    // تحديد نوع الورق وتكييف أبعاد الأعمدة
+    final isMediumPaper =
+        format != null && format.width >= 100 && format.width < 200;
+
+    // تكييف أبعاد الأعمدة حسب حجم الورق
+    Map<int, pw.TableColumnWidth> columnWidths;
+    double fontSize;
+    double padding;
+
+    if (isMediumPaper) {
+      columnWidths = {
+        0: pw.FlexColumnWidth(1.4), // الإجمالي
+        1: pw.FlexColumnWidth(1.4), // السعر (فارغ)
+        2: pw.FlexColumnWidth(1), // الكمية
+        3: pw.FlexColumnWidth(2.8), // مجموع الكلي
+        4: pw.FlexColumnWidth(0.7), // فارغ
+      };
+      fontSize = 8;
+      padding = 4;
+    } else {
+      columnWidths = {
+        0: pw.FlexColumnWidth(1.5), // الإجمالي
+        1: pw.FlexColumnWidth(1.5), // السعر (فارغ)
+        2: pw.FlexColumnWidth(1), // الكمية
+        3: pw.FlexColumnWidth(3), // مجموع الكلي
+        4: pw.FlexColumnWidth(0.8), // فارغ
+      };
+      fontSize = 10;
+      padding = 6;
+    }
+
     return pw.Container(
       decoration: pw.BoxDecoration(
         border: pw.Border.all(width: 1),
@@ -774,66 +1140,60 @@ class InvoicePdf {
       ),
       child: pw.Table(
         border: pw.TableBorder.all(width: 0.5),
-        columnWidths: {
-          0: pw.FlexColumnWidth(1.5), // الإجمالي
-          1: pw.FlexColumnWidth(1.5), // السعر (فارغ)
-          2: pw.FlexColumnWidth(1), // الكمية
-          3: pw.FlexColumnWidth(3), // مجموع الكلي
-          4: pw.FlexColumnWidth(0.8), // فارغ
-        },
+        columnWidths: columnWidths,
         children: [
           pw.TableRow(
             decoration: const pw.BoxDecoration(color: PdfColors.grey200),
             children: [
               // الإجمالي
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
                   NumberFormat.currency(
                     locale: 'ar_IQ',
                     symbol: '',
                     decimalDigits: 0,
                   ).format(total),
-                  style: _getArabicTextStyle(arabicFont, 10,
+                  style: _getArabicTextStyle(arabicFont, fontSize,
                       fontWeight: pw.FontWeight.bold),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               // السعر (فارغ)
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
                   '',
-                  style: _getArabicTextStyle(arabicFont, 10),
+                  style: _getArabicTextStyle(arabicFont, fontSize),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               // الكمية
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
                   totalQuantity.toString(),
-                  style: _getArabicTextStyle(arabicFont, 10,
+                  style: _getArabicTextStyle(arabicFont, fontSize,
                       fontWeight: pw.FontWeight.bold),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               // مجموع الكلي
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
                   'مجموع الكلي',
-                  style: _getArabicTextStyle(arabicFont, 10,
+                  style: _getArabicTextStyle(arabicFont, fontSize,
                       fontWeight: pw.FontWeight.bold),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               // فارغ
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
+                padding: pw.EdgeInsets.all(padding),
                 child: pw.Text(
                   '',
-                  style: _getArabicTextStyle(arabicFont, 10),
+                  style: _getArabicTextStyle(arabicFont, fontSize),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
