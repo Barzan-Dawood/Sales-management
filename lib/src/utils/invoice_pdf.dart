@@ -197,6 +197,154 @@ class InvoicePdf {
       {List<Map<String, Object?>>? installments,
       double? totalDebt,
       double? downPayment}) {
+    // إذا كان هناك أقساط، أنشئ صفحات منفصلة للأقساط أولاً
+    if (installments != null &&
+        installments.isNotEmpty &&
+        paymentType == 'installment') {
+      _addInstallmentPages(
+          doc,
+          shopName,
+          phone,
+          address,
+          invoiceNumber,
+          date,
+          customerName,
+          customerPhone,
+          customerAddress,
+          format,
+          arabicFont,
+          installments,
+          totalDebt,
+          downPayment);
+    }
+
+    // ثم أضف صفحات المنتجات
+    _addProductPages(
+        doc,
+        items,
+        shopName,
+        phone,
+        address,
+        invoiceNumber,
+        date,
+        paymentType,
+        dueDate,
+        customerName,
+        customerPhone,
+        customerAddress,
+        total,
+        format,
+        arabicFont,
+        installments: installments,
+        totalDebt: totalDebt,
+        downPayment: downPayment);
+  }
+
+  // إضافة صفحات الأقساط
+  static void _addInstallmentPages(
+      pw.Document doc,
+      String shopName,
+      String? phone,
+      String? address,
+      String invoiceNumber,
+      String date,
+      String? customerName,
+      String? customerPhone,
+      String? customerAddress,
+      PdfPageFormat format,
+      pw.Font arabicFont,
+      List<Map<String, Object?>> installments,
+      double? totalDebt,
+      double? downPayment) {
+    // حساب عدد الأقساط التي يمكن عرضها في الصفحة الواحدة
+    final maxInstallmentsPerPage = _calculateMaxInstallmentsPerPage(format);
+    print('الحد الأقصى للأقساط في الصفحة: $maxInstallmentsPerPage');
+
+    // تقسيم الأقساط على الصفحات
+    final pages = <List<Map<String, Object?>>>[];
+    for (int i = 0; i < installments.length; i += maxInstallmentsPerPage) {
+      final end = (i + maxInstallmentsPerPage < installments.length)
+          ? i + maxInstallmentsPerPage
+          : installments.length;
+      pages.add(installments.sublist(i, end));
+    }
+
+    // إضافة كل صفحة أقساط
+    for (int pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+      final isFirstPage = pageIndex == 0;
+      final isLastPage = pageIndex == pages.length - 1;
+      final pageInstallments = pages[pageIndex];
+
+      doc.addPage(
+        pw.Page(
+          pageFormat: format,
+          margin:
+              const pw.EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 8),
+          build: (context) {
+            return pw.Directionality(
+              textDirection: pw.TextDirection.rtl,
+              child: pw.Center(
+                child: pw.Container(
+                  width: format.width * 0.8,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      // مساحة فارغة من الأعلى
+                      pw.SizedBox(height: format.width < 100 ? 12 : 8),
+
+                      // Header Section - رأس الفاتورة
+                      if (isFirstPage) ...[
+                        _buildHeader(shopName, phone, address, invoiceNumber,
+                            date, format, arabicFont),
+                        pw.SizedBox(height: 4),
+                      ],
+
+                      // Customer Info
+                      if (isFirstPage) ...[
+                        _buildCustomerInfoOnly(customerName, customerPhone,
+                            customerAddress, arabicFont,
+                            format: format),
+                        pw.SizedBox(height: 4),
+                      ],
+
+                      // Installment Info
+                      _buildInstallmentInfoForPage(
+                          pageInstallments, totalDebt, downPayment, arabicFont,
+                          format: format,
+                          isFirstPage: isFirstPage,
+                          isLastPage: isLastPage,
+                          totalPages: pages.length),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+  }
+
+  // إضافة صفحات المنتجات
+  static void _addProductPages(
+      pw.Document doc,
+      List<Map<String, Object?>> items,
+      String shopName,
+      String? phone,
+      String? address,
+      String invoiceNumber,
+      String date,
+      String paymentType,
+      DateTime? dueDate,
+      String? customerName,
+      String? customerPhone,
+      String? customerAddress,
+      double total,
+      PdfPageFormat format,
+      pw.Font arabicFont,
+      {List<Map<String, Object?>>? installments,
+      double? totalDebt,
+      double? downPayment}) {
     // حساب عدد المنتجات التي يمكن عرضها في الصفحة الواحدة
     final maxItemsPerPage = _calculateMaxItemsPerPage(format);
     print('الحد الأقصى للمنتجات في الصفحة: $maxItemsPerPage');
@@ -221,7 +369,8 @@ class InvoicePdf {
         doc.addPage(
           pw.Page(
             pageFormat: format,
-            margin: const pw.EdgeInsets.all(8),
+            margin:
+                const pw.EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 8),
             build: (context) {
               return pw.Directionality(
                 textDirection: pw.TextDirection.rtl,
@@ -231,15 +380,13 @@ class InvoicePdf {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
+                        // مساحة فارغة من الأعلى
+                        pw.SizedBox(height: format.width < 100 ? 12 : 8),
                         // Header Section
                         if (isFirstPage) ...[
                           _buildHeader(shopName, phone, address, invoiceNumber,
                               date, format, arabicFont),
-                          pw.SizedBox(height: 8),
-                        ] else ...[
-                          _buildPageHeader(invoiceNumber, pageIndex + 1,
-                              pages.length, format, arabicFont),
-                          pw.SizedBox(height: 8),
+                          pw.SizedBox(height: 4),
                         ],
 
                         // Customer Info & Payment Type
@@ -252,14 +399,16 @@ class InvoicePdf {
                               dueDate,
                               arabicFont,
                               format: format,
-                              installments: installments,
-                              totalDebt: totalDebt,
-                              downPayment: downPayment),
-                          pw.SizedBox(height: 8),
+                              installments:
+                                  null, // لا نعرض الأقساط في صفحات المنتجات
+                              totalDebt: null,
+                              downPayment: null),
+                          pw.SizedBox(height: 4),
                         ],
 
                         // Items Table
-                        _buildItemsTable(pageItems, format, arabicFont),
+                        _buildItemsTable(pageItems, format, arabicFont,
+                            startIndex: pageIndex * maxItemsPerPage),
 
                         // Total Section - قسم المجموع (في الصفحة الأخيرة فقط)
                         if (isLastPage) ...[
@@ -304,7 +453,8 @@ class InvoicePdf {
       doc.addPage(
         pw.Page(
           pageFormat: format,
-          margin: const pw.EdgeInsets.all(8),
+          margin:
+              const pw.EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 8),
           build: (context) {
             return pw.Directionality(
               textDirection: pw.TextDirection.rtl,
@@ -314,16 +464,13 @@ class InvoicePdf {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
+                      // مساحة فارغة من الأعلى
+                      pw.SizedBox(height: format.width < 100 ? 12 : 8),
                       // Header Section - رأس الفاتورة (في الصفحة الأولى فقط)
                       if (isFirstPage) ...[
                         _buildHeader(shopName, phone, address, invoiceNumber,
                             date, format, arabicFont),
-                        pw.SizedBox(height: 8),
-                      ] else ...[
-                        // رأس مبسط للصفحات الإضافية
-                        _buildPageHeader(invoiceNumber, pageIndex + 1,
-                            pages.length, format, arabicFont),
-                        pw.SizedBox(height: 8),
+                        pw.SizedBox(height: 4),
                       ],
 
                       // Customer Info & Payment Type - معلومات العميل ونوع الدفع (في الصفحة الأولى فقط)
@@ -336,14 +483,16 @@ class InvoicePdf {
                             dueDate,
                             arabicFont,
                             format: format,
-                            installments: installments,
-                            totalDebt: totalDebt,
-                            downPayment: downPayment),
-                        pw.SizedBox(height: 8),
+                            installments:
+                                null, // لا نعرض الأقساط في صفحات المنتجات
+                            totalDebt: null,
+                            downPayment: null),
+                        pw.SizedBox(height: 4),
                       ],
 
                       // Items Table - جدول المنتجات
-                      _buildItemsTable(pageItems, format, arabicFont),
+                      _buildItemsTable(pageItems, format, arabicFont,
+                          startIndex: pageIndex * maxItemsPerPage),
 
                       pw.SizedBox(height: 8),
 
@@ -367,35 +516,6 @@ class InvoicePdf {
     }
   }
 
-  // بناء رأس مبسط للصفحات الإضافية
-  static pw.Widget _buildPageHeader(String invoiceNumber, int currentPage,
-      int totalPages, PdfPageFormat format, pw.Font arabicFont) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(width: 1),
-        borderRadius: pw.BorderRadius.circular(4),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.center,
-        children: [
-          pw.Text(
-            'فاتورة رقم: $invoiceNumber',
-            style: _getArabicTextStyle(arabicFont, _getFontSize(format, 14),
-                fontWeight: pw.FontWeight.bold),
-            textAlign: pw.TextAlign.center,
-          ),
-          pw.SizedBox(height: 4),
-          pw.Text(
-            'صفحة $currentPage من $totalPages',
-            style: _getArabicTextStyle(arabicFont, _getFontSize(format, 10)),
-            textAlign: pw.TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
   // بناء رأس الفاتورة
   static pw.Widget _buildHeader(
       String shopName,
@@ -408,7 +528,7 @@ class InvoicePdf {
     // للطابعات الحرارية - رأس مبسط
     if (format.width < 100) {
       return pw.Container(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 1),
         decoration: pw.BoxDecoration(
           border: pw.Border.all(width: 0.5),
           borderRadius: pw.BorderRadius.circular(2),
@@ -485,7 +605,7 @@ class InvoicePdf {
 
     // للأوراق الكبيرة - الرأس العادي
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(width: 0.5),
         borderRadius: pw.BorderRadius.circular(3),
@@ -564,6 +684,61 @@ class InvoicePdf {
     );
   }
 
+  // بناء معلومات العميل فقط (بدون نوع الدفع)
+  static pw.Widget _buildCustomerInfoOnly(String? customerName,
+      String? customerPhone, String? customerAddress, pw.Font arabicFont,
+      {PdfPageFormat? format}) {
+    // للطابعات الحرارية - قسم مبسط
+    if (format != null && format.width < 100) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+        decoration: pw.BoxDecoration(
+          color: PdfColors.grey100,
+          border: pw.Border.all(width: 0.5),
+          borderRadius: pw.BorderRadius.circular(2),
+        ),
+        child: pw.Column(
+          children: [
+            // معلومات العميل
+            if (customerName != null && customerName.isNotEmpty)
+              pw.Text('العميل: $customerName',
+                  style: _getArabicTextStyle(arabicFont, 6)),
+            if (customerPhone != null && customerPhone.isNotEmpty)
+              pw.Text('الهاتف: $customerPhone',
+                  style: _getArabicTextStyle(arabicFont, 6)),
+            if (customerAddress != null && customerAddress.isNotEmpty)
+              pw.Text('العنوان: $customerAddress',
+                  style: _getArabicTextStyle(arabicFont, 6)),
+          ],
+        ),
+      );
+    }
+
+    // للأوراق الكبيرة - القسم العادي
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey100,
+        border: pw.Border.all(width: 0.5),
+        borderRadius: pw.BorderRadius.circular(3),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+        children: [
+          if (customerName != null && customerName.isNotEmpty)
+            pw.Text('الاسم: $customerName',
+                style: _getArabicTextStyle(arabicFont, 8)),
+          if (customerPhone != null && customerPhone.isNotEmpty)
+            pw.Text('الهاتف: $customerPhone',
+                style: _getArabicTextStyle(arabicFont, 8)),
+          if (customerAddress != null && customerAddress.isNotEmpty)
+            pw.Text('العنوان: $customerAddress',
+                style: _getArabicTextStyle(arabicFont, 8)),
+        ],
+      ),
+    );
+  }
+
   // بناء معلومات العميل ونوع الدفع في صف واحد
   static pw.Widget _buildCustomerAndPaymentInfo(
       String? customerName,
@@ -597,7 +772,7 @@ class InvoicePdf {
     // للطابعات الحرارية - قسم مبسط
     if (format != null && format.width < 100) {
       return pw.Container(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 1),
         decoration: pw.BoxDecoration(
           color: PdfColors.grey100,
           border: pw.Border.all(width: 0.5),
@@ -634,6 +809,13 @@ class InvoicePdf {
                 textAlign: pw.TextAlign.center,
               ),
             ),
+
+            // معلومات الأقساط للطابعات الحرارية
+            if (installments != null && installments.isNotEmpty) ...[
+              pw.SizedBox(height: 2),
+              _buildInstallmentInfoCompact(
+                  installments, totalDebt, downPayment, arabicFont),
+            ],
           ],
         ),
       );
@@ -643,7 +825,7 @@ class InvoicePdf {
     return pw.Column(
       children: [
         pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: pw.BoxDecoration(
             color: PdfColors.grey100,
             border: pw.Border.all(width: 0.5),
@@ -715,6 +897,49 @@ class InvoicePdf {
     );
   }
 
+  // حساب الحد الأقصى لعدد الأقساط في الصفحة الواحدة
+  static int _calculateMaxInstallmentsPerPage(PdfPageFormat format) {
+    print(
+        'حساب عدد الأقساط - عرض الصفحة: ${format.width}, ارتفاع الصفحة: ${format.height}');
+
+    // حساب المساحة المتاحة للأقساط
+    final availableHeight = format.height - 120; // مساحة أقل للرأس والذيل
+    final installmentHeight = 25; // ارتفاع كل قسط
+
+    print(
+        'الارتفاع المتاح للأقساط: $availableHeight, ارتفاع القسط: $installmentHeight');
+
+    // فحص القيم للتأكد من صحتها
+    if (availableHeight.isNaN ||
+        availableHeight.isInfinite ||
+        installmentHeight.isNaN ||
+        installmentHeight.isInfinite ||
+        installmentHeight <= 0) {
+      print('تحذير: قيم غير صحيحة في حساب عدد الأقساط، استخدام قيمة افتراضية');
+      return 5; // قيمة افتراضية آمنة
+    }
+
+    final result = (availableHeight / installmentHeight).floor();
+    print('عدد الأقساط المحسوب: $result');
+
+    // التأكد من أن النتيجة صحيحة
+    if (result.isNaN || result.isInfinite || result < 0) {
+      print('تحذير: نتيجة غير صحيحة، استخدام قيمة افتراضية');
+      return 5;
+    }
+
+    // تحديد حد أقصى مناسب حسب نوع الورق
+    if (format.width < 100) {
+      return result.clamp(1, 3); // طابعات حرارية - مساحة محدودة
+    } else if (format.width < 200) {
+      return result.clamp(1, 6); // طابعات حرارية 80mm
+    } else if (format.width < 400) {
+      return result.clamp(1, 10); // أوراق A5
+    } else {
+      return result.clamp(1, 15); // أوراق A4
+    }
+  }
+
   // حساب الحد الأقصى لعدد المنتجات في الصفحة الواحدة
   static int _calculateMaxItemsPerPage(PdfPageFormat format) {
     print(
@@ -760,7 +985,8 @@ class InvoicePdf {
 
   // بناء جدول المنتجات العادي
   static pw.Widget _buildItemsTable(List<Map<String, Object?>> items,
-      PdfPageFormat format, pw.Font arabicFont) {
+      PdfPageFormat format, pw.Font arabicFont,
+      {int startIndex = 0}) {
     // تحديد نوع الورق حسب العرض
     final width = format.width;
 
@@ -769,23 +995,25 @@ class InvoicePdf {
       print(
           '🔥 طابعة حرارية 58mm - عرض: ${width}mm - استخدام تخطيط مضغوط جداً');
       return _buildCompactThermalItemsTable(items, format, arabicFont,
-          is58mm: true);
+          is58mm: true, startIndex: startIndex);
     }
     // طابعة حرارية 80mm - عرض متوسط
     else if (width < 120) {
       print('🔥 طابعة حرارية 80mm - عرض: ${width}mm - استخدام تخطيط حرارية');
       return _buildCompactThermalItemsTable(items, format, arabicFont,
-          is58mm: false);
+          is58mm: false, startIndex: startIndex);
     }
     // ورقة A5 - عرض جيد
     else if (width < 450) {
       print('📄 ورقة A5 - عرض: ${width}mm - استخدام جدول متوسط');
-      return _buildStandardItemsTable(items, format, arabicFont, isA5: true);
+      return _buildStandardItemsTable(items, format, arabicFont,
+          isA5: true, startIndex: startIndex);
     }
     // ورقة A4 - عرض كبير
     else {
       print('📄 ورقة A4 - عرض: ${width}mm - استخدام جدول كامل');
-      return _buildStandardItemsTable(items, format, arabicFont, isA5: false);
+      return _buildStandardItemsTable(items, format, arabicFont,
+          isA5: false, startIndex: startIndex);
     }
   }
 
@@ -794,7 +1022,8 @@ class InvoicePdf {
       List<Map<String, Object?>> items,
       PdfPageFormat format,
       pw.Font arabicFont,
-      {required bool is58mm}) {
+      {required bool is58mm,
+      int startIndex = 0}) {
     return pw.Column(
       children: [
         // خط فاصل علوي
@@ -827,12 +1056,28 @@ class InvoicePdf {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // اسم المنتج
-              pw.Text(
-                shortName,
-                style: _getArabicTextStyle(arabicFont, is58mm ? 7 : 8,
-                    fontWeight: pw.FontWeight.bold),
-                textAlign: pw.TextAlign.right,
+              // اسم المنتج مع التسلسل
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  // التسلسل
+                  pw.Text(
+                    '${startIndex + index + 1}.',
+                    style: _getArabicTextStyle(arabicFont, is58mm ? 6 : 7,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.grey600),
+                    textAlign: pw.TextAlign.left,
+                  ),
+                  // اسم المنتج
+                  pw.Expanded(
+                    child: pw.Text(
+                      shortName,
+                      style: _getArabicTextStyle(arabicFont, is58mm ? 7 : 8,
+                          fontWeight: pw.FontWeight.bold),
+                      textAlign: pw.TextAlign.right,
+                    ),
+                  ),
+                ],
               ),
 
               // تفاصيل السعر والكمية
@@ -881,7 +1126,7 @@ class InvoicePdf {
   // بناء جدول عادي للأوراق الكبيرة
   static pw.Widget _buildStandardItemsTable(List<Map<String, Object?>> items,
       PdfPageFormat format, pw.Font arabicFont,
-      {required bool isA5}) {
+      {required bool isA5, int startIndex = 0}) {
     // تكييف أبعاد الأعمدة حسب حجم الورق
     Map<int, pw.TableColumnWidth> columnWidths;
     double fontSize;
@@ -1044,7 +1289,7 @@ class InvoicePdf {
                 pw.Padding(
                   padding: pw.EdgeInsets.all(padding),
                   child: pw.Text(
-                    (index + 1).toString(),
+                    (startIndex + index + 1).toString(),
                     style: _getArabicTextStyle(arabicFont, fontSize,
                         fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.center,
@@ -1367,6 +1612,272 @@ class InvoicePdf {
     }
   }
 
+  // بناء معلومات الأقساط لصفحة منفصلة
+  static pw.Widget _buildInstallmentInfoForPage(
+      List<Map<String, Object?>> installments,
+      double? totalDebt,
+      double? downPayment,
+      pw.Font arabicFont,
+      {PdfPageFormat? format,
+      required bool isFirstPage,
+      required bool isLastPage,
+      required int totalPages}) {
+    final unpaidInstallments =
+        installments.where((i) => (i['paid'] as int) == 0).toList();
+    final paidInstallments =
+        installments.where((i) => (i['paid'] as int) == 1).toList();
+
+    // حساب المجموع الكلي (المبلغ المقدم + إجمالي الأقساط)
+    final totalAmount = (downPayment ?? 0) + (totalDebt ?? 0);
+
+    // للطابعات الحرارية - عرض مبسط
+    if (format != null && format.width < 100) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.all(3),
+        decoration: pw.BoxDecoration(
+          color: PdfColors.blue50,
+          border: pw.Border.all(color: PdfColors.blue, width: 0.5),
+          borderRadius: pw.BorderRadius.circular(2),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'معلومات الأقساط',
+              style: _getArabicTextStyle(arabicFont, 7,
+                  fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
+            ),
+            pw.SizedBox(height: 2),
+
+            // المجموع الكلي
+            pw.Text(
+              'المجموع الكلي: ${Formatters.currencyIQD(totalAmount)}',
+              style: _getArabicTextStyle(arabicFont, 6,
+                  fontWeight: pw.FontWeight.bold, color: PdfColors.black),
+            ),
+            pw.SizedBox(height: 1),
+
+            // المبلغ المقدم
+            if (downPayment != null && downPayment > 0)
+              pw.Text(
+                'المبلغ المقدم: ${Formatters.currencyIQD(downPayment)}',
+                style:
+                    _getArabicTextStyle(arabicFont, 6, color: PdfColors.green),
+              ),
+
+            // إجمالي الدين
+            if (totalDebt != null && totalDebt > 0)
+              pw.Text(
+                'إجمالي الأقساط: ${Formatters.currencyIQD(totalDebt)}',
+                style: _getArabicTextStyle(arabicFont, 6, color: PdfColors.red),
+              ),
+
+            pw.SizedBox(height: 2),
+
+            // الأقساط المتبقية
+            if (unpaidInstallments.isNotEmpty) ...[
+              pw.Text(
+                'الأقساط المتبقية:',
+                style: _getArabicTextStyle(arabicFont, 6,
+                    fontWeight: pw.FontWeight.bold),
+              ),
+              ...unpaidInstallments.map((installment) {
+                final dueDate =
+                    DateTime.parse(installment['due_date'] as String);
+                final amount = (installment['amount'] as num).toDouble();
+                final isOverdue = dueDate.isBefore(DateTime.now());
+
+                return pw.Padding(
+                  padding: const pw.EdgeInsets.only(left: 4, top: 1),
+                  child: pw.Text(
+                    '${DateFormat('dd/MM').format(dueDate)}: ${Formatters.currencyIQD(amount)}${isOverdue ? ' (متأخر)' : ''}',
+                    style: _getArabicTextStyle(arabicFont, 5,
+                        color: isOverdue ? PdfColors.red : PdfColors.black),
+                  ),
+                );
+              }),
+            ],
+
+            // الأقساط المدفوعة
+            if (paidInstallments.isNotEmpty)
+              pw.Text(
+                'مدفوع: ${paidInstallments.length}/${installments.length}',
+                style:
+                    _getArabicTextStyle(arabicFont, 5, color: PdfColors.green),
+              ),
+          ],
+        ),
+      );
+    }
+
+    // للأوراق الكبيرة - عرض مفصل
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(6),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.blue50,
+        border: pw.Border.all(color: PdfColors.blue, width: 0.5),
+        borderRadius: pw.BorderRadius.circular(3),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'معلومات الأقساط',
+                style: _getArabicTextStyle(arabicFont, 9,
+                    fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
+              ),
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  // المجموع الكلي
+                  pw.Text(
+                    'المجموع الكلي: ${Formatters.currencyIQD(totalAmount)}',
+                    style: _getArabicTextStyle(arabicFont, 8,
+                        fontWeight: pw.FontWeight.bold, color: PdfColors.black),
+                  ),
+                  pw.SizedBox(height: 2),
+                  if (downPayment != null && downPayment > 0)
+                    pw.Text(
+                      'المبلغ المقدم: ${Formatters.currencyIQD(downPayment)}',
+                      style: _getArabicTextStyle(arabicFont, 8,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.green),
+                    ),
+                  if (totalDebt != null && totalDebt > 0)
+                    pw.Text(
+                      'إجمالي الأقساط: ${Formatters.currencyIQD(totalDebt)}',
+                      style: _getArabicTextStyle(arabicFont, 8,
+                          fontWeight: pw.FontWeight.bold, color: PdfColors.red),
+                    ),
+                ],
+              ),
+            ],
+          ),
+
+          pw.SizedBox(height: 4),
+
+          // جدول الأقساط المتبقية
+          if (unpaidInstallments.isNotEmpty) ...[
+            pw.Text(
+              'الأقساط المتبقية:',
+              style: _getArabicTextStyle(arabicFont, 8,
+                  fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 3),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey, width: 0.5),
+              columnWidths: {
+                0: const pw.FixedColumnWidth(80),
+                1: const pw.FixedColumnWidth(100),
+                2: const pw.FixedColumnWidth(60),
+              },
+              children: [
+                // رأس الجدول
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(3),
+                      child: pw.Text(
+                        'تاريخ الاستحقاق',
+                        style: _getArabicTextStyle(arabicFont, 7,
+                            fontWeight: pw.FontWeight.bold),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(3),
+                      child: pw.Text(
+                        'المبلغ',
+                        style: _getArabicTextStyle(arabicFont, 7,
+                            fontWeight: pw.FontWeight.bold),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(3),
+                      child: pw.Text(
+                        'الحالة',
+                        style: _getArabicTextStyle(arabicFont, 7,
+                            fontWeight: pw.FontWeight.bold),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // صفوف الأقساط
+                ...unpaidInstallments.map((installment) {
+                  final dueDate =
+                      DateTime.parse(installment['due_date'] as String);
+                  final amount = (installment['amount'] as num).toDouble();
+                  final isOverdue = dueDate.isBefore(DateTime.now());
+
+                  return pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(3),
+                        child: pw.Text(
+                          DateFormat('dd/MM/yyyy').format(dueDate),
+                          style: _getArabicTextStyle(arabicFont, 6),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(3),
+                        child: pw.Text(
+                          Formatters.currencyIQD(amount),
+                          style: _getArabicTextStyle(arabicFont, 6),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(3),
+                        child: pw.Text(
+                          isOverdue ? 'متأخر' : 'في الموعد',
+                          style: _getArabicTextStyle(arabicFont, 6,
+                              color:
+                                  isOverdue ? PdfColors.red : PdfColors.green),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ],
+
+          pw.SizedBox(height: 4),
+
+          // ملخص الأقساط
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'إجمالي الأقساط: ${installments.length}',
+                style: _getArabicTextStyle(arabicFont, 7),
+              ),
+              pw.Text(
+                'مدفوع: ${paidInstallments.length}',
+                style:
+                    _getArabicTextStyle(arabicFont, 7, color: PdfColors.green),
+              ),
+              pw.Text(
+                'متبقي: ${unpaidInstallments.length}',
+                style:
+                    _getArabicTextStyle(arabicFont, 7, color: PdfColors.orange),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // بناء معلومات الأقساط للطابعات الحرارية (مضغوط)
   static pw.Widget _buildInstallmentInfoCompact(
       List<Map<String, Object?>> installments,
@@ -1477,11 +1988,11 @@ class InvoicePdf {
     final totalAmount = (downPayment ?? 0) + (totalDebt ?? 0);
 
     return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
+      padding: const pw.EdgeInsets.all(6),
       decoration: pw.BoxDecoration(
         color: PdfColors.blue50,
-        border: pw.Border.all(color: PdfColors.blue, width: 1),
-        borderRadius: pw.BorderRadius.circular(4),
+        border: pw.Border.all(color: PdfColors.blue, width: 0.5),
+        borderRadius: pw.BorderRadius.circular(3),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1491,7 +2002,7 @@ class InvoicePdf {
             children: [
               pw.Text(
                 'معلومات الأقساط',
-                style: _getArabicTextStyle(arabicFont, 10,
+                style: _getArabicTextStyle(arabicFont, 9,
                     fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
               ),
               pw.Column(
@@ -1500,21 +2011,21 @@ class InvoicePdf {
                   // المجموع الكلي
                   pw.Text(
                     'المجموع الكلي: ${Formatters.currencyIQD(totalAmount)}',
-                    style: _getArabicTextStyle(arabicFont, 9,
+                    style: _getArabicTextStyle(arabicFont, 8,
                         fontWeight: pw.FontWeight.bold, color: PdfColors.black),
                   ),
                   pw.SizedBox(height: 2),
                   if (downPayment != null && downPayment > 0)
                     pw.Text(
                       'المبلغ المقدم: ${Formatters.currencyIQD(downPayment)}',
-                      style: _getArabicTextStyle(arabicFont, 9,
+                      style: _getArabicTextStyle(arabicFont, 8,
                           fontWeight: pw.FontWeight.bold,
                           color: PdfColors.green),
                     ),
                   if (totalDebt != null && totalDebt > 0)
                     pw.Text(
                       'إجمالي الأقساط: ${Formatters.currencyIQD(totalDebt)}',
-                      style: _getArabicTextStyle(arabicFont, 9,
+                      style: _getArabicTextStyle(arabicFont, 8,
                           fontWeight: pw.FontWeight.bold, color: PdfColors.red),
                     ),
                 ],
@@ -1522,16 +2033,16 @@ class InvoicePdf {
             ],
           ),
 
-          pw.SizedBox(height: 6),
+          pw.SizedBox(height: 4),
 
           // جدول الأقساط المتبقية
           if (unpaidInstallments.isNotEmpty) ...[
             pw.Text(
               'الأقساط المتبقية:',
-              style: _getArabicTextStyle(arabicFont, 9,
+              style: _getArabicTextStyle(arabicFont, 8,
                   fontWeight: pw.FontWeight.bold),
             ),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 3),
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey, width: 0.5),
               columnWidths: {
@@ -1545,28 +2056,28 @@ class InvoicePdf {
                   decoration: const pw.BoxDecoration(color: PdfColors.grey200),
                   children: [
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(4),
+                      padding: const pw.EdgeInsets.all(3),
                       child: pw.Text(
                         'تاريخ الاستحقاق',
-                        style: _getArabicTextStyle(arabicFont, 8,
+                        style: _getArabicTextStyle(arabicFont, 7,
                             fontWeight: pw.FontWeight.bold),
                         textAlign: pw.TextAlign.center,
                       ),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(4),
+                      padding: const pw.EdgeInsets.all(3),
                       child: pw.Text(
                         'المبلغ',
-                        style: _getArabicTextStyle(arabicFont, 8,
+                        style: _getArabicTextStyle(arabicFont, 7,
                             fontWeight: pw.FontWeight.bold),
                         textAlign: pw.TextAlign.center,
                       ),
                     ),
                     pw.Padding(
-                      padding: const pw.EdgeInsets.all(4),
+                      padding: const pw.EdgeInsets.all(3),
                       child: pw.Text(
                         'الحالة',
-                        style: _getArabicTextStyle(arabicFont, 8,
+                        style: _getArabicTextStyle(arabicFont, 7,
                             fontWeight: pw.FontWeight.bold),
                         textAlign: pw.TextAlign.center,
                       ),
@@ -1575,7 +2086,7 @@ class InvoicePdf {
                 ),
 
                 // صفوف الأقساط
-                ...unpaidInstallments.take(5).map((installment) {
+                ...unpaidInstallments.map((installment) {
                   final dueDate =
                       DateTime.parse(installment['due_date'] as String);
                   final amount = (installment['amount'] as num).toDouble();
@@ -1584,26 +2095,26 @@ class InvoicePdf {
                   return pw.TableRow(
                     children: [
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
+                        padding: const pw.EdgeInsets.all(3),
                         child: pw.Text(
                           DateFormat('dd/MM/yyyy').format(dueDate),
-                          style: _getArabicTextStyle(arabicFont, 7),
+                          style: _getArabicTextStyle(arabicFont, 6),
                           textAlign: pw.TextAlign.center,
                         ),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
+                        padding: const pw.EdgeInsets.all(3),
                         child: pw.Text(
                           Formatters.currencyIQD(amount),
-                          style: _getArabicTextStyle(arabicFont, 7),
+                          style: _getArabicTextStyle(arabicFont, 6),
                           textAlign: pw.TextAlign.center,
                         ),
                       ),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
+                        padding: const pw.EdgeInsets.all(3),
                         child: pw.Text(
                           isOverdue ? 'متأخر' : 'في الموعد',
-                          style: _getArabicTextStyle(arabicFont, 7,
+                          style: _getArabicTextStyle(arabicFont, 6,
                               color:
                                   isOverdue ? PdfColors.red : PdfColors.green),
                           textAlign: pw.TextAlign.center,
@@ -1614,18 +2125,9 @@ class InvoicePdf {
                 }),
               ],
             ),
-            if (unpaidInstallments.length > 5)
-              pw.Padding(
-                padding: const pw.EdgeInsets.only(top: 4),
-                child: pw.Text(
-                  '... و ${unpaidInstallments.length - 5} قسط آخر',
-                  style:
-                      _getArabicTextStyle(arabicFont, 7, color: PdfColors.grey),
-                ),
-              ),
           ],
 
-          pw.SizedBox(height: 6),
+          pw.SizedBox(height: 4),
 
           // ملخص الأقساط
           pw.Row(
@@ -1633,17 +2135,17 @@ class InvoicePdf {
             children: [
               pw.Text(
                 'إجمالي الأقساط: ${installments.length}',
-                style: _getArabicTextStyle(arabicFont, 8),
+                style: _getArabicTextStyle(arabicFont, 7),
               ),
               pw.Text(
                 'مدفوع: ${paidInstallments.length}',
                 style:
-                    _getArabicTextStyle(arabicFont, 8, color: PdfColors.green),
+                    _getArabicTextStyle(arabicFont, 7, color: PdfColors.green),
               ),
               pw.Text(
                 'متبقي: ${unpaidInstallments.length}',
                 style:
-                    _getArabicTextStyle(arabicFont, 8, color: PdfColors.orange),
+                    _getArabicTextStyle(arabicFont, 7, color: PdfColors.orange),
               ),
             ],
           ),
