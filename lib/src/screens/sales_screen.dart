@@ -48,6 +48,11 @@ class _SalesScreenState extends State<SalesScreen> {
   String _lastCustomerPhone = '';
   String _lastCustomerAddress = '';
 
+  // Last invoice installment info
+  List<Map<String, Object?>>? _lastInstallments;
+  double? _lastTotalDebt;
+  double? _lastDownPayment;
+
   // Print settings
   String _selectedPrintType = '80'; // نوع الطباعة المختار
 
@@ -1680,6 +1685,28 @@ class _SalesScreenState extends State<SalesScreen> {
                                                         : null,
                                                   );
                                                   if (!mounted) return;
+
+                                                  // Save installment info for last invoice
+                                                  if (_type == 'installment') {
+                                                    _lastInstallments = await db
+                                                        .getInstallments(
+                                                            saleId: saleId);
+                                                    final installmentSummary =
+                                                        await db
+                                                            .getSaleInstallmentSummary(
+                                                                saleId);
+                                                    _lastTotalDebt =
+                                                        installmentSummary[
+                                                                'totalDebt']
+                                                            as double?;
+                                                    _lastDownPayment =
+                                                        _downPayment;
+                                                  } else {
+                                                    _lastInstallments = null;
+                                                    _lastTotalDebt = null;
+                                                    _lastDownPayment = null;
+                                                  }
+
                                                   setState(() {
                                                     _lastInvoiceItems = _cart
                                                         .map((e) => Map<String,
@@ -3257,6 +3284,9 @@ class _SalesScreenState extends State<SalesScreen> {
       showLogo: true, // إظهار الشعار
       showBarcode: true, // إظهار الباركود
       invoiceNumber: _lastInvoiceId?.toString(), // تمرير رقم الفاتورة
+      installments: _lastInstallments, // معلومات الأقساط
+      totalDebt: _lastTotalDebt, // إجمالي الدين
+      downPayment: _lastDownPayment, // المبلغ المقدم
       context: context,
     );
 

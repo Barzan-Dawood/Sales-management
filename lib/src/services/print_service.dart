@@ -27,6 +27,9 @@ class PrintService {
     bool? showLogo,
     bool? showBarcode,
     String? invoiceNumber, // رقم الفاتورة من قاعدة البيانات
+    List<Map<String, Object?>>? installments, // معلومات الأقساط
+    double? totalDebt, // إجمالي الدين
+    double? downPayment, // المبلغ المقدم
     BuildContext? context,
   }) async {
     try {
@@ -66,6 +69,9 @@ class PrintService {
         showLogo: showLogo ?? _savedShowLogo,
         showBarcode: showBarcode ?? _savedShowBarcode,
         invoiceNumber: invoiceNumber,
+        installments: installments,
+        totalDebt: totalDebt,
+        downPayment: downPayment,
       );
 
       print('تم إنشاء PDF بنجاح، حجم الملف: ${pdfData.length} بايت');

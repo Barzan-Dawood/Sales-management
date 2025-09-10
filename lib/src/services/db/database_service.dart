@@ -2740,4 +2740,47 @@ class DatabaseService {
           (overdueInstallments.first['total'] as num?)?.toDouble() ?? 0.0,
     };
   }
+
+  // دالة الحصول على ملخص أقساط فاتورة محددة
+  Future<Map<String, dynamic>> getSaleInstallmentSummary(int saleId) async {
+    final now = DateTime.now().toIso8601String();
+
+    final totalInstallments = await _db.rawQuery('''
+      SELECT COUNT(*) as count, SUM(amount) as total
+      FROM installments
+      WHERE sale_id = ?
+    ''', [saleId]);
+
+    final paidInstallments = await _db.rawQuery('''
+      SELECT COUNT(*) as count, SUM(amount) as total
+      FROM installments
+      WHERE sale_id = ? AND paid = 1
+    ''', [saleId]);
+
+    final unpaidInstallments = await _db.rawQuery('''
+      SELECT COUNT(*) as count, SUM(amount) as total
+      FROM installments
+      WHERE sale_id = ? AND paid = 0
+    ''', [saleId]);
+
+    final overdueInstallments = await _db.rawQuery('''
+      SELECT COUNT(*) as count, SUM(amount) as total
+      FROM installments
+      WHERE sale_id = ? AND paid = 0 AND due_date < ?
+    ''', [saleId, now]);
+
+    return {
+      'totalDebt':
+          (totalInstallments.first['total'] as num?)?.toDouble() ?? 0.0,
+      'totalPaid': (paidInstallments.first['total'] as num?)?.toDouble() ?? 0.0,
+      'remainingDebt':
+          (unpaidInstallments.first['total'] as num?)?.toDouble() ?? 0.0,
+      'overdueAmount':
+          (overdueInstallments.first['total'] as num?)?.toDouble() ?? 0.0,
+      'totalCount': (totalInstallments.first['count'] as int),
+      'paidCount': (paidInstallments.first['count'] as int),
+      'unpaidCount': (unpaidInstallments.first['count'] as int),
+      'overdueCount': (overdueInstallments.first['count'] as int),
+    };
+  }
 }
