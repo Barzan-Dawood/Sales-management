@@ -2152,7 +2152,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                         const SizedBox(
                                                                             width:
                                                                                 8),
-                                                                        // زر الطباعة
+                                                                        // زر طباعة فقط
                                                                         Expanded(
                                                                           child:
                                                                               ElevatedButton.icon(
@@ -2163,6 +2163,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                 await _printInvoice(context);
 
                                                                                 if (context.mounted) {
+                                                                                  // عرض رسالة النجاح
                                                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                                                     const SnackBar(
                                                                                       content: Text('تم طباعة الفاتورة بنجاح'),
@@ -2186,7 +2187,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                             icon:
                                                                                 const Icon(Icons.print, size: 20),
                                                                             label:
-                                                                                const Text('طباعة الفاتورة'),
+                                                                                const Text('طباعة'),
                                                                             style:
                                                                                 ElevatedButton.styleFrom(
                                                                               backgroundColor: _lastType == 'credit'
@@ -2206,37 +2207,49 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                         const SizedBox(
                                                                             width:
                                                                                 8),
-
-                                                                        // OK button
+                                                                        // زر موافق
                                                                         Expanded(
                                                                           child:
                                                                               ElevatedButton.icon(
                                                                             onPressed:
-                                                                                () {
-                                                                              // Clear everything when closing dialog
-                                                                              setState(() {
-                                                                                // Clear cart
-                                                                                _cart.clear();
-                                                                                _addedToCartProducts.clear();
-                                                                                // Clear customer fields
-                                                                                _customerName = '';
-                                                                                _customerPhone = '';
-                                                                                _customerAddress = '';
-                                                                                _dueDate = null;
-                                                                                // Clear controllers
-                                                                                _customerNameController.clear();
-                                                                                _customerPhoneController.clear();
-                                                                                _customerAddressController.clear();
-                                                                              });
-                                                                              Navigator.of(context).pop();
+                                                                                () async {
+                                                                              if (context.mounted) {
+                                                                                // Clear everything when closing dialog
+                                                                                setState(() {
+                                                                                  // Clear cart
+                                                                                  _cart.clear();
+                                                                                  _addedToCartProducts.clear();
+                                                                                  // Clear customer fields
+                                                                                  _customerName = '';
+                                                                                  _customerPhone = '';
+                                                                                  _customerAddress = '';
+                                                                                  _dueDate = null;
+                                                                                  // Clear controllers
+                                                                                  _customerNameController.clear();
+                                                                                  _customerPhoneController.clear();
+                                                                                  _customerAddressController.clear();
+                                                                                });
+
+                                                                                // إغلاق الحوار
+                                                                                Navigator.of(context).pop();
+
+                                                                                // عرض رسالة النجاح
+                                                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                                                  const SnackBar(
+                                                                                    content: Text('تم حفظ الطلب بنجاح'),
+                                                                                    backgroundColor: Colors.green,
+                                                                                    duration: Duration(seconds: 2),
+                                                                                  ),
+                                                                                );
+                                                                              }
                                                                             },
                                                                             icon:
-                                                                                const Icon(Icons.check_circle, size: 20),
+                                                                                const Icon(Icons.check, size: 20),
                                                                             label:
                                                                                 const Text('موافق'),
                                                                             style:
                                                                                 ElevatedButton.styleFrom(
-                                                                              backgroundColor: Colors.grey.shade700,
+                                                                              backgroundColor: Colors.green.shade600,
                                                                               foregroundColor: Colors.white,
                                                                               padding: const EdgeInsets.symmetric(vertical: 14),
                                                                               shape: RoundedRectangleBorder(
