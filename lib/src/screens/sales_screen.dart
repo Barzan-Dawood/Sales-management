@@ -49,7 +49,7 @@ class _SalesScreenState extends State<SalesScreen> {
   String _lastCustomerAddress = '';
 
   // Print settings
-  String _selectedPrintType = 'thermal_80'; // نوع الطباعة المختار
+  String _selectedPrintType = '80'; // نوع الطباعة المختار
 
   @override
   void dispose() {
@@ -1709,724 +1709,764 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     barrierDismissible: false,
                                                     builder:
                                                         (BuildContext context) {
-                                                      final totalAmount =
-                                                          _lastInvoiceItems
-                                                              .fold<num>(
-                                                        0,
-                                                        (sum, item) =>
-                                                            sum +
-                                                            ((item['price']
-                                                                    as num) *
-                                                                (item['quantity']
-                                                                    as num)),
-                                                      );
+                                                      return StatefulBuilder(
+                                                        builder: (context,
+                                                            setDialogState) {
+                                                          final totalAmount =
+                                                              _lastInvoiceItems
+                                                                  .fold<num>(
+                                                            0,
+                                                            (sum, item) =>
+                                                                sum +
+                                                                ((item['price']
+                                                                        as num) *
+                                                                    (item['quantity']
+                                                                        as num)),
+                                                          );
 
-                                                      return Dialog(
-                                                        shape:
-                                                            RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(20),
-                                                        ),
-                                                        child: Container(
-                                                          constraints:
-                                                              const BoxConstraints(
-                                                                  maxWidth: 500,
-                                                                  maxHeight:
-                                                                      600),
-                                                          child: Column(
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            children: [
-                                                              // Header
-                                                              Container(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .all(
-                                                                        20),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  gradient:
-                                                                      LinearGradient(
-                                                                    colors: _lastType ==
-                                                                            'credit'
-                                                                        ? [
-                                                                            Colors.orange.shade600,
-                                                                            Colors.orange.shade700
-                                                                          ]
-                                                                        : _lastType ==
-                                                                                'installment'
+                                                          return Dialog(
+                                                            shape:
+                                                                RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          20),
+                                                            ),
+                                                            child: Container(
+                                                              constraints:
+                                                                  const BoxConstraints(
+                                                                      maxWidth:
+                                                                          500,
+                                                                      maxHeight:
+                                                                          600),
+                                                              child: Column(
+                                                                mainAxisSize:
+                                                                    MainAxisSize
+                                                                        .min,
+                                                                children: [
+                                                                  // Header
+                                                                  Container(
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .all(
+                                                                            20),
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      gradient:
+                                                                          LinearGradient(
+                                                                        colors: _lastType ==
+                                                                                'credit'
                                                                             ? [
-                                                                                Colors.blue.shade600,
-                                                                                Colors.blue.shade700
+                                                                                Colors.orange.shade600,
+                                                                                Colors.orange.shade700
                                                                               ]
-                                                                            : [
-                                                                                Colors.green.shade600,
-                                                                                Colors.green.shade700
-                                                                              ],
-                                                                  ),
-                                                                  borderRadius:
-                                                                      const BorderRadius
-                                                                          .only(
-                                                                    topLeft: Radius
-                                                                        .circular(
-                                                                            20),
-                                                                    topRight: Radius
-                                                                        .circular(
-                                                                            20),
-                                                                  ),
-                                                                ),
-                                                                child: Row(
-                                                                  children: [
-                                                                    Icon(
-                                                                      Icons
-                                                                          .check_circle,
-                                                                      color: Colors
-                                                                          .white,
-                                                                      size: 32,
+                                                                            : _lastType ==
+                                                                                    'installment'
+                                                                                ? [
+                                                                                    Colors.blue.shade600,
+                                                                                    Colors.blue.shade700
+                                                                                  ]
+                                                                                : [
+                                                                                    Colors.green.shade600,
+                                                                                    Colors.green.shade700
+                                                                                  ],
+                                                                      ),
+                                                                      borderRadius:
+                                                                          const BorderRadius
+                                                                              .only(
+                                                                        topLeft:
+                                                                            Radius.circular(20),
+                                                                        topRight:
+                                                                            Radius.circular(20),
+                                                                      ),
                                                                     ),
-                                                                    const SizedBox(
-                                                                        width:
-                                                                            12),
-                                                                    Expanded(
+                                                                    child: Row(
+                                                                      children: [
+                                                                        Icon(
+                                                                          Icons
+                                                                              .check_circle,
+                                                                          color:
+                                                                              Colors.white,
+                                                                          size:
+                                                                              32,
+                                                                        ),
+                                                                        const SizedBox(
+                                                                            width:
+                                                                                12),
+                                                                        Expanded(
+                                                                          child:
+                                                                              Column(
+                                                                            crossAxisAlignment:
+                                                                                CrossAxisAlignment.start,
+                                                                            children: [
+                                                                              const Text(
+                                                                                'تم إنجاز البيع بنجاح',
+                                                                                style: TextStyle(
+                                                                                  color: Colors.white,
+                                                                                  fontSize: 20,
+                                                                                  fontWeight: FontWeight.bold,
+                                                                                ),
+                                                                              ),
+                                                                              Text(
+                                                                                _lastType == 'credit'
+                                                                                    ? 'بيع آجل'
+                                                                                    : _lastType == 'installment'
+                                                                                        ? 'بيع بالتقسيط'
+                                                                                        : 'بيع نقدي',
+                                                                                style: TextStyle(
+                                                                                  color: Colors.white.withOpacity(0.9),
+                                                                                  fontSize: 14,
+                                                                                ),
+                                                                              ),
+                                                                            ],
+                                                                          ),
+                                                                        ),
+                                                                        Container(
+                                                                          padding: const EdgeInsets
+                                                                              .symmetric(
+                                                                              horizontal: 12,
+                                                                              vertical: 6),
+                                                                          decoration:
+                                                                              BoxDecoration(
+                                                                            color:
+                                                                                Colors.white.withOpacity(0.2),
+                                                                            borderRadius:
+                                                                                BorderRadius.circular(12),
+                                                                          ),
+                                                                          child:
+                                                                              Text(
+                                                                            Formatters.currencyIQD(totalAmount),
+                                                                            style:
+                                                                                const TextStyle(
+                                                                              color: Colors.white,
+                                                                              fontWeight: FontWeight.bold,
+                                                                              fontSize: 16,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+
+                                                                  // Items List
+                                                                  Flexible(
+                                                                    child:
+                                                                        Container(
+                                                                      padding: const EdgeInsets
+                                                                          .all(
+                                                                          16),
                                                                       child:
                                                                           Column(
                                                                         crossAxisAlignment:
                                                                             CrossAxisAlignment.start,
                                                                         children: [
-                                                                          const Text(
-                                                                            'تم إنجاز البيع بنجاح',
-                                                                            style:
-                                                                                TextStyle(
-                                                                              color: Colors.white,
-                                                                              fontSize: 20,
-                                                                              fontWeight: FontWeight.bold,
-                                                                            ),
-                                                                          ),
-                                                                          Text(
-                                                                            _lastType == 'credit'
-                                                                                ? 'بيع آجل'
-                                                                                : _lastType == 'installment'
-                                                                                    ? 'بيع بالتقسيط'
-                                                                                    : 'بيع نقدي',
-                                                                            style:
-                                                                                TextStyle(
-                                                                              color: Colors.white.withOpacity(0.9),
-                                                                              fontSize: 14,
-                                                                            ),
-                                                                          ),
-                                                                        ],
-                                                                      ),
-                                                                    ),
-                                                                    Container(
-                                                                      padding: const EdgeInsets
-                                                                          .symmetric(
-                                                                          horizontal:
-                                                                              12,
-                                                                          vertical:
-                                                                              6),
-                                                                      decoration:
-                                                                          BoxDecoration(
-                                                                        color: Colors
-                                                                            .white
-                                                                            .withOpacity(0.2),
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(12),
-                                                                      ),
-                                                                      child:
-                                                                          Text(
-                                                                        Formatters.currencyIQD(
-                                                                            totalAmount),
-                                                                        style:
-                                                                            const TextStyle(
-                                                                          color:
-                                                                              Colors.white,
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
-                                                                          fontSize:
-                                                                              16,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ),
-
-                                                              // Items List
-                                                              Flexible(
-                                                                child:
-                                                                    Container(
-                                                                  padding:
-                                                                      const EdgeInsets
-                                                                          .all(
-                                                                          16),
-                                                                  child: Column(
-                                                                    crossAxisAlignment:
-                                                                        CrossAxisAlignment
-                                                                            .start,
-                                                                    children: [
-                                                                      Row(
-                                                                        mainAxisAlignment:
-                                                                            MainAxisAlignment.spaceBetween,
-                                                                        children: [
-                                                                          Text(
-                                                                            'المنتجات (${_lastInvoiceItems.length})',
-                                                                            style:
-                                                                                TextStyle(
-                                                                              fontWeight: FontWeight.bold,
-                                                                              fontSize: 16,
-                                                                              color: _lastType == 'credit'
-                                                                                  ? Colors.orange.shade700
-                                                                                  : _lastType == 'installment'
-                                                                                      ? Colors.blue.shade700
-                                                                                      : Colors.green.shade700,
-                                                                            ),
-                                                                          ),
-                                                                          if (_lastType == 'credit' &&
-                                                                              _lastDueDate != null)
-                                                                            Container(
-                                                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                                              decoration: BoxDecoration(
-                                                                                color: Colors.orange.shade100,
-                                                                                borderRadius: BorderRadius.circular(8),
-                                                                              ),
-                                                                              child: Text(
-                                                                                'تاريخ الاستحقاق: ${_lastDueDate!.day}/${_lastDueDate!.month}/${_lastDueDate!.year}',
+                                                                          Row(
+                                                                            mainAxisAlignment:
+                                                                                MainAxisAlignment.spaceBetween,
+                                                                            children: [
+                                                                              Text(
+                                                                                'المنتجات (${_lastInvoiceItems.length})',
                                                                                 style: TextStyle(
-                                                                                  fontSize: 10,
-                                                                                  color: Colors.orange.shade700,
-                                                                                  fontWeight: FontWeight.w600,
-                                                                                ),
-                                                                              ),
-                                                                            ),
-                                                                        ],
-                                                                      ),
-                                                                      const SizedBox(
-                                                                          height:
-                                                                              12),
-                                                                      Flexible(
-                                                                        child: ListView
-                                                                            .builder(
-                                                                          shrinkWrap:
-                                                                              true,
-                                                                          itemCount:
-                                                                              _lastInvoiceItems.length,
-                                                                          itemBuilder:
-                                                                              (context, index) {
-                                                                            final item =
-                                                                                _lastInvoiceItems[index];
-                                                                            return Container(
-                                                                              margin: const EdgeInsets.only(bottom: 8),
-                                                                              padding: const EdgeInsets.all(12),
-                                                                              decoration: BoxDecoration(
-                                                                                color: Colors.grey.shade50,
-                                                                                borderRadius: BorderRadius.circular(8),
-                                                                                border: Border.all(
+                                                                                  fontWeight: FontWeight.bold,
+                                                                                  fontSize: 16,
                                                                                   color: _lastType == 'credit'
-                                                                                      ? Colors.orange.shade200
+                                                                                      ? Colors.orange.shade700
                                                                                       : _lastType == 'installment'
-                                                                                          ? Colors.blue.shade200
-                                                                                          : Colors.green.shade200,
+                                                                                          ? Colors.blue.shade700
+                                                                                          : Colors.green.shade700,
                                                                                 ),
                                                                               ),
-                                                                              child: Row(
-                                                                                children: [
-                                                                                  Expanded(
-                                                                                    child: Text(
-                                                                                      item['name']?.toString() ?? '',
-                                                                                      style: const TextStyle(
-                                                                                        fontWeight: FontWeight.w600,
-                                                                                        fontSize: 14,
-                                                                                      ),
-                                                                                    ),
+                                                                              if (_lastType == 'credit' && _lastDueDate != null)
+                                                                                Container(
+                                                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                                                  decoration: BoxDecoration(
+                                                                                    color: Colors.orange.shade100,
+                                                                                    borderRadius: BorderRadius.circular(8),
                                                                                   ),
-                                                                                  Text(
-                                                                                    '${item['quantity']} × ${Formatters.currencyIQD(item['price'] as num)}',
+                                                                                  child: Text(
+                                                                                    'تاريخ الاستحقاق: ${_lastDueDate!.day}/${_lastDueDate!.month}/${_lastDueDate!.year}',
                                                                                     style: TextStyle(
+                                                                                      fontSize: 10,
+                                                                                      color: Colors.orange.shade700,
                                                                                       fontWeight: FontWeight.w600,
-                                                                                      fontSize: 12,
-                                                                                      color: _lastType == 'credit'
-                                                                                          ? Colors.orange.shade700
-                                                                                          : _lastType == 'installment'
-                                                                                              ? Colors.blue.shade700
-                                                                                              : Colors.green.shade700,
                                                                                     ),
                                                                                   ),
-                                                                                ],
-                                                                              ),
-                                                                            );
-                                                                          },
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                              ),
-
-                                                              // Customer Information Section
-                                                              if (_lastCustomerName
-                                                                  .isNotEmpty) ...[
-                                                                Container(
-                                                                  margin: const EdgeInsets
-                                                                      .symmetric(
-                                                                      horizontal:
-                                                                          16),
-                                                                  padding:
-                                                                      const EdgeInsets
-                                                                          .all(
-                                                                          6),
-                                                                  decoration:
-                                                                      BoxDecoration(
-                                                                    color: _lastType ==
-                                                                            'credit'
-                                                                        ? Colors
-                                                                            .orange
-                                                                            .shade50
-                                                                        : _lastType ==
-                                                                                'installment'
-                                                                            ? Colors.blue.shade50
-                                                                            : Colors.green.shade50,
-                                                                    borderRadius:
-                                                                        BorderRadius
-                                                                            .circular(6),
-                                                                    border:
-                                                                        Border
-                                                                            .all(
-                                                                      color: _lastType ==
-                                                                              'credit'
-                                                                          ? Colors
-                                                                              .orange
-                                                                              .shade200
-                                                                          : _lastType == 'installment'
-                                                                              ? Colors.blue.shade200
-                                                                              : Colors.green.shade200,
-                                                                      width: 1,
-                                                                    ),
-                                                                  ),
-                                                                  child: Column(
-                                                                    crossAxisAlignment:
-                                                                        CrossAxisAlignment
-                                                                            .start,
-                                                                    children: [
-                                                                      Row(
-                                                                        children: [
-                                                                          Icon(
-                                                                            Icons.person,
-                                                                            color: _lastType == 'credit'
-                                                                                ? Colors.orange.shade700
-                                                                                : _lastType == 'installment'
-                                                                                    ? Colors.blue.shade700
-                                                                                    : Colors.green.shade700,
-                                                                            size:
-                                                                                14,
+                                                                                ),
+                                                                            ],
                                                                           ),
                                                                           const SizedBox(
-                                                                              width: 4),
-                                                                          Text(
-                                                                            'معلومات العميل',
-                                                                            style:
-                                                                                TextStyle(
-                                                                              fontWeight: FontWeight.bold,
-                                                                              fontSize: 10,
-                                                                              color: _lastType == 'credit'
-                                                                                  ? Colors.orange.shade700
-                                                                                  : _lastType == 'installment'
-                                                                                      ? Colors.blue.shade700
-                                                                                      : Colors.green.shade700,
-                                                                            ),
-                                                                          ),
-                                                                        ],
-                                                                      ),
-                                                                      const SizedBox(
-                                                                          height:
-                                                                              6),
-                                                                      if (_lastCustomerName
-                                                                          .isNotEmpty) ...[
-                                                                        _buildCustomerInfoRow(
-                                                                            'الاسم',
-                                                                            _lastCustomerName),
-                                                                        const SizedBox(
-                                                                            height:
-                                                                                4),
-                                                                      ],
-                                                                      if (_lastCustomerPhone
-                                                                          .isNotEmpty) ...[
-                                                                        _buildCustomerInfoRow(
-                                                                            'الهاتف',
-                                                                            _lastCustomerPhone),
-                                                                        const SizedBox(
-                                                                            height:
-                                                                                4),
-                                                                      ],
-                                                                      if (_lastCustomerAddress
-                                                                          .isNotEmpty) ...[
-                                                                        _buildCustomerInfoRow(
-                                                                            'العنوان',
-                                                                            _lastCustomerAddress),
-                                                                        const SizedBox(
-                                                                            height:
-                                                                                4),
-                                                                      ],
-                                                                      if (_lastType ==
-                                                                              'credit' &&
-                                                                          _lastDueDate !=
-                                                                              null) ...[
-                                                                        _buildCustomerInfoRow(
-                                                                            'تاريخ الاستحقاق',
-                                                                            '${_lastDueDate!.day}/${_lastDueDate!.month}/${_lastDueDate!.year}'),
-                                                                      ],
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(
-                                                                    height: 6),
-                                                              ],
-
-                                                              // Actions - Simplified and organized buttons
-                                                              Container(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .all(
-                                                                        20),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: Colors
-                                                                      .grey
-                                                                      .shade50,
-                                                                  borderRadius:
-                                                                      const BorderRadius
-                                                                          .only(
-                                                                    bottomLeft:
-                                                                        Radius.circular(
-                                                                            20),
-                                                                    bottomRight:
-                                                                        Radius.circular(
-                                                                            20),
-                                                                  ),
-                                                                ),
-                                                                child: Column(
-                                                                  children: [
-                                                                    // Primary action buttons row
-                                                                    Row(
-                                                                      children: [
-                                                                        // زر اختيار نوع الطباعة
-                                                                        Expanded(
-                                                                          child:
-                                                                              ElevatedButton.icon(
-                                                                            onPressed:
-                                                                                () async {
-                                                                              // عرض حوار اختيار نوع الطباعة
-                                                                              final result = await _showPrintTypeDialog(context);
-                                                                              if (result != null) {
-                                                                                setState(() {
-                                                                                  _selectedPrintType = result;
-                                                                                });
-                                                                                if (context.mounted) {
-                                                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                                                    SnackBar(
-                                                                                      content: Text('تم اختيار نوع الطباعة: $result'),
-                                                                                      backgroundColor: Colors.blue,
-                                                                                      duration: const Duration(seconds: 2),
+                                                                              height: 12),
+                                                                          Flexible(
+                                                                            child:
+                                                                                ListView.builder(
+                                                                              shrinkWrap: true,
+                                                                              itemCount: _lastInvoiceItems.length,
+                                                                              itemBuilder: (context, index) {
+                                                                                final item = _lastInvoiceItems[index];
+                                                                                return Container(
+                                                                                  margin: const EdgeInsets.only(bottom: 8),
+                                                                                  padding: const EdgeInsets.all(12),
+                                                                                  decoration: BoxDecoration(
+                                                                                    color: Colors.grey.shade50,
+                                                                                    borderRadius: BorderRadius.circular(8),
+                                                                                    border: Border.all(
+                                                                                      color: _lastType == 'credit'
+                                                                                          ? Colors.orange.shade200
+                                                                                          : _lastType == 'installment'
+                                                                                              ? Colors.blue.shade200
+                                                                                              : Colors.green.shade200,
                                                                                     ),
-                                                                                  );
-                                                                                }
-                                                                              }
-                                                                            },
-                                                                            icon:
-                                                                                const Icon(Icons.settings, size: 20),
-                                                                            label:
-                                                                                const Text('نوع الطباعة'),
-                                                                            style:
-                                                                                ElevatedButton.styleFrom(
-                                                                              backgroundColor: Colors.blue.shade600,
-                                                                              foregroundColor: Colors.white,
-                                                                              padding: const EdgeInsets.symmetric(vertical: 14),
-                                                                              shape: RoundedRectangleBorder(
-                                                                                borderRadius: BorderRadius.circular(12),
-                                                                              ),
-                                                                              elevation: 2,
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                        const SizedBox(
-                                                                            width:
-                                                                                8),
-                                                                        // زر طباعة فقط
-                                                                        Expanded(
-                                                                          child:
-                                                                              ElevatedButton.icon(
-                                                                            onPressed:
-                                                                                () async {
-                                                                              try {
-                                                                                // طباعة بالإعدادات المختارة
-                                                                                await _printInvoice(context);
-
-                                                                                if (context.mounted) {
-                                                                                  // عرض رسالة النجاح
-                                                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                                                    const SnackBar(
-                                                                                      content: Text('تم طباعة الفاتورة بنجاح'),
-                                                                                      backgroundColor: Colors.green,
-                                                                                      duration: Duration(seconds: 2),
-                                                                                    ),
-                                                                                  );
-                                                                                }
-                                                                              } catch (e) {
-                                                                                if (context.mounted) {
-                                                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                                                    SnackBar(
-                                                                                      content: Text('خطأ في الطباعة: ${e.toString()}'),
-                                                                                      backgroundColor: Colors.red,
-                                                                                      duration: const Duration(seconds: 3),
-                                                                                    ),
-                                                                                  );
-                                                                                }
-                                                                              }
-                                                                            },
-                                                                            icon:
-                                                                                const Icon(Icons.print, size: 20),
-                                                                            label:
-                                                                                const Text('طباعة'),
-                                                                            style:
-                                                                                ElevatedButton.styleFrom(
-                                                                              backgroundColor: _lastType == 'credit'
-                                                                                  ? Colors.orange.shade600
-                                                                                  : _lastType == 'installment'
-                                                                                      ? Colors.blue.shade600
-                                                                                      : Colors.green.shade600,
-                                                                              foregroundColor: Colors.white,
-                                                                              padding: const EdgeInsets.symmetric(vertical: 14),
-                                                                              shape: RoundedRectangleBorder(
-                                                                                borderRadius: BorderRadius.circular(12),
-                                                                              ),
-                                                                              elevation: 2,
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                        const SizedBox(
-                                                                            width:
-                                                                                8),
-                                                                        // زر موافق
-                                                                        Expanded(
-                                                                          child:
-                                                                              ElevatedButton.icon(
-                                                                            onPressed:
-                                                                                () async {
-                                                                              if (context.mounted) {
-                                                                                // Clear everything when closing dialog
-                                                                                setState(() {
-                                                                                  // Clear cart
-                                                                                  _cart.clear();
-                                                                                  _addedToCartProducts.clear();
-                                                                                  // Clear customer fields
-                                                                                  _customerName = '';
-                                                                                  _customerPhone = '';
-                                                                                  _customerAddress = '';
-                                                                                  _dueDate = null;
-                                                                                  // Clear controllers
-                                                                                  _customerNameController.clear();
-                                                                                  _customerPhoneController.clear();
-                                                                                  _customerAddressController.clear();
-                                                                                });
-
-                                                                                // إغلاق الحوار
-                                                                                Navigator.of(context).pop();
-
-                                                                                // عرض رسالة النجاح
-                                                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                                                  const SnackBar(
-                                                                                    content: Text('تم حفظ الطلب بنجاح'),
-                                                                                    backgroundColor: Colors.green,
-                                                                                    duration: Duration(seconds: 2),
                                                                                   ),
-                                                                                );
-                                                                              }
-                                                                            },
-                                                                            icon:
-                                                                                const Icon(Icons.check, size: 20),
-                                                                            label:
-                                                                                const Text('موافق'),
-                                                                            style:
-                                                                                ElevatedButton.styleFrom(
-                                                                              backgroundColor: Colors.green.shade600,
-                                                                              foregroundColor: Colors.white,
-                                                                              padding: const EdgeInsets.symmetric(vertical: 14),
-                                                                              shape: RoundedRectangleBorder(
-                                                                                borderRadius: BorderRadius.circular(12),
-                                                                              ),
-                                                                              elevation: 2,
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                      ],
-                                                                    ),
-
-                                                                    const SizedBox(
-                                                                        height:
-                                                                            12),
-
-                                                                    // Cancel order button (full width)
-                                                                    SizedBox(
-                                                                      width: double
-                                                                          .infinity,
-                                                                      child: OutlinedButton
-                                                                          .icon(
-                                                                        onPressed:
-                                                                            () async {
-                                                                          // Show confirmation dialog
-                                                                          final shouldCancel =
-                                                                              await showDialog<bool>(
-                                                                            context:
-                                                                                context,
-                                                                            builder:
-                                                                                (BuildContext context) {
-                                                                              return AlertDialog(
-                                                                                shape: RoundedRectangleBorder(
-                                                                                  borderRadius: BorderRadius.circular(16),
-                                                                                ),
-                                                                                title: Row(
-                                                                                  children: [
-                                                                                    Icon(
-                                                                                      Icons.warning_amber_rounded,
-                                                                                      color: Colors.red.shade600,
-                                                                                      size: 28,
-                                                                                    ),
-                                                                                    const SizedBox(width: 12),
-                                                                                    const Text(
-                                                                                      'تأكيد الإلغاء',
-                                                                                      style: TextStyle(
-                                                                                        fontSize: 18,
-                                                                                        fontWeight: FontWeight.bold,
-                                                                                      ),
-                                                                                    ),
-                                                                                  ],
-                                                                                ),
-                                                                                content: const Text(
-                                                                                  'هل أنت متأكد من إلغاء هذا الطلب؟\nسيتم إرجاع جميع المنتجات إلى المخزن.',
-                                                                                  style: TextStyle(fontSize: 16),
-                                                                                  textAlign: TextAlign.center,
-                                                                                ),
-                                                                                actions: [
-                                                                                  Row(
+                                                                                  child: Row(
                                                                                     children: [
                                                                                       Expanded(
-                                                                                        child: OutlinedButton(
-                                                                                          onPressed: () {
-                                                                                            Navigator.of(context).pop(false);
-                                                                                          },
-                                                                                          style: OutlinedButton.styleFrom(
-                                                                                            foregroundColor: Colors.grey.shade600,
-                                                                                            padding: const EdgeInsets.symmetric(vertical: 12),
-                                                                                            side: BorderSide(color: Colors.grey.shade400),
-                                                                                            shape: RoundedRectangleBorder(
-                                                                                              borderRadius: BorderRadius.circular(8),
-                                                                                            ),
+                                                                                        child: Text(
+                                                                                          item['name']?.toString() ?? '',
+                                                                                          style: const TextStyle(
+                                                                                            fontWeight: FontWeight.w600,
+                                                                                            fontSize: 14,
                                                                                           ),
-                                                                                          child: const Text('لا'),
                                                                                         ),
                                                                                       ),
-                                                                                      const SizedBox(width: 12),
-                                                                                      Expanded(
-                                                                                        child: ElevatedButton(
-                                                                                          onPressed: () {
-                                                                                            Navigator.of(context).pop(true);
-                                                                                          },
-                                                                                          style: ElevatedButton.styleFrom(
-                                                                                            backgroundColor: Colors.red.shade600,
-                                                                                            foregroundColor: Colors.white,
-                                                                                            padding: const EdgeInsets.symmetric(vertical: 12),
-                                                                                            shape: RoundedRectangleBorder(
-                                                                                              borderRadius: BorderRadius.circular(8),
-                                                                                            ),
-                                                                                          ),
-                                                                                          child: const Text('نعم، ألغِ'),
+                                                                                      Text(
+                                                                                        '${item['quantity']} × ${Formatters.currencyIQD(item['price'] as num)}',
+                                                                                        style: TextStyle(
+                                                                                          fontWeight: FontWeight.w600,
+                                                                                          fontSize: 12,
+                                                                                          color: _lastType == 'credit'
+                                                                                              ? Colors.orange.shade700
+                                                                                              : _lastType == 'installment'
+                                                                                                  ? Colors.blue.shade700
+                                                                                                  : Colors.green.shade700,
                                                                                         ),
                                                                                       ),
                                                                                     ],
                                                                                   ),
-                                                                                ],
-                                                                              );
-                                                                            },
-                                                                          );
+                                                                                );
+                                                                              },
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                  ),
 
-                                                                          if (shouldCancel ==
-                                                                              true) {
-                                                                            // Cancel the invoice and return products to stock
-                                                                            try {
-                                                                              // Return products to stock
-                                                                              for (final item in _lastInvoiceItems) {
-                                                                                final productId = item['product_id'] as int;
-                                                                                final quantity = item['quantity'] as int;
-                                                                                await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
-                                                                              }
+                                                                  // Customer Information Section
+                                                                  if (_lastCustomerName
+                                                                      .isNotEmpty) ...[
+                                                                    Container(
+                                                                      margin: const EdgeInsets
+                                                                          .symmetric(
+                                                                          horizontal:
+                                                                              16),
+                                                                      padding:
+                                                                          const EdgeInsets
+                                                                              .all(
+                                                                              6),
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: _lastType ==
+                                                                                'credit'
+                                                                            ? Colors.orange.shade50
+                                                                            : _lastType == 'installment'
+                                                                                ? Colors.blue.shade50
+                                                                                : Colors.green.shade50,
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(6),
+                                                                        border:
+                                                                            Border.all(
+                                                                          color: _lastType == 'credit'
+                                                                              ? Colors.orange.shade200
+                                                                              : _lastType == 'installment'
+                                                                                  ? Colors.blue.shade200
+                                                                                  : Colors.green.shade200,
+                                                                          width:
+                                                                              1,
+                                                                        ),
+                                                                      ),
+                                                                      child:
+                                                                          Column(
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.start,
+                                                                        children: [
+                                                                          Row(
+                                                                            children: [
+                                                                              Icon(
+                                                                                Icons.person,
+                                                                                color: _lastType == 'credit'
+                                                                                    ? Colors.orange.shade700
+                                                                                    : _lastType == 'installment'
+                                                                                        ? Colors.blue.shade700
+                                                                                        : Colors.green.shade700,
+                                                                                size: 14,
+                                                                              ),
+                                                                              const SizedBox(width: 4),
+                                                                              Text(
+                                                                                'معلومات العميل',
+                                                                                style: TextStyle(
+                                                                                  fontWeight: FontWeight.bold,
+                                                                                  fontSize: 10,
+                                                                                  color: _lastType == 'credit'
+                                                                                      ? Colors.orange.shade700
+                                                                                      : _lastType == 'installment'
+                                                                                          ? Colors.blue.shade700
+                                                                                          : Colors.green.shade700,
+                                                                                ),
+                                                                              ),
+                                                                            ],
+                                                                          ),
+                                                                          const SizedBox(
+                                                                              height: 6),
+                                                                          if (_lastCustomerName
+                                                                              .isNotEmpty) ...[
+                                                                            _buildCustomerInfoRow('الاسم',
+                                                                                _lastCustomerName),
+                                                                            const SizedBox(height: 4),
+                                                                          ],
+                                                                          if (_lastCustomerPhone
+                                                                              .isNotEmpty) ...[
+                                                                            _buildCustomerInfoRow('الهاتف',
+                                                                                _lastCustomerPhone),
+                                                                            const SizedBox(height: 4),
+                                                                          ],
+                                                                          if (_lastCustomerAddress
+                                                                              .isNotEmpty) ...[
+                                                                            _buildCustomerInfoRow('العنوان',
+                                                                                _lastCustomerAddress),
+                                                                            const SizedBox(height: 4),
+                                                                          ],
+                                                                          if (_lastType == 'credit' &&
+                                                                              _lastDueDate != null) ...[
+                                                                            _buildCustomerInfoRow('تاريخ الاستحقاق',
+                                                                                '${_lastDueDate!.day}/${_lastDueDate!.month}/${_lastDueDate!.year}'),
+                                                                          ],
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            6),
+                                                                  ],
 
-                                                                              // Clear the last invoice items and current customer fields
-                                                                              setState(() {
+                                                                  // Actions - Simplified and organized buttons
+                                                                  Container(
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .all(
+                                                                            20),
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      color: Colors
+                                                                          .grey
+                                                                          .shade50,
+                                                                      borderRadius:
+                                                                          const BorderRadius
+                                                                              .only(
+                                                                        bottomLeft:
+                                                                            Radius.circular(20),
+                                                                        bottomRight:
+                                                                            Radius.circular(20),
+                                                                      ),
+                                                                    ),
+                                                                    child:
+                                                                        Column(
+                                                                      children: [
+                                                                        // Primary action buttons row
+                                                                        Row(
+                                                                          children: [
+                                                                            // زر اختيار نوع الطباعة
+                                                                            Expanded(
+                                                                              child: ElevatedButton.icon(
+                                                                                onPressed: () async {
+                                                                                  // عرض حوار اختيار نوع الطباعة
+                                                                                  final result = await _showPrintTypeDialog(context);
+                                                                                  if (result != null) {
+                                                                                    setDialogState(() {
+                                                                                      _selectedPrintType = result;
+                                                                                    });
+                                                                                    if (context.mounted) {
+                                                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                                                        SnackBar(
+                                                                                          content: Text('تم اختيار طابعة: ${_getPrintTypeDisplayName(result)}'),
+                                                                                          backgroundColor: Colors.blue,
+                                                                                          duration: const Duration(seconds: 2),
+                                                                                        ),
+                                                                                      );
+                                                                                    }
+                                                                                  }
+                                                                                },
+                                                                                icon: const Icon(Icons.settings, size: 20),
+                                                                                label: Text(
+                                                                                  _getPrintTypeDisplayName(_selectedPrintType),
+                                                                                  style: const TextStyle(
+                                                                                    fontSize: 12,
+                                                                                    fontWeight: FontWeight.w600,
+                                                                                  ),
+                                                                                ),
+                                                                                style: ElevatedButton.styleFrom(
+                                                                                  backgroundColor: Colors.blue.shade600,
+                                                                                  foregroundColor: Colors.white,
+                                                                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                                                                  shape: RoundedRectangleBorder(
+                                                                                    borderRadius: BorderRadius.circular(12),
+                                                                                  ),
+                                                                                  elevation: 2,
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                            const SizedBox(width: 8),
+                                                                            // زر طباعة فقط
+                                                                            Expanded(
+                                                                              child: ElevatedButton.icon(
+                                                                                onPressed: () async {
+                                                                                  try {
+                                                                                    // طباعة بالإعدادات المختارة
+                                                                                    await _printInvoice(context);
+
+                                                                                    if (context.mounted) {
+                                                                                      // عرض رسالة النجاح
+                                                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                                                        const SnackBar(
+                                                                                          content: Text('تم طباعة الفاتورة بنجاح'),
+                                                                                          backgroundColor: Colors.green,
+                                                                                          duration: Duration(seconds: 2),
+                                                                                        ),
+                                                                                      );
+                                                                                    }
+                                                                                  } catch (e) {
+                                                                                    if (context.mounted) {
+                                                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                                                        SnackBar(
+                                                                                          content: Text('خطأ في الطباعة: ${e.toString()}'),
+                                                                                          backgroundColor: Colors.red,
+                                                                                          duration: const Duration(seconds: 3),
+                                                                                        ),
+                                                                                      );
+                                                                                    }
+                                                                                  }
+                                                                                },
+                                                                                icon: const Icon(Icons.print, size: 20),
+                                                                                label: const Text('طباعة'),
+                                                                                style: ElevatedButton.styleFrom(
+                                                                                  backgroundColor: _lastType == 'credit'
+                                                                                      ? Colors.orange.shade600
+                                                                                      : _lastType == 'installment'
+                                                                                          ? Colors.blue.shade600
+                                                                                          : Colors.green.shade600,
+                                                                                  foregroundColor: Colors.white,
+                                                                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                                                                  shape: RoundedRectangleBorder(
+                                                                                    borderRadius: BorderRadius.circular(12),
+                                                                                  ),
+                                                                                  elevation: 2,
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                            const SizedBox(width: 8),
+                                                                            // زر موافق
+                                                                            Expanded(
+                                                                              child: ElevatedButton.icon(
+                                                                                onPressed: () async {
+                                                                                  if (context.mounted) {
+                                                                                    // Clear everything when closing dialog
+                                                                                    setState(() {
+                                                                                      // Clear cart
+                                                                                      _cart.clear();
+                                                                                      _addedToCartProducts.clear();
+                                                                                      // Clear customer fields
+                                                                                      _customerName = '';
+                                                                                      _customerPhone = '';
+                                                                                      _customerAddress = '';
+                                                                                      _dueDate = null;
+                                                                                      // Clear controllers
+                                                                                      _customerNameController.clear();
+                                                                                      _customerPhoneController.clear();
+                                                                                      _customerAddressController.clear();
+                                                                                    });
+
+                                                                                    // إغلاق الحوار
+                                                                                    Navigator.of(context).pop();
+
+                                                                                    // عرض رسالة النجاح
+                                                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                                                      const SnackBar(
+                                                                                        content: Text('تم حفظ الطلب بنجاح'),
+                                                                                        backgroundColor: Colors.green,
+                                                                                        duration: Duration(seconds: 2),
+                                                                                      ),
+                                                                                    );
+                                                                                  }
+                                                                                },
+                                                                                icon: const Icon(Icons.check, size: 20),
+                                                                                label: const Text('موافق'),
+                                                                                style: ElevatedButton.styleFrom(
+                                                                                  backgroundColor: Colors.green.shade600,
+                                                                                  foregroundColor: Colors.white,
+                                                                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                                                                  shape: RoundedRectangleBorder(
+                                                                                    borderRadius: BorderRadius.circular(12),
+                                                                                  ),
+                                                                                  elevation: 2,
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+
+                                                                        const SizedBox(
+                                                                            height:
+                                                                                12),
+
+                                                                        // Back to cart button (full width)
+                                                                        SizedBox(
+                                                                          width:
+                                                                              double.infinity,
+                                                                          child:
+                                                                              ElevatedButton.icon(
+                                                                            onPressed:
+                                                                                () {
+                                                                              // Return to cart for adding more products
+                                                                              setDialogState(() {
+                                                                                // Move last invoice items back to cart
+                                                                                _cart.clear();
+                                                                                _addedToCartProducts.clear();
+
+                                                                                // Add last invoice items back to cart
+                                                                                for (final item in _lastInvoiceItems) {
+                                                                                  _cart.add(Map<String, Object?>.from(item));
+                                                                                  _addedToCartProducts.add(item['product_id'] as int);
+                                                                                }
+
+                                                                                // Clear last invoice items
                                                                                 _lastInvoiceItems.clear();
-                                                                                _lastType = 'cash';
-                                                                                _lastDueDate = null;
-                                                                                _lastCustomerName = '';
-                                                                                _lastCustomerPhone = '';
-                                                                                _lastCustomerAddress = '';
-                                                                                // Clear current customer fields
-                                                                                _customerName = '';
-                                                                                _customerPhone = '';
-                                                                                _customerAddress = '';
-                                                                                _dueDate = null;
+                                                                                _lastInvoiceId = null;
                                                                               });
 
-                                                                              Navigator.of(context).pop(); // Close the success dialog
+                                                                              // Close the dialog
+                                                                              Navigator.of(context).pop();
 
                                                                               // Show success message
                                                                               ScaffoldMessenger.of(context).showSnackBar(
                                                                                 const SnackBar(
-                                                                                  content: Text('تم إلغاء الطلب وإرجاع المنتجات إلى المخزن'),
-                                                                                  backgroundColor: Colors.green,
+                                                                                  content: Text('تم العودة إلى السلة - يمكنك إضافة منتجات جديدة أو تعديل الكميات'),
+                                                                                  backgroundColor: Colors.blue,
+                                                                                  duration: Duration(seconds: 3),
                                                                                 ),
                                                                               );
-                                                                            } catch (e) {
-                                                                              Navigator.of(context).pop(); // Close the success dialog
-                                                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                                                SnackBar(
-                                                                                  content: Text('خطأ في إلغاء الطلب: $e'),
-                                                                                  backgroundColor: Colors.red,
-                                                                                ),
-                                                                              );
-                                                                            }
-                                                                          }
-                                                                        },
-                                                                        icon: const Icon(
-                                                                            Icons
-                                                                                .cancel_outlined,
-                                                                            size:
-                                                                                20),
-                                                                        label: const Text(
-                                                                            'إلغاء الطلب'),
-                                                                        style: OutlinedButton
-                                                                            .styleFrom(
-                                                                          foregroundColor: Colors
-                                                                              .red
-                                                                              .shade600,
-                                                                          padding: const EdgeInsets
-                                                                              .symmetric(
-                                                                              vertical: 12),
-                                                                          side:
-                                                                              BorderSide(color: Colors.red.shade300),
-                                                                          shape:
-                                                                              RoundedRectangleBorder(
-                                                                            borderRadius:
-                                                                                BorderRadius.circular(12),
+                                                                            },
+                                                                            icon:
+                                                                                const Icon(Icons.shopping_cart, size: 20),
+                                                                            label:
+                                                                                const Text('العودة إلى السلة'),
+                                                                            style:
+                                                                                ElevatedButton.styleFrom(
+                                                                              backgroundColor: Colors.orange.shade600,
+                                                                              foregroundColor: Colors.white,
+                                                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                                                              shape: RoundedRectangleBorder(
+                                                                                borderRadius: BorderRadius.circular(12),
+                                                                              ),
+                                                                              elevation: 2,
+                                                                            ),
                                                                           ),
                                                                         ),
-                                                                      ),
+
+                                                                        const SizedBox(
+                                                                            height:
+                                                                                8),
+
+                                                                        // Cancel order button (full width)
+                                                                        SizedBox(
+                                                                          width:
+                                                                              double.infinity,
+                                                                          child:
+                                                                              OutlinedButton.icon(
+                                                                            onPressed:
+                                                                                () async {
+                                                                              // Show confirmation dialog
+                                                                              final shouldCancel = await showDialog<bool>(
+                                                                                context: context,
+                                                                                builder: (BuildContext context) {
+                                                                                  return AlertDialog(
+                                                                                    shape: RoundedRectangleBorder(
+                                                                                      borderRadius: BorderRadius.circular(16),
+                                                                                    ),
+                                                                                    title: Row(
+                                                                                      children: [
+                                                                                        Icon(
+                                                                                          Icons.warning_amber_rounded,
+                                                                                          color: Colors.red.shade600,
+                                                                                          size: 28,
+                                                                                        ),
+                                                                                        const SizedBox(width: 12),
+                                                                                        const Text(
+                                                                                          'إلغاء العملية بالكامل',
+                                                                                          style: TextStyle(
+                                                                                            fontSize: 18,
+                                                                                            fontWeight: FontWeight.bold,
+                                                                                          ),
+                                                                                        ),
+                                                                                      ],
+                                                                                    ),
+                                                                                    content: const Text(
+                                                                                      'هل أنت متأكد من إلغاء العملية بالكامل؟\nسيتم:\n• إرجاع جميع المنتجات إلى المخزن\n• مسح السلة\n• إلغاء جميع البيانات',
+                                                                                      style: TextStyle(fontSize: 16),
+                                                                                      textAlign: TextAlign.center,
+                                                                                    ),
+                                                                                    actions: [
+                                                                                      Row(
+                                                                                        children: [
+                                                                                          Expanded(
+                                                                                            child: OutlinedButton(
+                                                                                              onPressed: () {
+                                                                                                Navigator.of(context).pop(false);
+                                                                                              },
+                                                                                              style: OutlinedButton.styleFrom(
+                                                                                                foregroundColor: Colors.grey.shade600,
+                                                                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                                                side: BorderSide(color: Colors.grey.shade400),
+                                                                                                shape: RoundedRectangleBorder(
+                                                                                                  borderRadius: BorderRadius.circular(8),
+                                                                                                ),
+                                                                                              ),
+                                                                                              child: const Text('لا'),
+                                                                                            ),
+                                                                                          ),
+                                                                                          const SizedBox(width: 12),
+                                                                                          Expanded(
+                                                                                            child: ElevatedButton(
+                                                                                              onPressed: () {
+                                                                                                Navigator.of(context).pop(true);
+                                                                                              },
+                                                                                              style: ElevatedButton.styleFrom(
+                                                                                                backgroundColor: Colors.red.shade600,
+                                                                                                foregroundColor: Colors.white,
+                                                                                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                                                shape: RoundedRectangleBorder(
+                                                                                                  borderRadius: BorderRadius.circular(8),
+                                                                                                ),
+                                                                                              ),
+                                                                                              child: const Text('نعم، ألغِ الكل'),
+                                                                                            ),
+                                                                                          ),
+                                                                                        ],
+                                                                                      ),
+                                                                                    ],
+                                                                                  );
+                                                                                },
+                                                                              );
+
+                                                                              if (shouldCancel == true) {
+                                                                                // Cancel the entire sale process
+                                                                                try {
+                                                                                  // Return products to stock - only from last invoice if it exists
+                                                                                  // If there's a last invoice, return those products
+                                                                                  // If no last invoice, return products from current cart
+                                                                                  print('إلغاء العملية - عدد منتجات الفاتورة الأخيرة: ${_lastInvoiceItems.length}');
+                                                                                  print('إلغاء العملية - عدد منتجات السلة: ${_cart.length}');
+
+                                                                                  if (_lastInvoiceItems.isNotEmpty) {
+                                                                                    // Return products from last invoice to stock
+                                                                                    print('إرجاع منتجات من الفاتورة الأخيرة إلى المخزن');
+                                                                                    for (final item in _lastInvoiceItems) {
+                                                                                      final productId = item['product_id'] as int;
+                                                                                      final quantity = item['quantity'] as int;
+                                                                                      print('إرجاع منتج ID: $productId, الكمية: $quantity');
+                                                                                      await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
+                                                                                    }
+                                                                                  } else if (_cart.isNotEmpty) {
+                                                                                    // Return products from current cart to stock (if no last invoice)
+                                                                                    print('إرجاع منتجات من السلة الحالية إلى المخزن');
+                                                                                    for (final item in _cart) {
+                                                                                      final productId = item['product_id'] as int;
+                                                                                      final quantity = item['quantity'] as int;
+                                                                                      print('إرجاع منتج ID: $productId, الكمية: $quantity');
+                                                                                      await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
+                                                                                    }
+                                                                                  }
+
+                                                                                  // Clear everything - complete reset
+                                                                                  setState(() {
+                                                                                    // Clear cart
+                                                                                    _cart.clear();
+                                                                                    _addedToCartProducts.clear();
+
+                                                                                    // Clear last invoice items
+                                                                                    _lastInvoiceItems.clear();
+                                                                                    _lastInvoiceId = null;
+
+                                                                                    // Reset payment type
+                                                                                    _lastType = 'cash';
+                                                                                    _type = 'cash';
+
+                                                                                    // Clear due date
+                                                                                    _lastDueDate = null;
+                                                                                    _dueDate = null;
+
+                                                                                    // Clear customer information
+                                                                                    _lastCustomerName = '';
+                                                                                    _lastCustomerPhone = '';
+                                                                                    _lastCustomerAddress = '';
+                                                                                    _customerName = '';
+                                                                                    _customerPhone = '';
+                                                                                    _customerAddress = '';
+
+                                                                                    // Clear controllers
+                                                                                    _customerNameController.clear();
+                                                                                    _customerPhoneController.clear();
+                                                                                    _customerAddressController.clear();
+
+                                                                                    // Clear installment info
+                                                                                    _installmentCount = null;
+                                                                                    _downPayment = null;
+                                                                                    _firstInstallmentDate = null;
+                                                                                  });
+
+                                                                                  Navigator.of(context).pop(); // Close the success dialog
+
+                                                                                  // Show success message
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                                                    const SnackBar(
+                                                                                      content: Text('تم إلغاء العملية بالكامل وإرجاع جميع المنتجات إلى المخزن'),
+                                                                                      backgroundColor: Colors.green,
+                                                                                      duration: Duration(seconds: 3),
+                                                                                    ),
+                                                                                  );
+                                                                                } catch (e) {
+                                                                                  Navigator.of(context).pop(); // Close the success dialog
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                                                    SnackBar(
+                                                                                      content: Text('خطأ في إلغاء العملية: $e'),
+                                                                                      backgroundColor: Colors.red,
+                                                                                      duration: Duration(seconds: 3),
+                                                                                    ),
+                                                                                  );
+                                                                                }
+                                                                              }
+                                                                            },
+                                                                            icon:
+                                                                                const Icon(Icons.cancel_outlined, size: 20),
+                                                                            label:
+                                                                                const Text('إلغاء الطلب'),
+                                                                            style:
+                                                                                OutlinedButton.styleFrom(
+                                                                              foregroundColor: Colors.red.shade600,
+                                                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                                                              side: BorderSide(color: Colors.red.shade300),
+                                                                              shape: RoundedRectangleBorder(
+                                                                                borderRadius: BorderRadius.circular(12),
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
                                                                     ),
-                                                                  ],
-                                                                ),
+                                                                  ),
+                                                                ],
                                                               ),
-                                                            ],
-                                                          ),
-                                                        ),
+                                                            ),
+                                                          );
+                                                        },
                                                       );
                                                     },
                                                   );
@@ -2937,6 +2977,22 @@ class _SalesScreenState extends State<SalesScreen> {
     context.read<DatabaseService>().adjustProductQuantity(productId, 1);
   }
 
+  // دالة للحصول على اسم نوع الطابعة للعرض
+  String _getPrintTypeDisplayName(String printType) {
+    switch (printType) {
+      case '58':
+        return '58mm';
+      case '80':
+        return '80mm';
+      case 'A5':
+        return 'A5';
+      case 'A4':
+        return 'A4';
+      default:
+        return 'نوع الطباعة';
+    }
+  }
+
   // دالة عرض حوار اختيار نوع الطباعة
   Future<String?> _showPrintTypeDialog(BuildContext context) async {
     return await showDialog<String>(
@@ -2967,43 +3023,193 @@ class _SalesScreenState extends State<SalesScreen> {
               const SizedBox(height: 20),
 
               // طابعة حرارية 58mm
-              ListTile(
-                leading: const Icon(Icons.receipt, color: Colors.orange),
-                title: const Text('طابعة حرارية 58mm'),
-                subtitle: const Text('مناسبة للفواتير الصغيرة'),
-                onTap: () {
-                  Navigator.of(context).pop('thermal_58');
-                },
+              Container(
+                decoration: BoxDecoration(
+                  color: _selectedPrintType == '58'
+                      ? Colors.orange.shade50
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: _selectedPrintType == '58'
+                      ? Border.all(color: Colors.orange.shade300, width: 2)
+                      : null,
+                ),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.receipt,
+                    color: _selectedPrintType == '58'
+                        ? Colors.orange.shade700
+                        : Colors.orange,
+                  ),
+                  title: Text(
+                    'طابعة حرارية 58mm',
+                    style: TextStyle(
+                      fontWeight: _selectedPrintType == '58'
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: _selectedPrintType == '58'
+                          ? Colors.orange.shade700
+                          : null,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'فواتير صغيرة ومضغوطة',
+                    style: TextStyle(
+                      color: _selectedPrintType == '58'
+                          ? Colors.orange.shade600
+                          : null,
+                    ),
+                  ),
+                  trailing: _selectedPrintType == '58'
+                      ? Icon(Icons.check_circle, color: Colors.orange.shade700)
+                      : null,
+                  onTap: () {
+                    Navigator.of(context).pop('58');
+                  },
+                ),
               ),
+
+              const SizedBox(height: 8),
 
               // طابعة حرارية 80mm
-              ListTile(
-                leading: const Icon(Icons.receipt_long, color: Colors.blue),
-                title: const Text('طابعة حرارية 80mm'),
-                subtitle: const Text('مناسبة للفواتير العادية'),
-                onTap: () {
-                  Navigator.of(context).pop('thermal_80');
-                },
+              Container(
+                decoration: BoxDecoration(
+                  color: _selectedPrintType == '80'
+                      ? Colors.blue.shade50
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: _selectedPrintType == '80'
+                      ? Border.all(color: Colors.blue.shade300, width: 2)
+                      : null,
+                ),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.receipt_long,
+                    color: _selectedPrintType == '80'
+                        ? Colors.blue.shade700
+                        : Colors.blue,
+                  ),
+                  title: Text(
+                    'طابعة حرارية 80mm',
+                    style: TextStyle(
+                      fontWeight: _selectedPrintType == '80'
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: _selectedPrintType == '80'
+                          ? Colors.blue.shade700
+                          : null,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'فواتير عادية ومقروءة',
+                    style: TextStyle(
+                      color: _selectedPrintType == '80'
+                          ? Colors.blue.shade600
+                          : null,
+                    ),
+                  ),
+                  trailing: _selectedPrintType == '80'
+                      ? Icon(Icons.check_circle, color: Colors.blue.shade700)
+                      : null,
+                  onTap: () {
+                    Navigator.of(context).pop('80');
+                  },
+                ),
               ),
+
+              const SizedBox(height: 8),
 
               // ورقة A5
-              ListTile(
-                leading: const Icon(Icons.description, color: Colors.green),
-                title: const Text('ورقة A5'),
-                subtitle: const Text('مناسبة للفواتير المتوسطة'),
-                onTap: () {
-                  Navigator.of(context).pop('a5');
-                },
+              Container(
+                decoration: BoxDecoration(
+                  color: _selectedPrintType == 'A5'
+                      ? Colors.green.shade50
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: _selectedPrintType == 'A5'
+                      ? Border.all(color: Colors.green.shade300, width: 2)
+                      : null,
+                ),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.description,
+                    color: _selectedPrintType == 'A5'
+                        ? Colors.green.shade700
+                        : Colors.green,
+                  ),
+                  title: Text(
+                    'ورقة A5',
+                    style: TextStyle(
+                      fontWeight: _selectedPrintType == 'A5'
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: _selectedPrintType == 'A5'
+                          ? Colors.green.shade700
+                          : null,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'فواتير متوسطة الحجم',
+                    style: TextStyle(
+                      color: _selectedPrintType == 'A5'
+                          ? Colors.green.shade600
+                          : null,
+                    ),
+                  ),
+                  trailing: _selectedPrintType == 'A5'
+                      ? Icon(Icons.check_circle, color: Colors.green.shade700)
+                      : null,
+                  onTap: () {
+                    Navigator.of(context).pop('A5');
+                  },
+                ),
               ),
 
+              const SizedBox(height: 8),
+
               // ورقة A4
-              ListTile(
-                leading: const Icon(Icons.picture_as_pdf, color: Colors.purple),
-                title: const Text('ورقة A4'),
-                subtitle: const Text('مناسبة للفواتير التفصيلية'),
-                onTap: () {
-                  Navigator.of(context).pop('a4');
-                },
+              Container(
+                decoration: BoxDecoration(
+                  color: _selectedPrintType == 'A4'
+                      ? Colors.purple.shade50
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: _selectedPrintType == 'A4'
+                      ? Border.all(color: Colors.purple.shade300, width: 2)
+                      : null,
+                ),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.picture_as_pdf,
+                    color: _selectedPrintType == 'A4'
+                        ? Colors.purple.shade700
+                        : Colors.purple,
+                  ),
+                  title: Text(
+                    'ورقة A4',
+                    style: TextStyle(
+                      fontWeight: _selectedPrintType == 'A4'
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: _selectedPrintType == 'A4'
+                          ? Colors.purple.shade700
+                          : null,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'فواتير تفصيلية ومهنية',
+                    style: TextStyle(
+                      color: _selectedPrintType == 'A4'
+                          ? Colors.purple.shade600
+                          : null,
+                    ),
+                  ),
+                  trailing: _selectedPrintType == 'A4'
+                      ? Icon(Icons.check_circle, color: Colors.purple.shade700)
+                      : null,
+                  onTap: () {
+                    Navigator.of(context).pop('A4');
+                  },
+                ),
               ),
             ],
           ),

@@ -59,6 +59,9 @@ class DatabaseService {
     await _ensureCategorySchemaOn(_db);
     // Clean up any sales_old references
     await cleanupSalesOldReferences();
+
+    // إصلاح جدول installments إذا كان يحتوي على مراجع خاطئة
+    await fixInstallmentsTable();
   }
 
   Future<void> reopen() async {
@@ -80,6 +83,67 @@ class DatabaseService {
       await _ensureCategorySchemaOn(_db);
     } catch (e) {
       print('Error during force cleanup: $e');
+      rethrow;
+    }
+  }
+
+  /// إصلاح جدول installments إذا كان يحتوي على مراجع خاطئة
+  Future<void> fixInstallmentsTable() async {
+    try {
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      final installmentsSchema = await _db.rawQuery(
+          "SELECT sql FROM sqlite_master WHERE type='table' AND name='installments'");
+      if (installmentsSchema.isNotEmpty) {
+        final schema = installmentsSchema.first['sql']?.toString() ?? '';
+        if (schema.contains('sales_old')) {
+          print('إصلاح جدول installments - يحتوي على مراجع خاطئة...');
+
+          // حفظ البيانات الموجودة
+          final existingData = await _db.rawQuery('SELECT * FROM installments');
+          print('تم العثور على ${existingData.length} قسط موجود');
+
+          // حذف الجدول القديم
+          await _db.execute('DROP TABLE installments');
+
+          // إنشاء الجدول الجديد
+          await _db.execute('''
+            CREATE TABLE installments (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              sale_id INTEGER NOT NULL,
+              due_date TEXT NOT NULL,
+              amount REAL NOT NULL,
+              paid INTEGER NOT NULL DEFAULT 0,
+              paid_at TEXT,
+              FOREIGN KEY(sale_id) REFERENCES sales(id)
+            );
+          ''');
+
+          // استعادة البيانات
+          for (final row in existingData) {
+            await _db.insert('installments', {
+              'id': row['id'],
+              'sale_id': row['sale_id'],
+              'due_date': row['due_date'],
+              'amount': row['amount'],
+              'paid': row['paid'],
+              'paid_at': row['paid_at'],
+            });
+          }
+
+          print(
+              'تم إصلاح جدول installments بنجاح - تم استعادة ${existingData.length} قسط');
+        } else {
+          print('جدول installments لا يحتوي على مراجع خاطئة');
+        }
+      } else {
+        print('جدول installments غير موجود');
+      }
+
+      await _db.execute('PRAGMA foreign_keys = ON');
+    } catch (e) {
+      await _db.execute('PRAGMA foreign_keys = ON');
+      print('خطأ في إصلاح جدول installments: $e');
       rethrow;
     }
   }
@@ -505,6 +569,54 @@ class DatabaseService {
       try {
         await db.execute('DROP TABLE IF EXISTS sales_old');
       } catch (_) {}
+
+      // إصلاح جدول installments إذا كان يحتوي على مراجع خاطئة
+      try {
+        final installmentsSchema = await db.rawQuery(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='installments'");
+        if (installmentsSchema.isNotEmpty) {
+          final schema = installmentsSchema.first['sql']?.toString() ?? '';
+          if (schema.contains('sales_old')) {
+            print('إصلاح جدول installments في _cleanupOrphanObjects...');
+
+            // حفظ البيانات الموجودة
+            final existingData =
+                await db.rawQuery('SELECT * FROM installments');
+
+            // حذف الجدول القديم
+            await db.execute('DROP TABLE installments');
+
+            // إنشاء الجدول الجديد
+            await db.execute('''
+              CREATE TABLE installments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sale_id INTEGER NOT NULL,
+                due_date TEXT NOT NULL,
+                amount REAL NOT NULL,
+                paid INTEGER NOT NULL DEFAULT 0,
+                paid_at TEXT,
+                FOREIGN KEY(sale_id) REFERENCES sales(id)
+              );
+            ''');
+
+            // استعادة البيانات
+            for (final row in existingData) {
+              await db.insert('installments', {
+                'id': row['id'],
+                'sale_id': row['sale_id'],
+                'due_date': row['due_date'],
+                'amount': row['amount'],
+                'paid': row['paid'],
+                'paid_at': row['paid_at'],
+              });
+            }
+
+            print('تم إصلاح جدول installments في _cleanupOrphanObjects بنجاح');
+          }
+        }
+      } catch (e) {
+        print('خطأ في إصلاح جدول installments في _cleanupOrphanObjects: $e');
+      }
 
       // Get all database objects that might reference sales_old
       final allObjects = await db.rawQuery('''
@@ -1258,6 +1370,8 @@ class DatabaseService {
     double paidInstallments = 0;
     double overdueAmount = 0;
     int overdueCount = 0;
+    int totalCount = 0;
+    int paidCount = 0;
 
     for (final installment in installments) {
       final amount = (installment['amount'] as num).toDouble();
@@ -1265,9 +1379,11 @@ class DatabaseService {
       final dueDate = DateTime.parse(installment['due_date'] as String);
 
       totalInstallments += amount;
+      totalCount++;
 
       if (paid) {
         paidInstallments += amount;
+        paidCount++;
       } else if (dueDate.isBefore(DateTime.now())) {
         overdueAmount += amount;
         overdueCount++;
@@ -1280,7 +1396,44 @@ class DatabaseService {
       'remainingInstallments': totalInstallments - paidInstallments,
       'overdueAmount': overdueAmount,
       'overdueCount': overdueCount,
+      'totalCount': totalCount,
+      'paidCount': paidCount,
+      'remainingCount': totalCount - paidCount,
     };
+  }
+
+  /// الحصول على تفاصيل الأقساط مع المبالغ المحدثة
+  Future<List<Map<String, dynamic>>> getInstallmentDetails(
+      int customerId) async {
+    final installments = await _db.rawQuery('''
+      SELECT 
+        i.id,
+        i.sale_id,
+        i.due_date,
+        i.amount,
+        i.paid,
+        i.paid_at,
+        s.created_at as sale_date,
+        s.total as sale_total,
+        s.type as sale_type
+      FROM installments i
+      JOIN sales s ON s.id = i.sale_id
+      WHERE s.customer_id = ?
+      ORDER BY i.due_date ASC
+    ''', [customerId]);
+
+    return installments.map((installment) {
+      final dueDate = DateTime.parse(installment['due_date'] as String);
+      final isOverdue = !(installment['paid'] as int == 1) &&
+          dueDate.isBefore(DateTime.now());
+
+      return {
+        ...installment,
+        'is_overdue': isOverdue,
+        'days_overdue':
+            isOverdue ? DateTime.now().difference(dueDate).inDays : 0,
+      };
+    }).toList();
   }
 
   // Sales and installments (integrated system)
@@ -1305,6 +1458,74 @@ class DatabaseService {
 
         // Drop the sales_old table if it exists
         await txn.execute('DROP TABLE IF EXISTS sales_old');
+
+        // إصلاح إضافي: التأكد من أن جدول sales موجود
+        final salesTableCheck = await txn.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='sales'");
+        if (salesTableCheck.isEmpty) {
+          print('خطأ: جدول sales غير موجود! إنشاء الجدول...');
+          // إنشاء جدول sales إذا لم يكن موجوداً
+          await txn.execute('''
+            CREATE TABLE IF NOT EXISTS sales (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              customer_id INTEGER,
+              total REAL NOT NULL,
+              profit REAL NOT NULL DEFAULT 0,
+              type TEXT NOT NULL DEFAULT 'cash',
+              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              down_payment REAL DEFAULT 0,
+              FOREIGN KEY(customer_id) REFERENCES customers(id)
+            );
+          ''');
+        }
+
+        // إصلاح جدول installments إذا كان يحتوي على مراجع خاطئة
+        try {
+          final installmentsSchema = await txn.rawQuery(
+              "SELECT sql FROM sqlite_master WHERE type='table' AND name='installments'");
+          if (installmentsSchema.isNotEmpty) {
+            final schema = installmentsSchema.first['sql']?.toString() ?? '';
+            if (schema.contains('sales_old')) {
+              print('جدول installments يحتوي على مراجع خاطئة، إعادة إنشاؤه...');
+
+              // حفظ البيانات الموجودة
+              final existingData =
+                  await txn.rawQuery('SELECT * FROM installments');
+
+              // حذف الجدول القديم
+              await txn.execute('DROP TABLE installments');
+
+              // إنشاء الجدول الجديد
+              await txn.execute('''
+                CREATE TABLE installments (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  sale_id INTEGER NOT NULL,
+                  due_date TEXT NOT NULL,
+                  amount REAL NOT NULL,
+                  paid INTEGER NOT NULL DEFAULT 0,
+                  paid_at TEXT,
+                  FOREIGN KEY(sale_id) REFERENCES sales(id)
+                );
+              ''');
+
+              // استعادة البيانات
+              for (final row in existingData) {
+                await txn.insert('installments', {
+                  'id': row['id'],
+                  'sale_id': row['sale_id'],
+                  'due_date': row['due_date'],
+                  'amount': row['amount'],
+                  'paid': row['paid'],
+                  'paid_at': row['paid_at'],
+                });
+              }
+
+              print('تم إصلاح جدول installments بنجاح');
+            }
+          }
+        } catch (e) {
+          print('خطأ في فحص/إصلاح جدول installments: $e');
+        }
 
         // Get all objects that reference sales_old from both main and temp schemas
         final allObjects = await txn.rawQuery('''
@@ -1556,13 +1777,49 @@ class DatabaseService {
           // إنشاء الأقساط
           DateTime currentDate = firstInstallmentDate ?? DateTime.now();
           for (int i = 0; i < installmentCount; i++) {
-            await txn.insert('installments', {
-              'sale_id': saleId,
-              'due_date': currentDate.toIso8601String(),
-              'amount': installmentAmount,
-              'paid': 0,
-              'paid_at': null,
-            });
+            try {
+              await txn.insert('installments', {
+                'sale_id': saleId,
+                'due_date': currentDate.toIso8601String(),
+                'amount': installmentAmount,
+                'paid': 0,
+                'paid_at': null,
+              });
+              print('تم إنشاء قسط ${i + 1} للمبيعة $saleId');
+            } catch (e) {
+              print('خطأ في إنشاء القسط ${i + 1}: $e');
+              // محاولة إصلاح المشكلة
+              try {
+                // التأكد من أن جدول sales موجود
+                final salesCheck = await txn.rawQuery(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='sales'");
+                if (salesCheck.isEmpty) {
+                  print('خطأ: جدول sales غير موجود!');
+                  throw Exception('جدول sales غير موجود');
+                }
+
+                // التأكد من أن المبيعة موجودة
+                final saleCheck = await txn
+                    .rawQuery('SELECT id FROM sales WHERE id = ?', [saleId]);
+                if (saleCheck.isEmpty) {
+                  print('خطأ: المبيعة $saleId غير موجودة!');
+                  throw Exception('المبيعة غير موجودة');
+                }
+
+                // إعادة المحاولة
+                await txn.insert('installments', {
+                  'sale_id': saleId,
+                  'due_date': currentDate.toIso8601String(),
+                  'amount': installmentAmount,
+                  'paid': 0,
+                  'paid_at': null,
+                });
+                print('تم إنشاء القسط ${i + 1} بنجاح بعد الإصلاح');
+              } catch (retryError) {
+                print('فشل في إصلاح المشكلة: $retryError');
+                rethrow;
+              }
+            }
             // إضافة شهر للأقساط الشهرية
             currentDate = DateTime(
                 currentDate.year, currentDate.month + 1, currentDate.day);
@@ -1861,8 +2118,76 @@ class DatabaseService {
         [amount, customerId],
       );
 
+      // تقليل الأقساط المتبقية
+      await _reduceInstallmentsFromPayment(txn, customerId, amount);
+
       return paymentId;
     });
+  }
+
+  /// تقليل الأقساط المتبقية عند الدفع الإضافي بالتساوي
+  Future<void> _reduceInstallmentsFromPayment(
+      DatabaseExecutor txn, int customerId, double paymentAmount) async {
+    try {
+      // الحصول على الأقساط المتبقية للعميل
+      final unpaidInstallments = await txn.rawQuery('''
+        SELECT i.* FROM installments i
+        JOIN sales s ON s.id = i.sale_id
+        WHERE s.customer_id = ? AND i.paid = 0 AND i.amount > 0
+        ORDER BY i.due_date ASC
+      ''', [customerId]);
+
+      if (unpaidInstallments.isEmpty) {
+        print('لا توجد أقساط متبقية للعميل $customerId');
+        return;
+      }
+
+      final installmentCount = unpaidInstallments.length;
+      final amountPerInstallment = paymentAmount / installmentCount;
+
+      print('بدء تقليل الأقساط بالتساوي:');
+      print('- عدد الأقساط المتبقية: $installmentCount');
+      print('- المبلغ الإجمالي: $paymentAmount');
+      print('- المبلغ لكل قسط: $amountPerInstallment');
+
+      for (final installment in unpaidInstallments) {
+        final installmentId = installment['id'] as int;
+        final currentAmount = (installment['amount'] as num).toDouble();
+        final newAmount =
+            (currentAmount - amountPerInstallment).clamp(0.0, double.infinity);
+
+        print('القسط $installmentId: $currentAmount → $newAmount');
+
+        if (newAmount <= 0) {
+          // القسط مدفوع بالكامل
+          await txn.update(
+            'installments',
+            {
+              'amount': 0.0,
+              'paid': 1,
+              'paid_at': DateTime.now().toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [installmentId],
+          );
+          print('تم دفع القسط $installmentId بالكامل');
+        } else {
+          // تقليل مبلغ القسط
+          await txn.update(
+            'installments',
+            {'amount': newAmount},
+            where: 'id = ?',
+            whereArgs: [installmentId],
+          );
+          print('تم تقليل القسط $installmentId إلى $newAmount');
+        }
+      }
+
+      print('انتهاء تقليل الأقساط بالتساوي');
+    } catch (e) {
+      print('خطأ في تقليل الأقساط: $e');
+      // لا نريد إيقاف العملية إذا فشل تقليل الأقساط
+    }
   }
 
   Future<List<Map<String, Object?>>> getCustomerPayments({

@@ -4,19 +4,27 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'strings.dart';
+import 'format.dart';
 
 class InvoicePdf {
   // دعم أنواع مختلفة من الطابعات والأوراق
   static final Map<String, PdfPageFormat> _pageFormats = {
-    'thermal_58': const PdfPageFormat(
+    '58': const PdfPageFormat(
         58 * PdfPageFormat.mm, 250 * PdfPageFormat.mm), // طابعة حرارية 58mm
-    'thermal_80': const PdfPageFormat(80 * PdfPageFormat.mm,
-        300 * PdfPageFormat.mm), // طابعة حرارية 80mm (مخصص)
-    'a4': PdfPageFormat.a4, // ورقة A4
-    'a5': PdfPageFormat.a5, // ورقة A5
-    'letter': PdfPageFormat.letter, // ورقة Letter
-    'receipt': const PdfPageFormat(200, 400), // فاتورة صغيرة
-    'invoice': const PdfPageFormat(210, 350), // فاتورة عادية
+    '80': const PdfPageFormat(
+        80 * PdfPageFormat.mm, 300 * PdfPageFormat.mm), // طابعة حرارية 80mm
+    'A4': PdfPageFormat.a4, // ورقة A4
+    'A5': PdfPageFormat.a5, // ورقة A5
+    // Legacy support
+    'thermal_58':
+        const PdfPageFormat(58 * PdfPageFormat.mm, 250 * PdfPageFormat.mm),
+    'thermal_80':
+        const PdfPageFormat(80 * PdfPageFormat.mm, 300 * PdfPageFormat.mm),
+    'a4': PdfPageFormat.a4,
+    'a5': PdfPageFormat.a5,
+    'letter': PdfPageFormat.letter,
+    'receipt': const PdfPageFormat(200, 400),
+    'invoice': const PdfPageFormat(210, 350),
   };
 
   // تحميل الخط العربي
@@ -710,19 +718,53 @@ class InvoicePdf {
 
     // تحديد حد أقصى مناسب حسب نوع الورق
     if (format.width < 100) {
-      return result.clamp(1, 6); // طابعات حرارية صغيرة
+      return result.clamp(1, 4); // طابعات حرارية 58mm - مساحة محدودة جداً
     } else if (format.width < 200) {
-      return result.clamp(1, 10); // طابعات متوسطة
+      return result.clamp(1, 8); // طابعات حرارية 80mm - مساحة متوسطة
+    } else if (format.width < 400) {
+      return result.clamp(1, 12); // أوراق A5 - مساحة جيدة
     } else {
-      return result.clamp(1, 15); // أوراق كبيرة
+      return result.clamp(1, 20); // أوراق A4 - مساحة كبيرة
     }
   }
 
-  // بناء تخطيط كاشير حقيقي للطابعات الحرارية
-  static pw.Widget _buildThermalItemsTable(List<Map<String, Object?>> items,
+  // بناء جدول المنتجات العادي
+  static pw.Widget _buildItemsTable(List<Map<String, Object?>> items,
       PdfPageFormat format, pw.Font arabicFont) {
-    print(
-        '🔥 استخدام تخطيط كاشير حقيقي للطابعات الحرارية - عرض: ${format.width}mm');
+    // تحديد نوع الورق حسب العرض
+    final width = format.width;
+
+    // طابعة حرارية 58mm - عرض محدود جداً
+    if (width < 70) {
+      print(
+          '🔥 طابعة حرارية 58mm - عرض: ${width}mm - استخدام تخطيط مضغوط جداً');
+      return _buildCompactThermalItemsTable(items, format, arabicFont,
+          is58mm: true);
+    }
+    // طابعة حرارية 80mm - عرض متوسط
+    else if (width < 120) {
+      print('🔥 طابعة حرارية 80mm - عرض: ${width}mm - استخدام تخطيط حرارية');
+      return _buildCompactThermalItemsTable(items, format, arabicFont,
+          is58mm: false);
+    }
+    // ورقة A5 - عرض جيد
+    else if (width < 450) {
+      print('📄 ورقة A5 - عرض: ${width}mm - استخدام جدول متوسط');
+      return _buildStandardItemsTable(items, format, arabicFont, isA5: true);
+    }
+    // ورقة A4 - عرض كبير
+    else {
+      print('📄 ورقة A4 - عرض: ${width}mm - استخدام جدول كامل');
+      return _buildStandardItemsTable(items, format, arabicFont, isA5: false);
+    }
+  }
+
+  // بناء جدول مضغوط للطابعات الحرارية
+  static pw.Widget _buildCompactThermalItemsTable(
+      List<Map<String, Object?>> items,
+      PdfPageFormat format,
+      pw.Font arabicFont,
+      {required bool is58mm}) {
     return pw.Column(
       children: [
         // خط فاصل علوي
@@ -733,7 +775,7 @@ class InvoicePdf {
           margin: const pw.EdgeInsets.only(bottom: 4),
         ),
 
-        // المنتجات - تخطيط كاشير حقيقي
+        // المنتجات - تخطيط مضغوط
         ...items.asMap().entries.map((entry) {
           final index = entry.key;
           final e = entry.value;
@@ -745,10 +787,11 @@ class InvoicePdf {
           final qty = quantity.isFinite ? quantity.toInt() : 0;
           final lineTotal = price * qty;
 
-          // تقصير اسم المنتج للطابعات الحرارية
+          // تقصير اسم المنتج حسب نوع الطابعة
           String shortName = name;
-          if (name.length > 20) {
-            shortName = '${name.substring(0, 20)}...';
+          final maxLength = is58mm ? 15 : 20;
+          if (name.length > maxLength) {
+            shortName = '${name.substring(0, maxLength)}...';
           }
 
           return pw.Column(
@@ -757,40 +800,32 @@ class InvoicePdf {
               // اسم المنتج
               pw.Text(
                 shortName,
-                style: _getArabicTextStyle(arabicFont, 7,
+                style: _getArabicTextStyle(arabicFont, is58mm ? 7 : 8,
                     fontWeight: pw.FontWeight.bold),
                 textAlign: pw.TextAlign.right,
               ),
 
-              // الكمية والسعر في سطر واحد
+              // تفاصيل السعر والكمية
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   // الكمية والسعر
                   pw.Text(
-                    '$qty × ${NumberFormat.currency(
-                      locale: 'ar_IQ',
-                      symbol: '',
-                      decimalDigits: 0,
-                    ).format(price)}',
-                    style: _getArabicTextStyle(arabicFont, 6),
+                    '$qty × ${Formatters.currencyIQD(price)}',
+                    style: _getArabicTextStyle(arabicFont, is58mm ? 6 : 7),
                     textAlign: pw.TextAlign.right,
                   ),
                   // الإجمالي
                   pw.Text(
-                    NumberFormat.currency(
-                      locale: 'ar_IQ',
-                      symbol: '',
-                      decimalDigits: 0,
-                    ).format(lineTotal),
-                    style: _getArabicTextStyle(arabicFont, 7,
+                    Formatters.currencyIQD(lineTotal),
+                    style: _getArabicTextStyle(arabicFont, is58mm ? 7 : 8,
                         fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.left,
                   ),
                 ],
               ),
 
-              // خط فاصل بين المنتجات
+              // خط فاصل
               if (index < items.length - 1)
                 pw.Container(
                   width: double.infinity,
@@ -813,30 +848,17 @@ class InvoicePdf {
     );
   }
 
-  // بناء جدول المنتجات العادي
-  static pw.Widget _buildItemsTable(List<Map<String, Object?>> items,
-      PdfPageFormat format, pw.Font arabicFont) {
-    // تحديد نوع الورق
-    final isThermalPrinter = format.width < 100; // طابعات حرارية صغيرة
-    final isMediumPaper =
-        format.width >= 100 && format.width < 200; // طابعات متوسطة
-
-    // للطابعات الحرارية - استخدام الجدول المبسط
-    if (isThermalPrinter) {
-      print(
-          '🔥 طابعة حرارية مكتشفة - عرض: ${format.width}mm - استخدام تخطيط كاشير');
-      return _buildThermalItemsTable(items, format, arabicFont);
-    }
-
-    // للأوراق الكبيرة والمتوسطة - استخدام الجدول الكامل
-    print('📄 ورقة كبيرة/متوسطة - عرض: ${format.width}mm - استخدام جدول كامل');
+  // بناء جدول عادي للأوراق الكبيرة
+  static pw.Widget _buildStandardItemsTable(List<Map<String, Object?>> items,
+      PdfPageFormat format, pw.Font arabicFont,
+      {required bool isA5}) {
     // تكييف أبعاد الأعمدة حسب حجم الورق
     Map<int, pw.TableColumnWidth> columnWidths;
     double fontSize;
     double padding;
 
-    if (isMediumPaper) {
-      // طابعات متوسطة
+    if (isA5) {
+      // ورقة A5
       columnWidths = {
         0: pw.FlexColumnWidth(1.4), // الإجمالي
         1: pw.FlexColumnWidth(1.4), // السعر
@@ -847,7 +869,7 @@ class InvoicePdf {
       fontSize = 8;
       padding = 4;
     } else {
-      // أوراق كبيرة
+      // ورقة A4
       columnWidths = {
         0: pw.FlexColumnWidth(1.5), // الإجمالي
         1: pw.FlexColumnWidth(1.5), // السعر
@@ -1287,6 +1309,15 @@ class InvoicePdf {
   // وصف أنواع الأوراق
   static String _getFormatDescription(String formatName) {
     switch (formatName) {
+      case '58':
+        return 'طابعة حرارية 58mm - فواتير صغيرة ومضغوطة';
+      case '80':
+        return 'طابعة حرارية 80mm - فواتير عادية ومقروءة';
+      case 'A4':
+        return 'ورقة A4 - فواتير تفصيلية ومهنية';
+      case 'A5':
+        return 'ورقة A5 - فواتير متوسطة الحجم';
+      // Legacy support
       case 'thermal_58':
         return 'طابعة حرارية 58mm - مناسبة للفواتير الصغيرة';
       case 'thermal_80':

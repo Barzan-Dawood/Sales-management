@@ -3,7 +3,7 @@ import 'package:printing/printing.dart';
 import '../utils/invoice_pdf.dart';
 
 class PrintService {
-  static const String _defaultPageFormat = 'thermal_80';
+  static const String _defaultPageFormat = '80';
   static const bool _defaultShowLogo = true;
   static const bool _defaultShowBarcode = true;
 
