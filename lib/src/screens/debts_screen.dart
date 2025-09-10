@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
+import '../services/print_service.dart';
 import '../utils/format.dart';
 
 class DebtsScreen extends StatefulWidget {
@@ -2246,7 +2247,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       );
 
       // طباعة كشف الحساب
-      await _printStatement(statement);
+      await _printStatement(statement, customer, payments, debtData);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -2321,10 +2322,45 @@ class _DebtsScreenState extends State<DebtsScreen>
   }
 
   // دالة طباعة كشف الحساب
-  Future<void> _printStatement(String statement) async {
-    // في التطبيق الحقيقي، يمكن استخدام مكتبة الطباعة
-    // هنا سنعرض النص في نافذة منبثقة للعرض
-    print('كشف الحساب:');
-    print(statement);
+  Future<void> _printStatement(
+    String statement,
+    Map<String, dynamic> customer,
+    List<Map<String, dynamic>> payments,
+    Map<String, dynamic> debtData,
+  ) async {
+    try {
+      // الحصول على بيانات المحل (يمكن تحسينها لاحقاً)
+      const shopName = 'المكتب';
+      const phone = null;
+      const address = null;
+
+      // طباعة كشف الحساب
+      final success = await PrintService.printCustomerStatement(
+        shopName: shopName,
+        phone: phone,
+        address: address,
+        customer: customer,
+        payments: payments,
+        debtData: debtData,
+        context: context,
+      );
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم طباعة كشف الحساب بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('خطأ في طباعة كشف الحساب: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في طباعة كشف الحساب: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
