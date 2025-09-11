@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -14,6 +13,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  String? _backupDirectory;
+
   @override
   Widget build(BuildContext context) {
     final backup = BackupService(context.read<DatabaseService>());
@@ -97,105 +98,352 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Developer Information Section
-          Text(AppStrings.developerTitle1,
+          // Database Section
+          Text(AppStrings.database,
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(color: Colors.grey.shade300),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  'النسخ الاحتياطي والاستعادة',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'يمكنك إنشاء نسخة احتياطية من قاعدة البيانات أو استعادة نسخة سابقة.\n'
+                  '• النسخ الاحتياطي الكامل: جميع البيانات (مبيعات، عملاء، منتجات، إلخ)\n'
+                  '• نسخ المنتجات والأقسام: المنتجات والأقسام فقط\n'
+                  '• الاستعادة: اختر ملف قاعدة بيانات سابق لاسترجاع بياناتك',
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () async {
+                        final path = await backup.backupDatabase();
+                        if (!mounted) return;
+                        if (path != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content:
+                                  Text('${AppStrings.backupSaved} $path')));
+                        }
+                      },
+                      icon: const Icon(Icons.backup),
+                      label: const Text('نسخ احتياطي كامل'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final path = await backup.backupProductsAndCategories();
+                        if (!mounted) return;
+                        if (path != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content:
+                                Text('تم حفظ نسخة المنتجات والأقسام: $path'),
+                            backgroundColor: Colors.blue,
+                          ));
+                        }
+                      },
+                      icon: const Icon(Icons.inventory),
+                      label: const Text('نسخ المنتجات والأقسام'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.blue,
+                        side: const BorderSide(color: Colors.blue),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final name = await backup.restoreDatabase();
+                        if (!mounted) return;
+                        if (name != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content:
+                                  Text('${AppStrings.backupRestored} $name')));
+                        }
+                      },
+                      icon: const Icon(Icons.restore),
+                      label: const Text(AppStrings.restore),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Products and Categories Restore
                 Row(
                   children: [
-                    Icon(Icons.code, color: Colors.blue.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      AppStrings.developerTitle2,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
-                        fontSize: 16,
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('تأكيد الاستعادة'),
+                              content: const Text(
+                                'هل تريد استعادة المنتجات والأقسام؟\n'
+                                'سيتم حذف جميع المنتجات والأقسام الحالية واستبدالها بالبيانات من الملف المحدد.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                  child: const Text('إلغاء'),
+                                ),
+                                FilledButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                  child: const Text('استعادة'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirmed == true) {
+                            final name =
+                                await backup.restoreProductsAndCategories();
+                            if (!mounted) return;
+                            if (name != null) {
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: Text(
+                                    'تم استعادة المنتجات والأقسام من: $name'),
+                                backgroundColor: Colors.green,
+                              ));
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content:
+                                      Text('فشل في استعادة المنتجات والأقسام'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.restore_from_trash),
+                        label: const Text('استعادة المنتجات والأقسام'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.orange,
+                          side: const BorderSide(color: Colors.orange),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  AppStrings.developerInfo,
-                  style: TextStyle(
-                    color: Colors.blue.shade700,
-                    fontSize: 14,
-                  ),
+                const SizedBox(height: 12),
+
+                // Backup Directory Selection
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final dir =
+                              await FilePicker.platform.getDirectoryPath();
+                          if (dir != null) {
+                            setState(() => _backupDirectory = dir);
+                          }
+                        },
+                        icon: const Icon(Icons.folder_open),
+                        label: Text(
+                            _backupDirectory ?? 'اختر مجلد النسخ الاحتياطي'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (_backupDirectory != null)
+                      FilledButton.icon(
+                        onPressed: () async {
+                          try {
+                            final path = await backup
+                                .backupToDirectory(_backupDirectory!);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text('تم إنشاء نسخة احتياطية: $path'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content:
+                                        Text('خطأ في النسخ الاحتياطي: $e')),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.save),
+                        label: const Text('نسخ احتياطي سريع'),
+                        style: FilledButton.styleFrom(
+                            backgroundColor: Colors.green),
+                      ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // Database Section
-          Text(AppStrings.database,
+          // Database Management Section
+          Text('إدارة قاعدة البيانات',
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            FilledButton.icon(
-              onPressed: () async {
-                final path = await backup.backupDatabase();
-                if (!mounted) return;
-                if (path != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('${AppStrings.backupSaved} $path')));
-                }
-              },
-              icon: const Icon(Icons.backup),
-              label: const Text(AppStrings.backup),
-            ),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final name = await backup.restoreDatabase();
-                if (!mounted) return;
-                if (name != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('${AppStrings.backupRestored} $name')));
-                }
-              },
-              icon: const Icon(Icons.restore),
-              label: const Text(AppStrings.restore),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'النسخ الاحتياطي: سيُطلب منك اختيار مكان لحفظ ملف قاعدة البيانات (.db).\n'
-              'الاستعادة: اختر ملف قاعدة بيانات سابق لاسترجاع بياناتك. سيتم إغلاق القاعدة مؤقتاً ثم إعادة فتحها.',
-              style: TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-          ]),
-          const SizedBox(height: 16),
-          Text('النسخ الاحتياطي التلقائي',
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          _AutoBackupCard(backup: backup),
+          _DatabaseManagementCard(),
         ],
       ),
     );
   }
 }
 
-class _AutoBackupCard extends StatefulWidget {
-  const _AutoBackupCard({required this.backup});
-  final BackupService backup;
+class _DatabaseManagementCard extends StatefulWidget {
   @override
-  State<_AutoBackupCard> createState() => _AutoBackupCardState();
+  State<_DatabaseManagementCard> createState() =>
+      _DatabaseManagementCardState();
 }
 
-class _AutoBackupCardState extends State<_AutoBackupCard> {
-  String _frequency = 'off'; // off, daily, weekly
-  String? _directory;
-  int _keep = 10;
+class _DatabaseManagementCardState extends State<_DatabaseManagementCard> {
+  Map<String, int> _dataCounts = {};
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkDataExists();
+  }
+
+  Future<void> _checkDataExists() async {
+    setState(() => _isLoading = true);
+    try {
+      final db = context.read<DatabaseService>();
+      final counts = await db.checkDataExists();
+      setState(() {
+        _dataCounts = counts;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في فحص البيانات: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteAllData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد الحذف'),
+        content: const Text(
+          'هل أنت متأكد من حذف جميع البيانات؟\n'
+          'هذا الإجراء لا يمكن التراجع عنه!\n\n'
+          'سيتم حذف:\n'
+          '• جميع المبيعات\n'
+          '• جميع المنتجات\n'
+          '• جميع العملاء\n'
+          '• جميع الموردين\n'
+          '• جميع الأقساط\n'
+          '• جميع المصاريف\n'
+          '• جميع التقارير',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('حذف الكل'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _isLoading = true);
+      try {
+        final db = context.read<DatabaseService>();
+        await db.deleteAllData();
+        await _checkDataExists();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم حذف جميع البيانات بنجاح'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('خطأ في حذف البيانات: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _resetCustomerDebts() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إعادة تعيين الديون'),
+        content: const Text(
+          'هل تريد إعادة تعيين جميع ديون العملاء إلى صفر؟\n'
+          'هذا سيقوم بتحديث حقل total_debt لجميع العملاء.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('إعادة تعيين'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _isLoading = true);
+      try {
+        final db = context.read<DatabaseService>();
+        await db.resetAllCustomerDebts();
+        await _checkDataExists();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم إعادة تعيين جميع الديون بنجاح'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('خطأ في إعادة تعيين الديون: $e')),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -210,227 +458,78 @@ class _AutoBackupCardState extends State<_AutoBackupCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'اختر تكرار النسخ ومجلد الحفظ وعدد النسخ التي سيتم الاحتفاظ بها.',
+            'إدارة البيانات والإحصائيات',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'يمكنك من هنا حذف جميع البيانات أو إعادة تعيين الديون لحل مشاكل الإحصائيات.',
             style: TextStyle(fontSize: 12, color: Colors.black54),
           ),
-          const SizedBox(height: 12),
-          Row(children: [
-            DropdownButton<String>(
-              value: _frequency,
-              items: const [
-                DropdownMenuItem(value: 'off', child: Text('إيقاف')),
-                DropdownMenuItem(value: 'daily', child: Text('يومي')),
-                DropdownMenuItem(value: 'weekly', child: Text('أسبوعي')),
-              ],
-              onChanged: (v) => setState(() => _frequency = v ?? 'off'),
+          const SizedBox(height: 16),
+
+          // Data Statistics
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator())
+          else ...[
+            const Text(
+              'إحصائيات البيانات الحالية:',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final dir = await FilePicker.platform.getDirectoryPath();
-                  if (dir != null) setState(() => _directory = dir);
-                },
-                icon: const Icon(Icons.folder_open),
-                label: Text(_directory ?? 'اختر مجلد النسخ'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 140,
-              child: TextField(
-                decoration: const InputDecoration(
-                  labelText: 'عدد النسخ',
-                  border: OutlineInputBorder(),
-                ),
-                controller: TextEditingController(text: _keep.toString()),
-                keyboardType: TextInputType.number,
-                onSubmitted: (v) {
-                  final parsed = int.tryParse(v);
-                  if (parsed != null && parsed > 0) {
-                    setState(() => _keep = parsed);
-                  }
-                },
-              ),
-            ),
-          ]),
-          const SizedBox(height: 12),
-          Wrap(spacing: 8, children: [
-            FilledButton.icon(
-              onPressed: _directory == null
-                  ? null
-                  : () async {
-                      final path =
-                          await widget.backup.backupToDirectory(_directory!);
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('تم إنشاء نسخة: $path')),
-                      );
-                    },
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('إنشاء نسخة الآن'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                        'تم حفظ الإعدادات: التكرار=$_frequency، المجلد=${_directory ?? '-'}، الاحتفاظ=$_keep'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              children: _dataCounts.entries.map((entry) {
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Text(
+                    '${entry.key}: ${entry.value}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 );
-              },
-              icon: const Icon(Icons.save),
-              label: const Text('حفظ الإعدادات'),
-            ),
-          ]),
-
-          // Debug section
-          if (kDebugMode) ...[
-            const Divider(),
-            const Text(
-              'أدوات التطوير',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              }).toList(),
             ),
             const SizedBox(height: 16),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    await context.read<DatabaseService>().forceCleanup();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('تم تنظيف قاعدة البيانات')),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('خطأ في التنظيف: $e')),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.cleaning_services),
-                label: const Text('تنظيف قاعدة البيانات'),
-              ),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    await context
-                        .read<DatabaseService>()
-                        .cleanupSalesOldReferences();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('تم تنظيف مراجع sales_old')),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('خطأ في تنظيف sales_old: $e')),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.delete_sweep),
-                label: const Text('إصلاح خطأ sales_old'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-              ),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    final db = context.read<DatabaseService>();
-                    final customers = await db.getCustomers();
-                    if (customers.isNotEmpty) {
-                      final testCustomer = customers.first;
-                      print(
-                          'Testing deletion of customer: ${testCustomer['id']} - ${testCustomer['name']}');
-
-                      final deletedRows =
-                          await db.deleteCustomer(testCustomer['id'] as int);
-
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'اختبار الحذف: تم حذف $deletedRows صفوف للعميل ${testCustomer['name']}'),
-                            backgroundColor:
-                                deletedRows > 0 ? Colors.green : Colors.orange,
-                          ),
-                        );
-                      }
-                    } else {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('لا توجد عملاء لاختبار الحذف'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('خطأ في اختبار الحذف: $e')),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.bug_report),
-                label: const Text('اختبار حذف عميل'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-              ),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    await context.read<DatabaseService>().aggressiveCleanup();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('تم التنظيف الشامل لقاعدة البيانات')),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('خطأ في التنظيف الشامل: $e')),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.build),
-                label: const Text('تنظيف شامل'),
-              ),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    final issues = await context
-                        .read<DatabaseService>()
-                        .checkDatabaseIntegrity();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(
-                                'مشاكل قاعدة البيانات: ${issues.isEmpty ? 'لا توجد' : issues.join(', ')}')),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text('خطأ في فحص قاعدة البيانات: $e')),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.health_and_safety),
-                label: const Text('فحص سلامة القاعدة'),
-              ),
-            ]),
           ],
+
+          // Action Buttons
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: _isLoading ? null : _checkDataExists,
+                icon: const Icon(Icons.refresh),
+                label: const Text('تحديث الإحصائيات'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _isLoading ? null : _resetCustomerDebts,
+                icon: const Icon(Icons.restore),
+                label: const Text('إعادة تعيين الديون'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: _isLoading ? null : _deleteAllData,
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('حذف جميع البيانات'),
+                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              ),
+            ],
+          ),
         ],
       ),
     );

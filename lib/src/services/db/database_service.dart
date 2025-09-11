@@ -62,6 +62,9 @@ class DatabaseService {
 
     // إصلاح جدول installments إذا كان يحتوي على مراجع خاطئة
     await fixInstallmentsTable();
+
+    // تنظيف الأقساط المعلقة
+    await cleanupOrphanedInstallments();
   }
 
   Future<void> reopen() async {
@@ -1035,7 +1038,81 @@ class DatabaseService {
   }
 
   Future<int> deleteProduct(int id) async {
-    return _db.delete('products', where: 'id = ?', whereArgs: [id]);
+    return _db.transaction<int>((txn) async {
+      try {
+        // First, get all sales that have items with this product
+        final salesWithProduct = await txn.rawQuery('''
+          SELECT DISTINCT s.id FROM sales s
+          JOIN sale_items si ON s.id = si.sale_id
+          WHERE si.product_id = ?
+        ''', [id]);
+
+        // Delete all sale_items that reference this product
+        await txn
+            .delete('sale_items', where: 'product_id = ?', whereArgs: [id]);
+
+        // Delete installments for sales that only had this product
+        for (final sale in salesWithProduct) {
+          final saleId = sale['id'] as int;
+
+          // Check if this sale has any remaining items
+          final remainingItems = await txn.rawQuery('''
+            SELECT COUNT(*) as count FROM sale_items WHERE sale_id = ?
+          ''', [saleId]);
+
+          final itemCount = remainingItems.first['count'] as int;
+
+          // If no items remain, delete the sale and its installments
+          if (itemCount == 0) {
+            await txn.delete('installments',
+                where: 'sale_id = ?', whereArgs: [saleId]);
+            await txn.delete('sales', where: 'id = ?', whereArgs: [saleId]);
+          }
+        }
+
+        // Then delete the product
+        return await txn.delete('products', where: 'id = ?', whereArgs: [id]);
+      } catch (e) {
+        print('Error deleting product: $e');
+        rethrow;
+      }
+    });
+  }
+
+  /// Delete product with cascade option - removes related sale_items first
+  Future<int> deleteProductWithCascade(int id) async {
+    return _db.transaction<int>((txn) async {
+      // First delete all sale_items that reference this product
+      await txn.delete('sale_items', where: 'product_id = ?', whereArgs: [id]);
+
+      // Then delete the product
+      return txn.delete('products', where: 'id = ?', whereArgs: [id]);
+    });
+  }
+
+  /// Get count of sale_items that reference a product
+  Future<int> getProductSaleItemsCount(int productId) async {
+    final result = await _db.rawQuery(
+        'SELECT COUNT(*) as count FROM sale_items WHERE product_id = ?',
+        [productId]);
+    return result.first['count'] as int;
+  }
+
+  /// Clean up orphaned installments (installments without valid sales)
+  Future<int> cleanupOrphanedInstallments() async {
+    try {
+      // Delete installments that reference non-existent sales
+      final result = await _db.rawDelete('''
+        DELETE FROM installments 
+        WHERE sale_id NOT IN (SELECT id FROM sales)
+      ''');
+
+      print('Cleaned up $result orphaned installments');
+      return result;
+    } catch (e) {
+      print('Error cleaning up orphaned installments: $e');
+      return 0;
+    }
   }
 
   // Categories
@@ -2782,5 +2859,126 @@ class DatabaseService {
       'unpaidCount': (unpaidInstallments.first['count'] as int),
       'overdueCount': (overdueInstallments.first['count'] as int),
     };
+  }
+
+  /// دالة شاملة لحذف جميع البيانات من قاعدة البيانات
+  /// تحذف جميع الجداول عدا الجداول الأساسية (users, settings)
+  Future<void> deleteAllData() async {
+    try {
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      print('بدء حذف جميع البيانات...');
+
+      // حذف جميع البيانات من الجداول بالترتيب الصحيح
+      await _db.delete('payments');
+      print('تم حذف جميع المدفوعات');
+
+      await _db.delete('installments');
+      print('تم حذف جميع الأقساط');
+
+      await _db.delete('sale_items');
+      print('تم حذف جميع عناصر المبيعات');
+
+      await _db.delete('sales');
+      print('تم حذف جميع المبيعات');
+
+      await _db.delete('expenses');
+      print('تم حذف جميع المصاريف');
+
+      await _db.delete('customers');
+      print('تم حذف جميع العملاء');
+
+      await _db.delete('suppliers');
+      print('تم حذف جميع الموردين');
+
+      await _db.delete('products');
+      print('تم حذف جميع المنتجات');
+
+      await _db.delete('categories');
+      print('تم حذف جميع الفئات');
+
+      // إعادة تعيين AUTO_INCREMENT للجداول
+      await _db.execute(
+          'DELETE FROM sqlite_sequence WHERE name IN (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            'payments',
+            'installments',
+            'sale_items',
+            'sales',
+            'expenses',
+            'customers',
+            'suppliers',
+            'products',
+            'categories'
+          ]);
+      print('تم إعادة تعيين AUTO_INCREMENT');
+
+      await _db.execute('PRAGMA foreign_keys = ON');
+
+      print('تم حذف جميع البيانات بنجاح');
+    } catch (e) {
+      await _db.execute('PRAGMA foreign_keys = ON');
+      print('خطأ في حذف البيانات: $e');
+      rethrow;
+    }
+  }
+
+  /// دالة للتحقق من وجود بيانات في قاعدة البيانات
+  Future<Map<String, int>> checkDataExists() async {
+    final result = <String, int>{};
+
+    try {
+      // فحص جدول المبيعات
+      final salesCount =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM sales');
+      result['المبيعات'] = salesCount.first['count'] as int;
+
+      // فحص جدول المنتجات
+      final productsCount =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM products');
+      result['المنتجات'] = productsCount.first['count'] as int;
+
+      // فحص جدول العملاء
+      final customersCount =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM customers');
+      result['العملاء'] = customersCount.first['count'] as int;
+
+      // فحص جدول المصاريف
+      final expensesCount =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM expenses');
+      result['المصاريف'] = expensesCount.first['count'] as int;
+
+      // فحص جدول الأقساط
+      final installmentsCount =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM installments');
+      result['الأقساط'] = installmentsCount.first['count'] as int;
+
+      // فحص جدول المدفوعات
+      final paymentsCount =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM payments');
+      result['المدفوعات'] = paymentsCount.first['count'] as int;
+
+      // فحص جدول عناصر المبيعات
+      final saleItemsCount =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM sale_items');
+      result['عناصر المبيعات'] = saleItemsCount.first['count'] as int;
+
+      print('نتائج فحص البيانات: $result');
+    } catch (e) {
+      print('خطأ في فحص البيانات: $e');
+    }
+
+    return result;
+  }
+
+  /// دالة لإعادة تعيين جميع الديون في جدول العملاء
+  Future<void> resetAllCustomerDebts() async {
+    try {
+      await _db.execute('UPDATE customers SET total_debt = 0');
+      print('تم إعادة تعيين جميع ديون العملاء');
+    } catch (e) {
+      print('خطأ في إعادة تعيين ديون العملاء: $e');
+      rethrow;
+    }
   }
 }

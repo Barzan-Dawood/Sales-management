@@ -795,11 +795,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Future<void> _deleteProduct(BuildContext context, int id) async {
     final db = context.read<DatabaseService>();
+
+    // Simple confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('حذف المنتج'),
-        content: const Text('هل أنت متأكد من الحذف؟'),
+        content: const Text(
+            'هل أنت متأكد من حذف هذا المنتج؟\nسيتم حذف المنتج فقط دون التأثير على المبيعات السابقة.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -812,16 +815,38 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ],
       ),
     );
+
     if (confirm == true) {
-      await db.deleteProduct(id);
-      if (!mounted) return;
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم الحذف'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      try {
+        await db.deleteProduct(id);
+        if (!mounted) return;
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حذف المنتج بنجاح'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        String errorMessage = 'خطأ في الحذف';
+        if (e.toString().contains('FOREIGN KEY constraint failed')) {
+          errorMessage = 'لا يمكن حذف هذا المنتج لأنه مرتبط بفواتير مبيعات';
+        } else if (e.toString().contains('database is locked')) {
+          errorMessage = 'قاعدة البيانات مقفلة، حاول مرة أخرى';
+        } else {
+          errorMessage = 'خطأ في الحذف: ${e.toString()}';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 

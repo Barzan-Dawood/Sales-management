@@ -29,9 +29,9 @@ class PrintService {
     BuildContext? context,
   }) async {
     try {
-      print('=== بدء طباعة كشف الحساب ===');
-      print('اسم العميل: ${customer['name']}');
-      print('عدد المدفوعات: ${payments.length}');
+      debugPrint('=== بدء طباعة كشف الحساب ===');
+      debugPrint('اسم العميل: ${customer['name']}');
+      debugPrint('عدد المدفوعات: ${payments.length}');
 
       // إنشاء PDF لكشف الحساب
       final pdfBytes = await _generateStatementPDF(
@@ -51,10 +51,10 @@ class PrintService {
             'كشف_حساب_${customer['name']}_${DateTime.now().millisecondsSinceEpoch}',
       );
 
-      print('تم طباعة كشف الحساب بنجاح');
+      debugPrint('تم طباعة كشف الحساب بنجاح');
       return true;
     } catch (e) {
-      print('خطأ في طباعة كشف الحساب: $e');
+      debugPrint('خطأ في طباعة كشف الحساب: $e');
       if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -446,7 +446,7 @@ class PrintService {
           .load('assets/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf');
       return pw.Font.ttf(fontData);
     } catch (e) {
-      print('خطأ في تحميل الخط العربي: $e');
+      debugPrint('خطأ في تحميل الخط العربي: $e');
       return pw.Font.helvetica();
     }
   }
@@ -491,15 +491,15 @@ class PrintService {
   }) async {
     try {
       // إضافة رسائل تشخيص
-      print('=== بدء عملية الطباعة ===');
-      print('عدد المنتجات: ${items.length}');
-      print('نوع الدفع: $paymentType');
-      print('اسم المحل: $shopName');
-      print('نوع الورق: $pageFormat');
+      debugPrint('=== بدء عملية الطباعة ===');
+      debugPrint('عدد المنتجات: ${items.length}');
+      debugPrint('نوع الدفع: $paymentType');
+      debugPrint('اسم المحل: $shopName');
+      debugPrint('نوع الورق: $pageFormat');
 
       // فحص أن هناك منتجات للطباعة
       if (items.isEmpty) {
-        print('خطأ: لا توجد منتجات للطباعة');
+        debugPrint('خطأ: لا توجد منتجات للطباعة');
         if (context != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -531,25 +531,25 @@ class PrintService {
         downPayment: downPayment,
       );
 
-      print('تم إنشاء PDF بنجاح، حجم الملف: ${pdfData.length} بايت');
+      debugPrint('تم إنشاء PDF بنجاح، حجم الملف: ${pdfData.length} بايت');
 
       try {
         await Printing.layoutPdf(
           onLayout: (format) async => pdfData,
           name: 'فاتورة_${DateTime.now().millisecondsSinceEpoch}',
         );
-        print('تم فتح نافذة الطباعة بنجاح');
+        debugPrint('تم فتح نافذة الطباعة بنجاح');
       } catch (layoutError) {
-        print('خطأ في فتح نافذة الطباعة: $layoutError');
+        debugPrint('خطأ في فتح نافذة الطباعة: $layoutError');
         // محاولة بديلة - حفظ الملف وعرضه
         try {
           await Printing.sharePdf(
             bytes: pdfData,
             filename: 'فاتورة_${DateTime.now().millisecondsSinceEpoch}.pdf',
           );
-          print('تم مشاركة ملف PDF بنجاح');
+          debugPrint('تم مشاركة ملف PDF بنجاح');
         } catch (shareError) {
-          print('خطأ في مشاركة ملف PDF: $shareError');
+          debugPrint('خطأ في مشاركة ملف PDF: $shareError');
           rethrow;
         }
       }

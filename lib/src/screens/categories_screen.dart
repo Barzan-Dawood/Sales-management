@@ -192,43 +192,147 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                               (v == null || v.trim().isEmpty) ? 'مطلوب' : null,
                         ),
                         const SizedBox(height: 16),
-                        Text('الأيقونة',
-                            style: Theme.of(context).textTheme.labelLarge),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+
+                        // تخطيط أفقي للأيقونات والألوان
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            for (final ic in _iconOptions)
-                              ChoiceChip(
-                                label: Icon(ic),
-                                selected: selectedIcon == ic.codePoint,
-                                onSelected: (_) => setStateDialog(
-                                    () => selectedIcon = ic.codePoint),
+                            // قسم الأيقونات
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('الأيقونة',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    height: 200,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: Colors.grey.shade300),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: SingleChildScrollView(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Wrap(
+                                          spacing: 6,
+                                          runSpacing: 6,
+                                          children: [
+                                            for (final ic in _iconOptions)
+                                              GestureDetector(
+                                                onTap: () => setStateDialog(
+                                                    () => selectedIcon =
+                                                        ic.codePoint),
+                                                child: Container(
+                                                  width: 40,
+                                                  height: 40,
+                                                  decoration: BoxDecoration(
+                                                    color: selectedIcon ==
+                                                            ic.codePoint
+                                                        ? Theme.of(context)
+                                                            .primaryColor
+                                                        : Colors.grey.shade100,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                    border: Border.all(
+                                                      color: selectedIcon ==
+                                                              ic.codePoint
+                                                          ? Theme.of(context)
+                                                              .primaryColor
+                                                          : Colors
+                                                              .grey.shade300,
+                                                    ),
+                                                  ),
+                                                  child: Icon(
+                                                    ic,
+                                                    color: selectedIcon ==
+                                                            ic.codePoint
+                                                        ? Colors.white
+                                                        : Colors.grey.shade600,
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Text('اللون',
-                            style: Theme.of(context).textTheme.labelLarge),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            for (final col in _colorOptions)
-                              GestureDetector(
-                                onTap: () => setStateDialog(
-                                    () => selectedColor = col.value),
-                                child: CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: col,
-                                  child: selectedColor == col.value
-                                      ? const Icon(Icons.check,
-                                          color: Colors.white, size: 16)
-                                      : null,
-                                ),
+                            ),
+
+                            const SizedBox(width: 16),
+
+                            // قسم الألوان
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('اللون',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    height: 200,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: Colors.grey.shade300),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: SingleChildScrollView(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Wrap(
+                                          spacing: 8,
+                                          runSpacing: 8,
+                                          children: [
+                                            for (final col in _colorOptions)
+                                              GestureDetector(
+                                                onTap: () => setStateDialog(
+                                                    () => selectedColor =
+                                                        col.value),
+                                                child: Container(
+                                                  width: 32,
+                                                  height: 32,
+                                                  decoration: BoxDecoration(
+                                                    color: col,
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                      color: selectedColor ==
+                                                              col.value
+                                                          ? Colors.black
+                                                          : Colors
+                                                              .grey.shade300,
+                                                      width: selectedColor ==
+                                                              col.value
+                                                          ? 3
+                                                          : 1,
+                                                    ),
+                                                  ),
+                                                  child: selectedColor ==
+                                                          col.value
+                                                      ? const Icon(Icons.check,
+                                                          color: Colors.white,
+                                                          size: 16)
+                                                      : null,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 20),
@@ -454,33 +558,179 @@ class _FancyCategoryCardState extends State<_FancyCategoryCard> {
 }
 
 const _iconOptions = <IconData>[
+  // أجهزة الهاتف والاتصالات
   Icons.phone_iphone,
   Icons.phone_android,
   Icons.devices_other,
   Icons.watch,
   Icons.headphones,
   Icons.speaker,
+
+  // أجهزة الكمبيوتر والتكنولوجيا
+  Icons.laptop,
+  Icons.computer,
+  Icons.desktop_windows,
+  Icons.monitor,
+  Icons.keyboard,
+  Icons.mouse,
   Icons.memory,
+  Icons.storage,
   Icons.usb,
   Icons.cable,
+
+  // الشبكات والاتصالات
   Icons.router,
   Icons.wifi,
   Icons.lan,
   Icons.network_check,
   Icons.settings_input_antenna,
+  Icons.satellite_alt,
+  Icons.satellite,
+
+  // الأجهزة المنزلية
+  Icons.tv,
+  Icons.radio,
+  Icons.camera_alt,
+  Icons.videocam,
+  Icons.mic,
+  Icons.airplay,
+
+  // الكهرباء والإضاءة
   Icons.electrical_services,
   Icons.lightbulb,
   Icons.power,
   Icons.bolt,
+  Icons.flash_on,
+  Icons.battery_charging_full,
+
+  // الأجهزة المنزلية الأخرى
+  Icons.kitchen,
+  Icons.local_laundry_service,
+  Icons.ac_unit,
+  Icons.air,
+  Icons.water_drop,
+  Icons.thermostat,
+
+  // الأدوات والمعدات
+  Icons.build,
+  Icons.handyman,
+  Icons.settings,
+  Icons.tune,
+  Icons.precision_manufacturing,
+  Icons.engineering,
+
+  // الألعاب والترفيه
+  Icons.sports_esports,
+  Icons.gamepad,
+  Icons.toys,
+  Icons.music_note,
+  Icons.movie,
+
+  // الأمن والمراقبة
+  Icons.security,
+  Icons.camera_indoor,
+  Icons.camera_outdoor,
+  Icons.lock,
+  Icons.fingerprint,
+
+  // النقل والمركبات
+  Icons.directions_car,
+  Icons.motorcycle,
+  Icons.bike_scooter,
+  Icons.flight,
+  Icons.train,
+
+  // الصحة والطب
+  Icons.medical_services,
+  Icons.favorite,
+  Icons.local_hospital,
+  Icons.healing,
+  Icons.medication,
+
+  // الرياضة واللياقة
+  Icons.sports_soccer,
+  Icons.sports_basketball,
+  Icons.sports_tennis,
+  Icons.fitness_center,
+  Icons.pool,
+
+  // الطعام والشراب
+  Icons.restaurant,
+  Icons.coffee,
+  Icons.local_pizza,
+  Icons.cake,
+  Icons.wine_bar,
+
+  // الملابس والأزياء
+  Icons.checkroom,
+  Icons.diamond,
+  Icons.watch,
+  Icons.visibility,
+  Icons.accessibility_new,
+
+  // الكتب والتعليم
+  Icons.book,
+  Icons.school,
+  Icons.library_books,
+  Icons.edit,
+  Icons.calculate,
+
+  // المكتب والأعمال
+  Icons.business,
+  Icons.work,
+  Icons.folder,
+  Icons.description,
+  Icons.print,
+
+  // السفر والسياحة
+  Icons.flight,
+  Icons.hotel,
+  Icons.beach_access,
+  Icons.landscape,
+  Icons.map,
+
+  // الحيوانات الأليفة
+  Icons.pets,
+  Icons.cruelty_free,
+  Icons.grass,
+  Icons.park,
+
+  // البستنة والزراعة
+  Icons.local_florist,
+  Icons.eco,
+  Icons.agriculture,
+  Icons.water_drop,
+  Icons.sunny,
 ];
 
 const _colorOptions = <Color>[
-  Color(0xFF1E88E5),
-  Color(0xFF43A047),
-  Color(0xFFF4511E),
-  Color(0xFF8E24AA),
-  Color(0xFF00897B),
-  Color(0xFF6D4C41),
-  Color(0xFF546E7A),
-  Color(0xFFFFB300),
+  // الألوان الأساسية
+  Color(0xFF1E88E5), // أزرق
+  Color(0xFF43A047), // أخضر
+  Color(0xFFF4511E), // برتقالي
+  Color(0xFF8E24AA), // بنفسجي
+  Color(0xFF00897B), // تركوازي
+  Color(0xFF6D4C41), // بني
+  Color(0xFF546E7A), // رمادي أزرق
+  Color(0xFFFFB300), // أصفر
+
+  // ألوان إضافية
+  Color(0xFFE91E63), // وردي
+  Color(0xFF9C27B0), // بنفسجي فاتح
+  Color(0xFF673AB7), // بنفسجي داكن
+  Color(0xFF3F51B5), // نيلي
+  Color(0xFF2196F3), // أزرق فاتح
+  Color(0xFF00BCD4), // سماوي
+  Color(0xFF009688), // أخضر داكن
+  Color(0xFF4CAF50), // أخضر فاتح
+  Color(0xFF8BC34A), // أخضر مصفر
+  Color(0xFFCDDC39), // أصفر أخضر
+  Color(0xFFFFEB3B), // أصفر ذهبي
+  Color(0xFFFFC107), // عنبر
+  Color(0xFFFF9800), // برتقالي داكن
+  Color(0xFFFF5722), // أحمر برتقالي
+  Color(0xFF795548), // بني فاتح
+  Color(0xFF607D8B), // رمادي أزرق داكن
+  Color(0xFF9E9E9E), // رمادي
+  Color(0xFF424242), // رمادي داكن
 ];
