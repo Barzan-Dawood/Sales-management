@@ -1032,6 +1032,15 @@ class DatabaseService {
         conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
+  /// التحقق من وجود باركود في قاعدة البيانات
+  Future<bool> isBarcodeExists(String barcode) async {
+    if (barcode.trim().isEmpty) return false;
+    final result = await _db.rawQuery(
+        'SELECT COUNT(*) as count FROM products WHERE barcode = ?',
+        [barcode.trim()]);
+    return (result.first['count'] as int) > 0;
+  }
+
   Future<int> updateProduct(int id, Map<String, Object?> values) async {
     values['updated_at'] = DateTime.now().toIso8601String();
     return _db.update('products', values, where: 'id = ?', whereArgs: [id]);

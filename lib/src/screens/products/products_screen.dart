@@ -173,7 +173,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 4),
                         Expanded(
                           flex: 1,
                           child: Container(
@@ -858,13 +858,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final TextEditingController barcodeCtrl =
         TextEditingController(text: product['barcode']?.toString() ?? '');
     final TextEditingController priceCtrl = TextEditingController(
-        text: (product['price'] as num?)?.toString() ?? '0');
+        text: (product['price'] as num?)?.toString() ?? '');
     final TextEditingController costCtrl = TextEditingController(
-        text: (product['cost'] as num?)?.toString() ?? '0');
+        text: (product['cost'] as num?)?.toString() ?? '');
     final TextEditingController qtyCtrl = TextEditingController(
-        text: (product['quantity'] as num?)?.toString() ?? '0');
-    final TextEditingController minQtyCtrl = TextEditingController(
-        text: (product['min_quantity'] as num?)?.toString() ?? '1');
+        text: (product['quantity'] as num?)?.toString() ?? '');
     int? categoryId = product['category_id'] as int?;
 
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -881,148 +879,284 @@ class _ProductsScreenState extends State<ProductsScreen> {
             textAlign: TextAlign.right,
           ),
           content: SizedBox(
-            width: 460,
+            width: 500,
+            height: 600,
             child: Form(
               key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  TextFormField(
-                    controller: nameCtrl,
-                    textAlign: TextAlign.right,
-                    textDirection: TextDirection.rtl,
-                    decoration: const InputDecoration(
-                      labelText: 'الاسم',
-                      alignLabelWithHint: true,
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: barcodeCtrl,
-                    textAlign: TextAlign.right,
-                    textDirection: TextDirection.rtl,
-                    decoration: const InputDecoration(
-                      labelText: 'الباركود',
-                      alignLabelWithHint: true,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: priceCtrl,
-                          textAlign: TextAlign.right,
-                          textDirection: TextDirection.rtl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'السعر',
-                            alignLabelWithHint: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                                RegExp(r'[0-9.]')),
-                          ],
-                          validator: (v) =>
-                              (v == null || v.isEmpty) ? 'السعر مطلوب' : null,
-                        ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // قسم المعلومات الأساسية
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          controller: costCtrl,
-                          textAlign: TextAlign.right,
-                          textDirection: TextDirection.rtl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'الكلفة',
-                            alignLabelWithHint: true,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: Colors.blue.shade700, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'المعلومات الأساسية',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade800,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
                           ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                                RegExp(r'[0-9.]')),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: qtyCtrl,
-                          textAlign: TextAlign.right,
-                          textDirection: TextDirection.rtl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              signed: false),
-                          decoration: const InputDecoration(
-                            labelText: 'الكمية',
-                            alignLabelWithHint: true,
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: nameCtrl,
+                            textAlign: TextAlign.right,
+                            textDirection: TextDirection.rtl,
+                            decoration: const InputDecoration(
+                              labelText: 'اسم المنتج',
+                              hintText: 'مطلوب',
+                              helperText: 'اسم المنتج كما سيظهر في الفواتير',
+                              prefixIcon: Icon(Icons.inventory_2),
+                              alignLabelWithHint: true,
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'اسم المنتج مطلوب'
+                                : null,
                           ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          controller: minQtyCtrl,
-                          textAlign: TextAlign.right,
-                          textDirection: TextDirection.rtl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              signed: false),
-                          decoration: const InputDecoration(
-                            labelText: 'الحد الأدنى',
-                            alignLabelWithHint: true,
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: barcodeCtrl,
+                                  textAlign: TextAlign.right,
+                                  textDirection: TextDirection.rtl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'الباركود',
+                                    hintText: 'اختياري',
+                                    helperText: 'رقم الباركود للمنتج',
+                                    prefixIcon: Icon(Icons.qr_code),
+                                    alignLabelWithHint: true,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  // توليد باركود عشوائي
+                                  final random = DateTime.now()
+                                      .millisecondsSinceEpoch
+                                      .toString();
+                                  barcodeCtrl.text =
+                                      random.substring(random.length - 8);
+                                },
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const Text('توليد'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                ),
+                              ),
+                            ],
                           ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  FutureBuilder<List<Map<String, Object?>>>(
-                    future: db.getCategories(),
-                    builder: (context, snap) {
-                      final cats = snap.data ?? const <Map<String, Object?>>[];
-                      final ids = cats.map<int>((c) => c['id'] as int).toSet();
-                      final int? effectiveCategoryId =
-                          (categoryId != null && ids.contains(categoryId))
-                              ? categoryId
-                              : null;
-                      return DropdownButtonFormField<int>(
-                        initialValue: effectiveCategoryId,
-                        isExpanded: true,
-                        decoration:
-                            const InputDecoration(labelText: 'القسم (اختياري)'),
-                        items: [
-                          const DropdownMenuItem<int>(
-                            value: null,
-                            child: Text('بدون قسم'),
-                          ),
-                          ...cats.map((c) => DropdownMenuItem<int>(
-                                value: c['id'] as int,
-                                child: Text(c['name']?.toString() ?? ''),
-                              )),
                         ],
-                        onChanged: (v) => categoryId = v,
-                      );
-                    },
-                  ),
-                ],
+                      ),
+                    ),
+                    // قسم الأسعار والمخزون
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.attach_money,
+                                  color: Colors.green.shade700, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'الأسعار والمخزون',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade800,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: priceCtrl,
+                                  textAlign: TextAlign.right,
+                                  textDirection: TextDirection.rtl,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  decoration: const InputDecoration(
+                                    labelText: 'السعر',
+                                    hintText: 'مطلوب',
+                                    helperText: 'سعر البيع للعميل',
+                                    prefixIcon: Icon(Icons.sell),
+                                    alignLabelWithHint: true,
+                                  ),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                        RegExp(r'[0-9.]')),
+                                  ],
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) {
+                                      return 'السعر مطلوب';
+                                    }
+                                    final price = double.tryParse(v.trim());
+                                    if (price == null || price < 0) {
+                                      return 'يرجى إدخال سعر صحيح';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: costCtrl,
+                                  textAlign: TextAlign.right,
+                                  textDirection: TextDirection.rtl,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  decoration: const InputDecoration(
+                                    labelText: 'الكلفة',
+                                    hintText: 'اختياري',
+                                    helperText: 'تكلفة الشراء',
+                                    prefixIcon: Icon(Icons.shopping_cart),
+                                    alignLabelWithHint: true,
+                                  ),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                        RegExp(r'[0-9.]')),
+                                  ],
+                                  validator: (v) {
+                                    if (v != null && v.trim().isNotEmpty) {
+                                      final cost = double.tryParse(v.trim());
+                                      if (cost == null || cost < 0) {
+                                        return 'يرجى إدخال كلفة صحيحة';
+                                      }
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 25),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 1,
+                                child: TextFormField(
+                                  controller: qtyCtrl,
+                                  textAlign: TextAlign.right,
+                                  textDirection: TextDirection.rtl,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          signed: false),
+                                  decoration: const InputDecoration(
+                                    labelText: 'الكمية',
+                                    hintText: 'مطلوب',
+                                    helperText: 'الكمية المتوفرة في المخزون',
+                                    prefixIcon: Icon(Icons.inventory),
+                                    alignLabelWithHint: true,
+                                  ),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) {
+                                      return 'الكمية مطلوبة';
+                                    }
+                                    final qty = int.tryParse(v.trim());
+                                    if (qty == null || qty < 1) {
+                                      return 'الكمية يجب أن تكون 1 أو أكثر';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                flex: 2,
+                                child:
+                                    FutureBuilder<List<Map<String, Object?>>>(
+                                  future: db.getCategories(),
+                                  builder: (context, snap) {
+                                    final cats = snap.data ??
+                                        const <Map<String, Object?>>[];
+                                    final ids = cats
+                                        .map<int>((c) => c['id'] as int)
+                                        .toSet();
+                                    final int? effectiveCategoryId =
+                                        (categoryId != null &&
+                                                ids.contains(categoryId))
+                                            ? categoryId
+                                            : null;
+                                    return DropdownButtonFormField<int>(
+                                      initialValue: effectiveCategoryId,
+                                      isExpanded: true,
+                                      decoration: const InputDecoration(
+                                        labelText: 'اختر القسم',
+                                        hintText: 'اختياري',
+                                        helperText: 'اختر قسم المنتج',
+                                        prefixIcon: Icon(Icons.category),
+                                        alignLabelWithHint: true,
+                                      ),
+                                      items: [
+                                        const DropdownMenuItem<int>(
+                                          value: null,
+                                          child: Text('بدون قسم'),
+                                        ),
+                                        ...cats.map((c) =>
+                                            DropdownMenuItem<int>(
+                                              value: c['id'] as int,
+                                              child: Text(
+                                                  c['name']?.toString() ?? ''),
+                                            )),
+                                      ],
+                                      onChanged: (v) => categoryId = v,
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
           actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('إلغاء'),
+            ),
             FilledButton(
               onPressed: () async {
                 if (!(formKey.currentState?.validate() ?? false)) return;
@@ -1031,24 +1165,54 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   'barcode': barcodeCtrl.text.trim().isEmpty
                       ? null
                       : barcodeCtrl.text.trim(),
-                  'price': double.tryParse(priceCtrl.text.trim()) ?? 0,
-                  'cost': double.tryParse(costCtrl.text.trim()) ?? 0,
-                  'quantity': int.tryParse(qtyCtrl.text.trim()) ?? 0,
-                  'min_quantity': int.tryParse(minQtyCtrl.text.trim()) ?? 1,
+                  'price': priceCtrl.text.trim().isEmpty
+                      ? 0.0
+                      : double.parse(priceCtrl.text.trim()),
+                  'cost': costCtrl.text.trim().isEmpty
+                      ? 0.0
+                      : double.parse(costCtrl.text.trim()),
+                  'quantity': (int.tryParse(qtyCtrl.text.trim()) ?? 1)
+                      .clamp(1, double.infinity)
+                      .toInt(),
+                  'min_quantity': 1, // قيمة افتراضية
                   'category_id': categoryId,
                 };
-                if (isEdit) {
-                  await db.updateProduct(product['id'] as int, values);
-                } else {
-                  await db.insertProduct(values);
+                try {
+                  if (isEdit) {
+                    await db.updateProduct(product['id'] as int, values);
+                  } else {
+                    // التحقق من وجود الباركود قبل الإدراج
+                    if (values['barcode'] != null) {
+                      final barcodeExists =
+                          await db.isBarcodeExists(values['barcode'] as String);
+                      if (barcodeExists) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'الباركود موجود بالفعل، يرجى استخدام باركود آخر'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                        return; // منع إغلاق الحوار
+                      }
+                    }
+                    await db.insertProduct(values);
+                  }
+                  if (context.mounted) Navigator.pop(context, true);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('خطأ: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
-                if (context.mounted) Navigator.pop(context, true);
               },
-              child: const Text('حفظ'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('إلغاء'),
+              child: Text(isEdit ? 'حفظ التعديل' : 'إضافة المنتج'),
             ),
           ],
         ),
