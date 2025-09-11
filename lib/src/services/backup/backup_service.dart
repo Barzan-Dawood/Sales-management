@@ -106,7 +106,7 @@ class BackupService {
       await tempDb.close();
       return output;
     } catch (e) {
-      print('خطأ في نسخ المنتجات والأقسام: $e');
+   
       return null;
     }
   }
@@ -159,8 +159,7 @@ class BackupService {
       await sourceDb.close();
       return p.basename(source);
     } catch (e) {
-      print('خطأ في استعادة المنتجات والأقسام: $e');
-      return null;
+       return null;
     }
   }
 }

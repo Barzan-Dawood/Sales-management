@@ -30,8 +30,7 @@ void main() {
       }
 
       stopwatch.stop();
-      print('Inserted 1000 products in ${stopwatch.elapsedMilliseconds}ms');
-
+ 
       // Should complete within reasonable time (adjust threshold as needed)
       expect(stopwatch.elapsedMilliseconds, lessThan(5000));
     });
@@ -43,9 +42,7 @@ void main() {
       final products = await databaseService.database.query('products');
 
       stopwatch.stop();
-      print(
-          'Queried ${products.length} products in ${stopwatch.elapsedMilliseconds}ms');
-
+  
       expect(products.length, greaterThan(0));
       expect(stopwatch.elapsedMilliseconds, lessThan(1000));
     });
@@ -70,10 +67,7 @@ void main() {
       ''');
 
       stopwatch.stop();
-      print(
-          'Complex join query completed in ${stopwatch.elapsedMilliseconds}ms');
-      print('Query returned ${result.length} records');
-
+  
       expect(result, isA<List>());
       expect(stopwatch.elapsedMilliseconds, lessThan(2000));
     });
@@ -97,9 +91,7 @@ void main() {
       await Future.wait(futures);
       stopwatch.stop();
 
-      print(
-          'Completed 10 concurrent inserts in ${stopwatch.elapsedMilliseconds}ms');
-      expect(stopwatch.elapsedMilliseconds, lessThan(3000));
+        expect(stopwatch.elapsedMilliseconds, lessThan(3000));
     });
   });
 }

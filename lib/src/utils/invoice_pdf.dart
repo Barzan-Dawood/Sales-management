@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -35,8 +34,7 @@ class InvoicePdf {
       return pw.Font.ttf(fontData);
     } catch (e) {
       // إذا فشل تحميل الخط العربي، استخدم الخط الافتراضي
-      print('خطأ في تحميل الخط العربي: $e');
-      return pw.Font.helvetica();
+       return pw.Font.helvetica();
     }
   }
 
@@ -59,9 +57,7 @@ class InvoicePdf {
   // دالة مساعدة لتنظيف القيم الرقمية
   static double _cleanNumber(num value, {double defaultValue = 0.0}) {
     if (!_isValidNumber(value)) {
-      print(
-          'تحذير: قيمة غير صحيحة $value (isNaN: ${value.isNaN}, isInfinite: ${value.isInfinite})، استخدام القيمة الافتراضية $defaultValue');
-      return defaultValue;
+        return defaultValue;
     }
     return value.toDouble();
   }
@@ -127,9 +123,7 @@ class InvoicePdf {
     double? totalDebt, // إجمالي الدين
     double? downPayment, // المبلغ المقدم
   }) async {
-    print('=== بدء إنشاء PDF ===');
-    print('عدد المنتجات: ${items.length}');
-
+  
     // فحص البيانات قبل المعالجة (للتشخيص فقط)
     // يمكن إزالة هذا الجزء بعد التأكد من استقرار النظام
 
@@ -150,9 +144,7 @@ class InvoicePdf {
 
     // تحديد نوع الورق
     final format = _pageFormats[pageFormat] ?? PdfPageFormat.roll80;
-    print('نوع الورق المحدد: $pageFormat');
-    print('أبعاد الورق: عرض=${format.width}, ارتفاع=${format.height}');
-
+  
     // إضافة الصفحات مع دعم التقسيم
     _addPagesWithPagination(
         doc,
@@ -258,8 +250,7 @@ class InvoicePdf {
       double? downPayment) {
     // حساب عدد الأقساط التي يمكن عرضها في الصفحة الواحدة
     final maxInstallmentsPerPage = _calculateMaxInstallmentsPerPage(format);
-    print('الحد الأقصى للأقساط في الصفحة: $maxInstallmentsPerPage');
-
+ 
     // تقسيم الأقساط على الصفحات
     final pages = <List<Map<String, Object?>>>[];
     for (int i = 0; i < installments.length; i += maxInstallmentsPerPage) {
@@ -347,12 +338,10 @@ class InvoicePdf {
       double? downPayment}) {
     // حساب عدد المنتجات التي يمكن عرضها في الصفحة الواحدة
     final maxItemsPerPage = _calculateMaxItemsPerPage(format);
-    print('الحد الأقصى للمنتجات في الصفحة: $maxItemsPerPage');
-
+  
     // فحص أن maxItemsPerPage صحيح
     if (maxItemsPerPage <= 0) {
-      print('تحذير: عدد المنتجات غير صحيح، استخدام قيمة افتراضية');
-      final safeMaxItems = 10;
+       final safeMaxItems = 10;
       // تقسيم المنتجات على الصفحات بقيمة آمنة
       final pages = <List<Map<String, Object?>>>[];
       for (int i = 0; i < items.length; i += safeMaxItems) {
@@ -899,15 +888,12 @@ class InvoicePdf {
 
   // حساب الحد الأقصى لعدد الأقساط في الصفحة الواحدة
   static int _calculateMaxInstallmentsPerPage(PdfPageFormat format) {
-    print(
-        'حساب عدد الأقساط - عرض الصفحة: ${format.width}, ارتفاع الصفحة: ${format.height}');
-
+ 
     // حساب المساحة المتاحة للأقساط
     final availableHeight = format.height - 120; // مساحة أقل للرأس والذيل
     final installmentHeight = 25; // ارتفاع كل قسط
 
-    print(
-        'الارتفاع المتاح للأقساط: $availableHeight, ارتفاع القسط: $installmentHeight');
+    
 
     // فحص القيم للتأكد من صحتها
     if (availableHeight.isNaN ||
@@ -920,12 +906,10 @@ class InvoicePdf {
     }
 
     final result = (availableHeight / installmentHeight).floor();
-    print('عدد الأقساط المحسوب: $result');
-
+ 
     // التأكد من أن النتيجة صحيحة
     if (result.isNaN || result.isInfinite || result < 0) {
-      print('تحذير: نتيجة غير صحيحة، استخدام قيمة افتراضية');
-      return 5;
+       return 5;
     }
 
     // تحديد حد أقصى مناسب حسب نوع الورق
@@ -942,33 +926,27 @@ class InvoicePdf {
 
   // حساب الحد الأقصى لعدد المنتجات في الصفحة الواحدة
   static int _calculateMaxItemsPerPage(PdfPageFormat format) {
-    print(
-        'حساب عدد المنتجات - عرض الصفحة: ${format.width}, ارتفاع الصفحة: ${format.height}');
-
+  
     // حساب المساحة المتاحة للجدول
     final availableHeight =
         format.height - 180; // طرح مساحة أقل للرأس والذيل والمجموع (تحسين)
     final itemHeight = 35; // ارتفاع كل منتج (أكبر قليلاً)
 
-    print('الارتفاع المتاح: $availableHeight, ارتفاع المنتج: $itemHeight');
-
+ 
     // فحص القيم للتأكد من صحتها
     if (availableHeight.isNaN ||
         availableHeight.isInfinite ||
         itemHeight.isNaN ||
         itemHeight.isInfinite ||
         itemHeight <= 0) {
-      print('تحذير: قيم غير صحيحة في حساب عدد المنتجات، استخدام قيمة افتراضية');
-      return 8; // قيمة افتراضية آمنة أقل
+       return 8; // قيمة افتراضية آمنة أقل
     }
 
     final result = (availableHeight / itemHeight).floor();
-    print('عدد المنتجات المحسوب: $result');
-
+ 
     // التأكد من أن النتيجة صحيحة
     if (result.isNaN || result.isInfinite || result < 0) {
-      print('تحذير: نتيجة غير صحيحة، استخدام قيمة افتراضية');
-      return 8;
+       return 8;
     }
 
     // تحديد حد أقصى مناسب حسب نوع الورق
@@ -992,27 +970,22 @@ class InvoicePdf {
 
     // طابعة حرارية 58mm - عرض محدود جداً
     if (width < 70) {
-      print(
-          '🔥 طابعة حرارية 58mm - عرض: ${width}mm - استخدام تخطيط مضغوط جداً');
-      return _buildCompactThermalItemsTable(items, format, arabicFont,
+        return _buildCompactThermalItemsTable(items, format, arabicFont,
           is58mm: true, startIndex: startIndex);
     }
     // طابعة حرارية 80mm - عرض متوسط
     else if (width < 120) {
-      print('🔥 طابعة حرارية 80mm - عرض: ${width}mm - استخدام تخطيط حرارية');
-      return _buildCompactThermalItemsTable(items, format, arabicFont,
+       return _buildCompactThermalItemsTable(items, format, arabicFont,
           is58mm: false, startIndex: startIndex);
     }
     // ورقة A5 - عرض جيد
     else if (width < 450) {
-      print('📄 ورقة A5 - عرض: ${width}mm - استخدام جدول متوسط');
-      return _buildStandardItemsTable(items, format, arabicFont,
+       return _buildStandardItemsTable(items, format, arabicFont,
           isA5: true, startIndex: startIndex);
     }
     // ورقة A4 - عرض كبير
     else {
-      print('📄 ورقة A4 - عرض: ${width}mm - استخدام جدول كامل');
-      return _buildStandardItemsTable(items, format, arabicFont,
+       return _buildStandardItemsTable(items, format, arabicFont,
           isA5: false, startIndex: startIndex);
     }
   }

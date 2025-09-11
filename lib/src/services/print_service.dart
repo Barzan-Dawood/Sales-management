@@ -556,9 +556,7 @@ class PrintService {
 
       return true;
     } catch (e) {
-      print('خطأ في الطباعة: $e');
-      print('تفاصيل الخطأ: ${e.toString()}');
-      if (context != null) {
+       if (context != null) {
         String errorMessage = 'خطأ في الطباعة';
 
         // تحسين رسائل الخطأ
@@ -829,14 +827,10 @@ class PrintService {
     String? invoiceNumber, // رقم الفاتورة من قاعدة البيانات
     BuildContext? context,
   }) async {
-    print('=== بدء الطباعة السريعة ===');
-    print('عدد المنتجات: ${items.length}');
-    print('نوع الدفع: $paymentType');
-
+  
     // فحص أن هناك منتجات للطباعة
     if (items.isEmpty) {
-      print('خطأ: لا توجد منتجات للطباعة السريعة');
-      if (context != null) {
+       if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('لا توجد منتجات للطباعة'),

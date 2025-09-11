@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../services/test_runner_service.dart';
 
 class TestsScreen extends StatefulWidget {
@@ -185,7 +184,10 @@ class _TestsScreenState extends State<TestsScreen>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(4),
             gradient: LinearGradient(
-              colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+              colors: [
+                color.withValues(alpha: 0.1),
+                color.withValues(alpha: 0.05)
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

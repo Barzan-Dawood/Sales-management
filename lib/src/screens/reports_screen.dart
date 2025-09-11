@@ -62,9 +62,9 @@ class _ReportsScreenState extends State<ReportsScreen>
             controller: _tabController,
             children: [
               _buildSummaryTab(db),
-              _buildSalesPlaceholder(),
-              _buildInventoryPlaceholder(),
-              _buildDebtsPlaceholder(),
+              _buildSalesTab(db),
+              _buildInventoryTab(db),
+              _buildDebtsTab(db),
             ],
           ),
         ),
@@ -175,10 +175,293 @@ class _ReportsScreenState extends State<ReportsScreen>
     ]);
   }
 
-  // Placeholders to be replaced with full implementations next
-  Widget _buildSalesPlaceholder() => Center(child: Text('تقارير المبيعات'));
-  Widget _buildInventoryPlaceholder() => Center(child: Text('تقارير المخزون'));
-  Widget _buildDebtsPlaceholder() => Center(child: Text('تقارير الديون'));
+  // Sales tab
+  Widget _buildSalesTab(DatabaseService db) {
+    return FutureBuilder<List<Map<String, Object?>>>(
+      future: db.getSalesHistory(sortDescending: true),
+      builder: (context, snap) {
+        final rows = snap.data ?? const [];
+        final totals = <String, double>{};
+        for (final r in rows) {
+          final type = (r['type'] as String?) ?? '';
+          final total = (r['total'] as num?)?.toDouble() ?? 0.0;
+          final typeAr = _typeText(type);
+          totals[typeAr] = (totals[typeAr] ?? 0) + total;
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Text('تفصيل حسب نوع الدفع',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Spacer(),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final csv = <List<String>>[
+                    ['النوع', 'القيمة'],
+                    ...totals.entries.map((e) => [e.key, e.value.toString()])
+                  ];
+                  await PdfExporter.exportDataTable(
+                    filename: 'sales_breakdown.pdf',
+                    title: 'تفصيل المبيعات',
+                    headers: ['النوع', 'القيمة'],
+                    rows: csv.skip(1).toList(),
+                  );
+                },
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('تصدير PDF'),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: totals.entries
+                  .map((e) => _tile(
+                      e.key, Formatters.currencyIQD(e.value), Colors.indigo))
+                  .toList(),
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 8),
+            const Text('آخر 10 فواتير',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Expanded(
+              child: ListView.builder(
+                itemCount: rows.length.clamp(0, 10),
+                itemBuilder: (context, i) {
+                  final r = rows[i];
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.receipt_long),
+                    title: Text(
+                        '#${r['id']} - ${_typeText((r['type'] as String?) ?? '')}'),
+                    subtitle: Text(
+                        (r['created_at'] as String?)?.substring(0, 16) ?? ''),
+                    trailing: Text(
+                      Formatters.currencyIQD(
+                          ((r['total'] as num?)?.toDouble() ?? 0)),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _typeText(String type) {
+    switch (type) {
+      case 'cash':
+        return 'نقدي';
+      case 'credit':
+        return 'أجل';
+      case 'installment':
+        return 'أقساط';
+      default:
+        return 'غير محدد';
+    }
+  }
+
+  // Inventory tab
+  Widget _buildInventoryTab(DatabaseService db) {
+    return FutureBuilder<List<List<Map<String, Object?>>>>(
+      future: Future.wait([
+        db.getLowStock(),
+        db.slowMovingProducts(days: 30),
+      ]),
+      builder: (context, snap) {
+        final low = (snap.data != null && snap.data!.isNotEmpty)
+            ? snap.data![0]
+            : <Map<String, Object?>>[];
+        final slow = (snap.data != null && snap.data!.length > 1)
+            ? snap.data![1]
+            : <Map<String, Object?>>[];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Text('المخزون المنخفض والبطيء',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Spacer(),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final rows = <List<String>>[
+                    ['النوع', 'المنتج', 'الكمية'],
+                    ...low.map((p) => [
+                          'منخفض',
+                          (p['name'] ?? '').toString(),
+                          (p['quantity'] ?? 0).toString(),
+                        ]),
+                    ...slow.map((p) => [
+                          'بطيء',
+                          (p['name'] ?? '').toString(),
+                          (p['quantity'] ?? 0).toString(),
+                        ]),
+                  ];
+                  await PdfExporter.exportDataTable(
+                    filename: 'inventory_overview.pdf',
+                    title: 'تقارير المخزون',
+                    headers: rows.first,
+                    rows: rows.skip(1).toList(),
+                  );
+                },
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('تصدير PDF'),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(child: _listBox('منخفض المخزون', low)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _listBox('بطيء الحركة (30 يوم)', slow)),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _listBox(String title, List<Map<String, Object?>> items) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Expanded(
+              child: items.isEmpty
+                  ? const Center(child: Text('لا توجد بيانات'))
+                  : ListView.builder(
+                      itemCount: items.length,
+                      itemBuilder: (context, i) {
+                        final p = items[i];
+                        return ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.inventory_2),
+                          title: Text((p['name'] ?? '').toString()),
+                          trailing: Text('${p['quantity']}'),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Debts tab
+  Widget _buildDebtsTab(DatabaseService db) {
+    return FutureBuilder<Map<String, double>>(
+      future: db.getDebtStatistics(),
+      builder: (context, snap) {
+        final stats = snap.data ??
+            {
+              'total_debt': 0,
+              'overdue_debt': 0,
+              'total_payments': 0,
+              'customers_with_debt': 0,
+            };
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _tile(
+                    'إجمالي الديون',
+                    Formatters.currencyIQD(stats['total_debt'] ?? 0),
+                    Colors.deepOrange),
+                _tile(
+                    'ديون متأخرة',
+                    Formatters.currencyIQD(stats['overdue_debt'] ?? 0),
+                    Colors.red),
+                _tile(
+                    'إجمالي المدفوعات',
+                    Formatters.currencyIQD(stats['total_payments'] ?? 0),
+                    Colors.green),
+                _tile(
+                    'عملاء مدينون',
+                    (stats['customers_with_debt'] ?? 0).toString(),
+                    Colors.indigo),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(children: [
+              const Text('فواتير متأخرة',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Spacer(),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final overdue = await db.creditSales(overdueOnly: true);
+                  final rows = <List<String>>[
+                    ['#', 'العميل', 'المبلغ', 'تاريخ الاستحقاق'],
+                    ...overdue.map((r) => [
+                          (r['id'] ?? '').toString(),
+                          (r['customer_name'] ?? '').toString(),
+                          (r['total'] ?? 0).toString(),
+                          (r['due_date'] ?? '').toString().substring(0, 10),
+                        ]),
+                  ];
+                  await PdfExporter.exportDataTable(
+                    filename: 'overdue_invoices.pdf',
+                    title: 'فواتير متأخرة',
+                    headers: rows.first,
+                    rows: rows.skip(1).toList(),
+                  );
+                },
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('تصدير PDF'),
+              ),
+            ]),
+            const SizedBox(height: 6),
+            Expanded(
+              child: FutureBuilder<List<Map<String, Object?>>>(
+                future: db.creditSales(overdueOnly: true),
+                builder: (context, snap) {
+                  final rows = snap.data ?? const [];
+                  if (rows.isEmpty) {
+                    return const Center(child: Text('لا توجد فواتير متأخرة'));
+                  }
+                  return ListView.builder(
+                    itemCount: rows.length,
+                    itemBuilder: (context, i) {
+                      final r = rows[i];
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.warning, color: Colors.red),
+                        title: Text(
+                            '#${r['id']} - ${(r['customer_name'] ?? '').toString()}'),
+                        subtitle: Text(
+                            'استحقاق: ${(r['due_date'] ?? '').toString().substring(0, 10)}'),
+                        trailing: Text(
+                          Formatters.currencyIQD(
+                              ((r['total'] as num?)?.toDouble() ?? 0)),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Widget _tile(String title, String value, Color color) {
     return SizedBox(

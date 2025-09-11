@@ -85,7 +85,6 @@ class DatabaseService {
       await _createIndexes(_db);
       await _ensureCategorySchemaOn(_db);
     } catch (e) {
-      print('Error during force cleanup: $e');
       rethrow;
     }
   }
@@ -100,11 +99,8 @@ class DatabaseService {
       if (installmentsSchema.isNotEmpty) {
         final schema = installmentsSchema.first['sql']?.toString() ?? '';
         if (schema.contains('sales_old')) {
-          print('إصلاح جدول installments - يحتوي على مراجع خاطئة...');
-
           // حفظ البيانات الموجودة
           final existingData = await _db.rawQuery('SELECT * FROM installments');
-          print('تم العثور على ${existingData.length} قسط موجود');
 
           // حذف الجدول القديم
           await _db.execute('DROP TABLE installments');
@@ -133,20 +129,12 @@ class DatabaseService {
               'paid_at': row['paid_at'],
             });
           }
-
-          print(
-              'تم إصلاح جدول installments بنجاح - تم استعادة ${existingData.length} قسط');
-        } else {
-          print('جدول installments لا يحتوي على مراجع خاطئة');
-        }
-      } else {
-        print('جدول installments غير موجود');
-      }
+        } else {}
+      } else {}
 
       await _db.execute('PRAGMA foreign_keys = ON');
     } catch (e) {
       await _db.execute('PRAGMA foreign_keys = ON');
-      print('خطأ في إصلاح جدول installments: $e');
       rethrow;
     }
   }
@@ -186,19 +174,15 @@ class DatabaseService {
                 continue;
             }
             await _db.execute(dropCommand);
-            print('Cleaned up orphaned $type: $name');
           } catch (e) {
-            print('Error cleaning up $type $name: $e');
             // Continue with other objects even if one fails
           }
         }
       }
 
       await _db.execute('PRAGMA foreign_keys = ON');
-      print('Sales_old cleanup completed');
     } catch (e) {
       await _db.execute('PRAGMA foreign_keys = ON');
-      print('Error during sales_old cleanup: $e');
       rethrow;
     }
   }
@@ -268,10 +252,7 @@ class DatabaseService {
           WHERE sale_id NOT IN (SELECT id FROM sales)
           OR product_id NOT IN (SELECT id FROM products)
         ''');
-        print('Cleaned up orphaned sale_items records');
-      } catch (e) {
-        print('Error cleaning orphaned sale_items: $e');
-      }
+      } catch (e) {}
 
       // If that doesn't work, completely rebuild sale_items
       try {
@@ -313,9 +294,7 @@ class DatabaseService {
             }
           }
         }
-      } catch (e) {
-        print('Error rebuilding sale_items: $e');
-      }
+      } catch (e) {}
 
       // Ensure all core tables exist
       await _db.execute('''
@@ -356,7 +335,6 @@ class DatabaseService {
       try {
         await _db.execute('PRAGMA foreign_keys = ON');
       } catch (_) {}
-      print('Error during aggressive cleanup: $e');
       rethrow;
     }
   }
@@ -497,7 +475,6 @@ class DatabaseService {
 
       // Get all existing data
       final existingData = await _db.rawQuery('SELECT * FROM sale_items');
-      print('Backing up ${existingData.length} sale_items records');
 
       // Drop the table completely
       await _db.execute('DROP TABLE IF EXISTS sale_items');
@@ -527,15 +504,12 @@ class DatabaseService {
         });
       }
 
-      print('Restored ${existingData.length} sale_items records');
-
       // Re-enable foreign keys
       await _db.execute('PRAGMA foreign_keys = ON');
     } catch (e) {
       try {
         await _db.execute('PRAGMA foreign_keys = ON');
       } catch (_) {}
-      print('Error during emergency reset: $e');
       rethrow;
     }
   }
@@ -580,8 +554,6 @@ class DatabaseService {
         if (installmentsSchema.isNotEmpty) {
           final schema = installmentsSchema.first['sql']?.toString() ?? '';
           if (schema.contains('sales_old')) {
-            print('إصلاح جدول installments في _cleanupOrphanObjects...');
-
             // حفظ البيانات الموجودة
             final existingData =
                 await db.rawQuery('SELECT * FROM installments');
@@ -613,13 +585,9 @@ class DatabaseService {
                 'paid_at': row['paid_at'],
               });
             }
-
-            print('تم إصلاح جدول installments في _cleanupOrphanObjects بنجاح');
           }
         }
-      } catch (e) {
-        print('خطأ في إصلاح جدول installments في _cleanupOrphanObjects: $e');
-      }
+      } catch (e) {}
 
       // Get all database objects that might reference sales_old
       final allObjects = await db.rawQuery('''
@@ -1082,7 +1050,6 @@ class DatabaseService {
         // Then delete the product
         return await txn.delete('products', where: 'id = ?', whereArgs: [id]);
       } catch (e) {
-        print('Error deleting product: $e');
         rethrow;
       }
     });
@@ -1116,10 +1083,8 @@ class DatabaseService {
         WHERE sale_id NOT IN (SELECT id FROM sales)
       ''');
 
-      print('Cleaned up $result orphaned installments');
       return result;
     } catch (e) {
-      print('Error cleaning up orphaned installments: $e');
       return 0;
     }
   }
@@ -1162,8 +1127,6 @@ class DatabaseService {
   Future<int> deleteCustomer(int id) async {
     return _db.transaction<int>((txn) async {
       try {
-        print('Starting deletion of customer ID: $id');
-
         // تنظيف المراجع القديمة قبل البدء
         try {
           await txn.execute('PRAGMA foreign_keys = OFF');
@@ -1196,10 +1159,7 @@ class DatabaseService {
                     continue;
                 }
                 await txn.execute(dropCommand);
-                print('Dropped orphaned $type: $name');
-              } catch (e) {
-                print('Error dropping $type $name: $e');
-              }
+              } catch (e) {}
             }
           }
 
@@ -1230,16 +1190,12 @@ class DatabaseService {
                     continue;
                 }
                 await txn.execute(dropCommand);
-                print('Dropped temp orphaned $type: $name');
-              } catch (e) {
-                print('Error dropping temp $type $name: $e');
-              }
+              } catch (e) {}
             }
           }
 
           await txn.execute('PRAGMA foreign_keys = ON');
         } catch (e) {
-          print('Error during cleanup: $e');
           await txn.execute('PRAGMA foreign_keys = ON');
         }
 
@@ -1247,61 +1203,47 @@ class DatabaseService {
         final customerExists = await txn.query('customers',
             columns: ['id'], where: 'id = ?', whereArgs: [id]);
         if (customerExists.isEmpty) {
-          print('Customer with ID $id does not exist');
           return 0;
         }
 
         // أولاً، الحصول على معرفات المبيعات المرتبطة بالعميل
         final sales = await txn.query('sales',
             columns: ['id'], where: 'customer_id = ?', whereArgs: [id]);
-        print('Found ${sales.length} sales for customer $id');
 
         // حذف عناصر المبيعات المرتبطة
         for (final sale in sales) {
-          final deletedItems = await txn.delete('sale_items',
+          await txn.delete('sale_items',
               where: 'sale_id = ?', whereArgs: [sale['id']]);
-          print('Deleted $deletedItems sale_items for sale ${sale['id']}');
         }
 
         // حذف المدفوعات المرتبطة بالعميل
-        final deletedPayments = await txn
-            .delete('payments', where: 'customer_id = ?', whereArgs: [id]);
-        print('Deleted $deletedPayments payments for customer $id');
+        await txn.delete('payments', where: 'customer_id = ?', whereArgs: [id]);
 
         // حذف الأقساط المرتبطة بالمبيعات
         for (final sale in sales) {
           try {
-            final deletedInstallments = await txn.delete('installments',
+            await txn.delete('installments',
                 where: 'sale_id = ?', whereArgs: [sale['id']]);
-            print(
-                'Deleted $deletedInstallments installments for sale ${sale['id']}');
           } catch (e) {
-            print('Error deleting installments for sale ${sale['id']}: $e');
             // محاولة بديلة - حذف مباشر
             try {
               await txn.execute(
                   'DELETE FROM installments WHERE sale_id = ?', [sale['id']]);
-              print('Successfully deleted installments using direct SQL');
             } catch (directError) {
-              print('Direct SQL deletion also failed: $directError');
               // تجاهل الخطأ والمتابعة
             }
           }
         }
 
         // حذف المبيعات المرتبطة بالعميل
-        final deletedSales = await txn
-            .delete('sales', where: 'customer_id = ?', whereArgs: [id]);
-        print('Deleted $deletedSales sales for customer $id');
+        await txn.delete('sales', where: 'customer_id = ?', whereArgs: [id]);
 
         // حذف العميل نفسه
         final deletedRows =
             await txn.delete('customers', where: 'id = ?', whereArgs: [id]);
-        print('Deleted $deletedRows customers with ID $id');
 
         return deletedRows;
       } catch (e) {
-        print('Error deleting customer: $e');
         rethrow;
       }
     });
@@ -1549,7 +1491,6 @@ class DatabaseService {
         final salesTableCheck = await txn.rawQuery(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='sales'");
         if (salesTableCheck.isEmpty) {
-          print('خطأ: جدول sales غير موجود! إنشاء الجدول...');
           // إنشاء جدول sales إذا لم يكن موجوداً
           await txn.execute('''
             CREATE TABLE IF NOT EXISTS sales (
@@ -1572,8 +1513,6 @@ class DatabaseService {
           if (installmentsSchema.isNotEmpty) {
             final schema = installmentsSchema.first['sql']?.toString() ?? '';
             if (schema.contains('sales_old')) {
-              print('جدول installments يحتوي على مراجع خاطئة، إعادة إنشاؤه...');
-
               // حفظ البيانات الموجودة
               final existingData =
                   await txn.rawQuery('SELECT * FROM installments');
@@ -1605,13 +1544,9 @@ class DatabaseService {
                   'paid_at': row['paid_at'],
                 });
               }
-
-              print('تم إصلاح جدول installments بنجاح');
             }
           }
-        } catch (e) {
-          print('خطأ في فحص/إصلاح جدول installments: $e');
-        }
+        } catch (e) {}
 
         // Get all objects that reference sales_old from both main and temp schemas
         final allObjects = await txn.rawQuery('''
@@ -1722,25 +1657,18 @@ class DatabaseService {
               switch (type) {
                 case 'trigger':
                   await txn.execute('DROP TRIGGER IF EXISTS $name');
-                  print('Dropped problematic trigger in createSale: $name');
                   break;
                 case 'view':
                   await txn.execute('DROP VIEW IF EXISTS $name');
-                  print('Dropped problematic view in createSale: $name');
                   break;
                 case 'index':
                   await txn.execute('DROP INDEX IF EXISTS $name');
-                  print('Dropped problematic index in createSale: $name');
                   break;
               }
-            } catch (e) {
-              print('Error dropping $type $name in createSale: $e');
-            }
+            } catch (e) {}
           }
         }
-      } catch (e) {
-        print('Error during sales_old cleanup in createSale: $e');
-      }
+      } catch (e) {}
 
       double total = 0;
       double profit = 0;
@@ -1754,8 +1682,6 @@ class DatabaseService {
             price.isInfinite ||
             quantity.isNaN ||
             quantity.isInfinite) {
-          print(
-              'تحذير: قيمة غير صحيحة في قاعدة البيانات - السعر: $price, الكمية: $quantity');
           continue;
         }
 
@@ -1810,8 +1736,6 @@ class DatabaseService {
                 [it['quantity'], it['product_id']]);
           }
         } catch (e) {
-          print('Error inserting sale item: $e');
-          print('Sale ID: $saleId, Product ID: ${it['product_id']}');
           rethrow;
         }
       }
@@ -1850,15 +1774,10 @@ class DatabaseService {
               if (name != null && name.isNotEmpty) {
                 try {
                   await txn.execute('DROP TRIGGER IF EXISTS $name');
-                  print('Dropped problematic trigger: $name');
-                } catch (e) {
-                  print('Error dropping trigger $name: $e');
-                }
+                } catch (e) {}
               }
             }
-          } catch (e) {
-            print('Error during trigger cleanup: $e');
-          }
+          } catch (e) {}
 
           // إنشاء الأقساط
           DateTime currentDate = firstInstallmentDate ?? DateTime.now();
@@ -1871,9 +1790,7 @@ class DatabaseService {
                 'paid': 0,
                 'paid_at': null,
               });
-              print('تم إنشاء قسط ${i + 1} للمبيعة $saleId');
             } catch (e) {
-              print('خطأ في إنشاء القسط ${i + 1}: $e');
               // محاولة إصلاح المشكلة
               try {
                 // التأكد من أن جدول sales موجود
@@ -2587,11 +2504,8 @@ class DatabaseService {
 
       // التأكد من وجود الجداول الأساسية
       await _ensureCategorySchemaOn(_db);
-
-      print('Comprehensive cleanup completed successfully');
     } catch (e) {
       await _db.execute('PRAGMA foreign_keys = ON');
-      print('Error during comprehensive cleanup: $e');
       rethrow;
     }
   }
@@ -2723,10 +2637,8 @@ class DatabaseService {
           }
         }
 
-        print('Trigger cleanup completed');
-      } catch (e) {
-        print('Error during trigger cleanup: $e');
-        rethrow;
+       } catch (e) {
+         rethrow;
       }
     });
   }
@@ -2760,34 +2672,28 @@ class DatabaseService {
               switch (type) {
                 case 'trigger':
                   await txn.execute('DROP TRIGGER IF EXISTS $name');
-                  print('Dropped trigger: $name');
-                  break;
+                   break;
                 case 'view':
                   await txn.execute('DROP VIEW IF EXISTS $name');
-                  print('Dropped view: $name');
-                  break;
+                   break;
                 case 'index':
                   await txn.execute('DROP INDEX IF EXISTS $name');
-                  print('Dropped index: $name');
-                  break;
+                   break;
               }
             } catch (e) {
-              print('Error dropping $type $name: $e');
-            }
+             }
           }
         }
 
         // إعادة تفعيل المفاتيح الخارجية
         await txn.execute('PRAGMA foreign_keys = ON');
 
-        print('Comprehensive sales_old cleanup completed');
-      } catch (e) {
+       } catch (e) {
         // التأكد من إعادة تفعيل المفاتيح الخارجية حتى لو فشل التنظيف
         try {
           await txn.execute('PRAGMA foreign_keys = ON');
         } catch (_) {}
-        print('Error during comprehensive sales_old cleanup: $e');
-        rethrow;
+         rethrow;
       }
     });
   }
@@ -2884,36 +2790,26 @@ class DatabaseService {
     try {
       await _db.execute('PRAGMA foreign_keys = OFF');
 
-      print('بدء حذف جميع البيانات...');
-
+ 
       // حذف جميع البيانات من الجداول بالترتيب الصحيح
       await _db.delete('payments');
-      print('تم حذف جميع المدفوعات');
-
+ 
       await _db.delete('installments');
-      print('تم حذف جميع الأقساط');
-
+ 
       await _db.delete('sale_items');
-      print('تم حذف جميع عناصر المبيعات');
-
+ 
       await _db.delete('sales');
-      print('تم حذف جميع المبيعات');
-
+ 
       await _db.delete('expenses');
-      print('تم حذف جميع المصاريف');
-
+ 
       await _db.delete('customers');
-      print('تم حذف جميع العملاء');
-
+ 
       await _db.delete('suppliers');
-      print('تم حذف جميع الموردين');
-
+ 
       await _db.delete('products');
-      print('تم حذف جميع المنتجات');
-
+ 
       await _db.delete('categories');
-      print('تم حذف جميع الفئات');
-
+ 
       // إعادة تعيين AUTO_INCREMENT للجداول
       await _db.execute(
           'DELETE FROM sqlite_sequence WHERE name IN (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -2928,15 +2824,12 @@ class DatabaseService {
             'products',
             'categories'
           ]);
-      print('تم إعادة تعيين AUTO_INCREMENT');
-
+ 
       await _db.execute('PRAGMA foreign_keys = ON');
 
-      print('تم حذف جميع البيانات بنجاح');
-    } catch (e) {
+     } catch (e) {
       await _db.execute('PRAGMA foreign_keys = ON');
-      print('خطأ في حذف البيانات: $e');
-      rethrow;
+       rethrow;
     }
   }
 
@@ -2980,8 +2873,7 @@ class DatabaseService {
           await _db.rawQuery('SELECT COUNT(*) as count FROM sale_items');
       result['عناصر المبيعات'] = saleItemsCount.first['count'] as int;
 
-      print('نتائج فحص البيانات: $result');
-    } catch (e) {
+     } catch (e) {
       print('خطأ في فحص البيانات: $e');
     }
 
@@ -2992,10 +2884,8 @@ class DatabaseService {
   Future<void> resetAllCustomerDebts() async {
     try {
       await _db.execute('UPDATE customers SET total_debt = 0');
-      print('تم إعادة تعيين جميع ديون العملاء');
-    } catch (e) {
-      print('خطأ في إعادة تعيين ديون العملاء: $e');
-      rethrow;
+     } catch (e) {
+       rethrow;
     }
   }
 }
