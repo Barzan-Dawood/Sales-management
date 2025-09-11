@@ -59,21 +59,186 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   }
 
   Future<void> _selectDateRange() async {
-    final DateTimeRange? picked = await showDateRangePicker(
+    DateTime? tempFrom = _fromDate;
+    DateTime? tempTo = _toDate;
+
+    await showDialog(
       context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: _fromDate != null && _toDate != null
-          ? DateTimeRange(start: _fromDate!, end: _toDate!)
-          : null,
+      barrierDismissible: true,
+      builder: (context) {
+        return Directionality(
+          textDirection: Directionality.of(context),
+          child: Dialog(
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: StatefulBuilder(builder: (context, setModalState) {
+              String formatDate(DateTime? d) =>
+                  d == null ? '-' : DateFormat('yyyy/MM/dd').format(d);
+
+              void applyQuickRange(String key) {
+                final now = DateTime.now();
+                DateTime start;
+                DateTime end;
+                if (key == 'today') {
+                  start = DateTime(now.year, now.month, now.day);
+                  end = start;
+                } else if (key == '7') {
+                  end = DateTime(now.year, now.month, now.day);
+                  start = end.subtract(const Duration(days: 6));
+                } else if (key == '30') {
+                  end = DateTime(now.year, now.month, now.day);
+                  start = end.subtract(const Duration(days: 29));
+                } else if (key == 'month') {
+                  start = DateTime(now.year, now.month, 1);
+                  end = DateTime(now.year, now.month + 1, 0);
+                } else {
+                  start = DateTime(now.year, now.month, now.day);
+                  end = start;
+                }
+                setModalState(() {
+                  tempFrom = start;
+                  tempTo = end;
+                });
+              }
+
+              Future<void> pickFrom() async {
+                final picked = await showDatePicker(
+                  context: context,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                  initialDate: tempFrom ?? DateTime.now(),
+                );
+                if (picked != null) {
+                  setModalState(() => tempFrom = picked);
+                }
+              }
+
+              Future<void> pickTo() async {
+                final picked = await showDatePicker(
+                  context: context,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                  initialDate: tempTo ?? tempFrom ?? DateTime.now(),
+                );
+                if (picked != null) {
+                  setModalState(() => tempTo = picked);
+                }
+              }
+
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'اختيار الفترة',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('اليوم'),
+                            selected: false,
+                            onSelected: (_) => applyQuickRange('today'),
+                          ),
+                          ChoiceChip(
+                            label: const Text('آخر 7 أيام'),
+                            selected: false,
+                            onSelected: (_) => applyQuickRange('7'),
+                          ),
+                          ChoiceChip(
+                            label: const Text('آخر 30 يوم'),
+                            selected: false,
+                            onSelected: (_) => applyQuickRange('30'),
+                          ),
+                          ChoiceChip(
+                            label: const Text('هذا الشهر'),
+                            selected: false,
+                            onSelected: (_) => applyQuickRange('month'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: pickFrom,
+                              icon: const Icon(Icons.calendar_today, size: 16),
+                              label: Text('من: ${formatDate(tempFrom)}'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: pickTo,
+                              icon: const Icon(Icons.calendar_today, size: 16),
+                              label: Text('إلى: ${formatDate(tempTo)}'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                tempFrom = null;
+                                tempTo = null;
+                              });
+                            },
+                            child: const Text('مسح'),
+                          ),
+                          const Spacer(),
+                          OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('إلغاء'),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton.icon(
+                            onPressed: () {
+                              if (tempFrom != null &&
+                                  tempTo != null &&
+                                  tempFrom!.isAfter(tempTo!)) {
+                                final tmp = tempFrom;
+                                tempFrom = tempTo;
+                                tempTo = tmp;
+                              }
+                              setState(() {
+                                _fromDate = tempFrom;
+                                _toDate = tempTo;
+                              });
+                              Navigator.pop(context);
+                              _loadSales();
+                            },
+                            icon: const Icon(Icons.check),
+                            label: const Text('تطبيق'),
+                          )
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
     );
-    if (picked != null) {
-      setState(() {
-        _fromDate = picked.start;
-        _toDate = picked.end;
-      });
-      _loadSales();
-    }
   }
 
   void _toggleSelectionMode() {

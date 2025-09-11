@@ -1928,6 +1928,14 @@ class DatabaseService {
         where: 'quantity <= min_quantity', orderBy: 'quantity ASC');
   }
 
+  Future<List<Map<String, Object?>>> getOutOfStock() async {
+    return _db.query(
+      'products',
+      where: 'quantity <= 0',
+      orderBy: 'updated_at IS NULL DESC, updated_at ASC',
+    );
+  }
+
   Future<List<Map<String, Object?>>> slowMovingProducts({int days = 30}) async {
     // products with no sales in X days
     final since =

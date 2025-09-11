@@ -17,6 +17,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   double _todayProfit = 0;
   int _lowStockCount = 0;
   int _totalProducts = 0;
+  int _availableProductsCount = 0;
+  int _totalProductQuantity = 0;
   int _totalCustomers = 0;
   int _totalSuppliers = 0;
   double _monthlySales = 0;
@@ -80,6 +82,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     // إحصائيات عامة
     final products = await db.rawQuery("SELECT COUNT(*) as c FROM products");
+    final availableProducts = await db
+        .rawQuery("SELECT COUNT(*) as c FROM products WHERE quantity > 0");
+    final totalQty =
+        await db.rawQuery("SELECT IFNULL(SUM(quantity),0) as q FROM products");
     final customers = await db.rawQuery("SELECT COUNT(*) as c FROM customers");
     final suppliers = await db.rawQuery("SELECT COUNT(*) as c FROM suppliers");
     final lowStock = await db.rawQuery(
@@ -113,6 +119,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         _monthlySales = (monthSales.first['t'] as num).toDouble();
         _monthlyProfit = (monthSales.first['p'] as num).toDouble();
         _totalProducts = (products.first['c'] as int);
+        _availableProductsCount = (availableProducts.first['c'] as int);
+        _totalProductQuantity = (totalQty.first['q'] as num).toInt();
         _totalCustomers = (customers.first['c'] as int);
         _totalSuppliers = (suppliers.first['c'] as int);
         _lowStockCount = (lowStock.first['c'] as int);
@@ -298,6 +306,20 @@ class _DashboardScreenState extends State<DashboardScreen>
               Icons.inventory_2,
               Colors.indigo,
               Colors.indigo.shade50,
+            ),
+            _buildStatCard(
+              'إجمالي الكمية في المخزون',
+              '$_totalProductQuantity',
+              Icons.warehouse,
+              Colors.brown,
+              Colors.brown.shade50,
+            ),
+            _buildStatCard(
+              'عدد المنتجات المتوفرة',
+              '$_availableProductsCount',
+              Icons.inventory,
+              Colors.deepPurple,
+              Colors.deepPurple.shade50,
             ),
             _buildStatCard(
               'العملاء',

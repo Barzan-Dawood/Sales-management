@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
+import '../utils/export.dart';
 
 class AccountingScreen extends StatefulWidget {
   const AccountingScreen({super.key});
@@ -48,6 +49,14 @@ class _AccountingScreenState extends State<AccountingScreen> {
                 onPressed: () => _showDateRangePicker(context),
                 icon: const Icon(Icons.date_range),
                 label: Text(_getDateRangeLabel()),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () async {
+                  await _exportAccountingSummary(context);
+                },
+                tooltip: 'تصدير الملخص PDF',
+                icon: const Icon(Icons.picture_as_pdf),
               ),
             ]),
             const SizedBox(height: 12),
@@ -139,6 +148,13 @@ class _AccountingScreenState extends State<AccountingScreen> {
                                 ),
                               ),
                               const Spacer(),
+                              IconButton(
+                                onPressed: () async {
+                                  await _exportExpensesList(context, items);
+                                },
+                                tooltip: 'تصدير المصاريف PDF',
+                                icon: const Icon(Icons.picture_as_pdf),
+                              ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -215,6 +231,69 @@ class _AccountingScreenState extends State<AccountingScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _exportAccountingSummary(BuildContext context) async {
+    try {
+      final db = context.read<DatabaseService>();
+      final data = await db.profitAndLoss(from: _range?.start, to: _range?.end);
+      final rows = <List<String>>[
+        ['البند', 'القيمة'],
+        ['المبيعات', Formatters.currencyIQD(data['sales'] ?? 0)],
+        ['الربح الإجمالي', Formatters.currencyIQD(data['profit'] ?? 0)],
+        ['المصاريف', Formatters.currencyIQD(data['expenses'] ?? 0)],
+        ['الصافي', Formatters.currencyIQD(data['net'] ?? 0)],
+      ];
+      final saved = await PdfExporter.exportSimpleTable(
+        filename: 'accounting_summary.pdf',
+        title:
+            'ملخص الحسابات${_selectedPeriodName != null ? ' - $_selectedPeriodName' : ''}',
+        rows: rows,
+      );
+      if (!mounted) return;
+      if (saved != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم حفظ التقرير في: $saved')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل تصدير ملخص الحسابات: $e')),
+      );
+    }
+  }
+
+  Future<void> _exportExpensesList(
+      BuildContext context, List<Map<String, Object?>> items) async {
+    try {
+      final headers = ['العنوان', 'المبلغ', 'التاريخ'];
+      final rows = items
+          .map((e) => [
+                (e['title'] ?? '').toString(),
+                Formatters.currencyIQD((e['amount'] as num?)?.toDouble() ?? 0),
+                (e['created_at'] ?? '').toString().substring(0, 10),
+              ])
+          .toList();
+      final saved = await PdfExporter.exportDataTable(
+        filename: 'expenses_list.pdf',
+        title:
+            'قائمة المصاريف${_selectedPeriodName != null ? ' - $_selectedPeriodName' : ''}',
+        headers: headers,
+        rows: rows,
+      );
+      if (!mounted) return;
+      if (saved != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم حفظ التقرير في: $saved')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل تصدير قائمة المصاريف: $e')),
+      );
+    }
   }
 
   Future<void> _showDateRangePicker(BuildContext context) async {

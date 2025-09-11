@@ -290,48 +290,114 @@ class _TestsScreenState extends State<TestsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // إحصائيات سريعة
-          Row(
-            children: [
-              Expanded(child: _buildStatCard('إجمالي', '156', Colors.blue)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('نجح', '142', Colors.green)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _buildStatCard('فشل', '8', Colors.red)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('متجاهل', '6', Colors.grey)),
-            ],
-          ),
+          // إحصائيات من نتائج الاختبارات
+          _buildRealTimeStats(),
 
           const SizedBox(height: 16),
 
           // تفاصيل الاختبارات
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'تفاصيل الاختبارات',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildTestDetailRow('قاعدة البيانات', 25, 23, 2, 0),
-                  _buildTestDetailRow('واجهة المستخدم', 30, 28, 1, 1),
-                  _buildTestDetailRow('الوحدات', 35, 33, 2, 0),
-                  _buildTestDetailRow('الخدمات', 20, 18, 1, 1),
-                  _buildTestDetailRow('التكامل', 25, 24, 1, 0),
-                  _buildTestDetailRow('الأداء', 21, 16, 1, 4),
-                ],
-              ),
-            ),
-          ),
+          _buildRealTestDetails(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRealTimeStats() {
+    final totalTests = _testResults.length;
+    final passedTests =
+        _testResults.where((r) => r.status == TestStatus.passed).length;
+    final failedTests =
+        _testResults.where((r) => r.status == TestStatus.failed).length;
+    final skippedTests =
+        _testResults.where((r) => r.status == TestStatus.skipped).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'إحصائيات الاختبارات الحالية',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+                child: _buildStatCard(
+                    'إجمالي', totalTests.toString(), Colors.blue)),
+            const SizedBox(width: 12),
+            Expanded(
+                child: _buildStatCard(
+                    'نجح', passedTests.toString(), Colors.green)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+                child:
+                    _buildStatCard('فشل', failedTests.toString(), Colors.red)),
+            const SizedBox(width: 12),
+            Expanded(
+                child: _buildStatCard(
+                    'متجاهل', skippedTests.toString(), Colors.grey)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRealTestDetails() {
+    if (_testResults.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Icon(Icons.info_outline, size: 48, color: Colors.grey.shade400),
+              const SizedBox(height: 8),
+              Text(
+                'لا توجد نتائج اختبارات',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'قم بتشغيل الاختبارات أولاً لعرض النتائج',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'تفاصيل الاختبارات الحالية',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ..._testResults.map((result) => _buildTestDetailRow(
+                  result.name,
+                  result.status == TestStatus.passed ? 1 : 0,
+                  result.status == TestStatus.passed ? 1 : 0,
+                  result.status == TestStatus.failed ? 1 : 0,
+                  result.status == TestStatus.skipped ? 1 : 0,
+                )),
+          ],
+        ),
       ),
     );
   }
@@ -669,6 +735,8 @@ class _TestsScreenState extends State<TestsScreen>
       });
     }
   }
+
+  // تمت إزالة دوال التصدير بناءً على طلب المستخدم
 }
 
 enum TestStatus { passed, failed, skipped }

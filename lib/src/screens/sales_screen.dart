@@ -75,10 +75,12 @@ class _SalesScreenState extends State<SalesScreen> {
 
     InputDecoration pill(String hint, IconData icon) => InputDecoration(
           hintText: hint,
+          hintStyle: const TextStyle(fontSize: 11),
+          labelStyle: const TextStyle(fontSize: 11),
           isDense: true,
           prefixIcon: Icon(
             icon,
-            size: 18,
+            size: 16,
             color: Theme.of(context).colorScheme.primary,
           ),
           prefixIconConstraints: const BoxConstraints(
@@ -334,7 +336,7 @@ class _SalesScreenState extends State<SalesScreen> {
                 ),
                 child: Row(
                   children: [
-                    // Customer Name
+                    // Customer Name (default)
                     Expanded(
                       flex: 1,
                       child: TextField(
@@ -344,7 +346,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    // Customer Phone
+                    // Customer Phone (default)
                     Expanded(
                       flex: 1,
                       child: TextField(
@@ -354,7 +356,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    // Customer Address
+                    // Customer Address (default)
                     Expanded(
                       flex: 1,
                       child: TextField(
@@ -393,35 +395,8 @@ class _SalesScreenState extends State<SalesScreen> {
                       ),
                     ],
                     // ملاحظة توضيحية للبيع الآجل
-                    if (_type == 'credit' || _type == 'installment') ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange.shade200),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.warning_amber_outlined,
-                                size: 16, color: Colors.orange.shade600),
-                            const SizedBox(width: 4),
-                            Text(
-                              'مطلوب',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.orange.shade600,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    // Due Date field - only show for credit payments
+                    if (_type == 'credit' || _type == 'installment') ...[],
+                    // Due Date field - only show for credit payments (default)
                     if (_type == 'credit') ...[
                       const SizedBox(width: 6),
                       Expanded(
@@ -488,7 +463,7 @@ class _SalesScreenState extends State<SalesScreen> {
                         ),
                       ),
                     ],
-                    // Installment fields - only show for installment payments
+                    // Installment fields - only show for installment payments (default)
                     if (_type == 'installment') ...[
                       const SizedBox(width: 6),
                       Expanded(
@@ -574,6 +549,7 @@ class _SalesScreenState extends State<SalesScreen> {
                           ),
                         ),
                       ),
+                      // Address remains in default position above
                     ],
                   ],
                 ),
@@ -985,8 +961,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     decoration: BoxDecoration(
                                                       color: isOutOfStock
                                                           ? Colors.grey.shade300
-                                                          : Colors
-                                                              .green.shade600,
+                                                          : (_addedToCartProducts
+                                                                  .contains(
+                                                                      p['id'])
+                                                              ? Colors.purple
+                                                                  .shade600
+                                                              : Colors.green
+                                                                  .shade600),
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               20),
@@ -994,9 +975,15 @@ class _SalesScreenState extends State<SalesScreen> {
                                                           ? null
                                                           : [
                                                               BoxShadow(
-                                                                color: Colors
-                                                                    .green
-                                                                    .shade200,
+                                                                color: (_addedToCartProducts
+                                                                        .contains(p[
+                                                                            'id'])
+                                                                    ? Colors
+                                                                        .purple
+                                                                        .shade200
+                                                                    : Colors
+                                                                        .green
+                                                                        .shade200),
                                                                 blurRadius: 4,
                                                                 offset:
                                                                     const Offset(
@@ -1540,7 +1527,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                           onPressed: _cart.isEmpty
                                               ? null
                                               : () async {
-                                                  // Validate customer information requirements only for credit sales
+                                                  // Validate customer information requirements for credit and installment
                                                   if (_type == 'credit' ||
                                                       _type == 'installment') {
                                                     if (_customerName
@@ -1555,9 +1542,11 @@ class _SalesScreenState extends State<SalesScreen> {
                                                       ScaffoldMessenger.of(
                                                               context)
                                                           .showSnackBar(
-                                                              const SnackBar(
-                                                        content: Text(
-                                                            'يرجى ملء جميع معلومات العميل للبيع الآجل'),
+                                                              SnackBar(
+                                                        content: Text(_type ==
+                                                                'installment'
+                                                            ? 'يرجى ملء جميع معلومات العميل للبيع بالأقساط'
+                                                            : 'يرجى ملء جميع معلومات العميل للبيع بالأجل'),
                                                         backgroundColor:
                                                             Colors.red,
                                                       ));

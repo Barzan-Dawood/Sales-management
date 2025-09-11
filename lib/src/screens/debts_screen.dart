@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../services/print_service.dart';
 import '../utils/format.dart';
+import '../utils/export.dart';
 
 class DebtsScreen extends StatefulWidget {
   const DebtsScreen({super.key});
@@ -97,6 +98,13 @@ class _DebtsScreenState extends State<DebtsScreen>
               icon: const Icon(Icons.add),
               onPressed: () => _showAddPaymentDialog(context, db),
               tooltip: 'إضافة دفعة',
+            ),
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf),
+              tooltip: 'تصدير PDF',
+              onPressed: () async {
+                await _exportDebtsSummary(db);
+              },
             ),
           ],
         ),
@@ -224,6 +232,41 @@ class _DebtsScreenState extends State<DebtsScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _exportDebtsSummary(DatabaseService db) async {
+    try {
+      final stats = await db.getDebtStatistics();
+      final rows = <List<String>>[
+        ['البند', 'القيمة'],
+        ['إجمالي الديون', Formatters.currencyIQD(stats['total_debt'] ?? 0)],
+        ['ديون متأخرة', Formatters.currencyIQD(stats['overdue_debt'] ?? 0)],
+        [
+          'إجمالي المدفوعات',
+          Formatters.currencyIQD(stats['total_payments'] ?? 0)
+        ],
+        [
+          'عدد العملاء المدينين',
+          (stats['customers_with_debt'] ?? 0).toString()
+        ],
+      ];
+      final saved = await PdfExporter.exportSimpleTable(
+        filename: 'debts_summary.pdf',
+        title: 'تقرير الديون',
+        rows: rows,
+      );
+      if (!mounted) return;
+      if (saved != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم حفظ التقرير في: $saved')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل تصدير تقرير الديون: $e')),
+      );
+    }
   }
 
   Widget _buildSimpleStatCard(String title, String value, Color color) {
