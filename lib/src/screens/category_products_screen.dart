@@ -335,10 +335,80 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                       ),
                       const SizedBox(height: 8),
                     ],
-                    // Price and quantity row
+                    // Price, cost, profit and quantity row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        // Price
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.green.shade200,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.attach_money_rounded,
+                                size: 14,
+                                color: Colors.green.shade700,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'السعر: ${Formatters.currencyIQD(price)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Cost
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.purple.shade200,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.shopping_bag_rounded,
+                                size: 14,
+                                color: Colors.purple.shade700,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'التكلفة: ${Formatters.currencyIQD(cost)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.purple.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         // Profit
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -363,7 +433,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                Formatters.currencyIQD(profit),
+                                'الربح: ${Formatters.currencyIQD(profit)}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -398,46 +468,11 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                quantity.toString(),
+                                'الكمية: ${quantity.toString()}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.orange.shade700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Price
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Colors.green.shade200,
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.attach_money_rounded,
-                                size: 14,
-                                color: Colors.green.shade700,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                Formatters.currencyIQD(price),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.green.shade700,
                                 ),
                               ),
                             ],
