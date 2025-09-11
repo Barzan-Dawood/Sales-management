@@ -1,30 +1,53 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:provider/provider.dart';
 import 'package:office_mangment_system/main.dart';
+import 'package:office_mangment_system/src/services/db/database_service.dart';
+import 'package:office_mangment_system/src/services/auth/auth_provider.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('Office Management System - Main App Tests', () {
+    late DatabaseService databaseService;
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    setUpAll(() async {
+      databaseService = DatabaseService();
+      await databaseService.initialize();
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    tearDownAll(() async {
+      await databaseService.database.close();
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    testWidgets('App should start and show login screen',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider<DatabaseService>.value(value: databaseService),
+          ChangeNotifierProvider(create: (_) => AuthProvider(databaseService)),
+        ],
+        child: const MyApp(),
+      ));
+
+      await tester.pumpAndSettle();
+
+      // Verify app title is displayed
+      expect(find.text('نظام إدارة المكتب'), findsOneWidget);
+    });
+
+    testWidgets('App should handle authentication flow',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(MultiProvider(
+        providers: [
+          Provider<DatabaseService>.value(value: databaseService),
+          ChangeNotifierProvider(create: (_) => AuthProvider(databaseService)),
+        ],
+        child: const MyApp(),
+      ));
+
+      await tester.pumpAndSettle();
+
+      // Check if login screen is shown when not authenticated
+      expect(find.byType(TextField), findsWidgets);
+    });
   });
 }
