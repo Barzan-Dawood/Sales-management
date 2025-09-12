@@ -1,11 +1,11 @@
 {
-    "name": "office_mangment_system",
-    "short_name": "office_mangment_system",
+    "name": "ROJ NET - نظام إدارة المكتب",
+    "short_name": "ROJ NET",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#4285F4",
+    "description": "نظام إدارة المكتب لخدمات الانترنت والهواتف",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

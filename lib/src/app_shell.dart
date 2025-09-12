@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'services/auth/auth_provider.dart';
+import 'services/store_config.dart';
 import 'utils/strings.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -31,9 +32,12 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final store = context.watch<StoreConfig>();
     if (!auth.isAuthenticated) {
       return const LoginScreen();
     }
+
+    // Disabled forced password change screen on default login per request
 
     final pages = <Widget>[
       const DashboardScreen(),
@@ -53,7 +57,7 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppStrings.appTitle),
+        title: Text(store.appTitle),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),

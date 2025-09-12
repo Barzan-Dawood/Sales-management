@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../services/backup/backup_service.dart';
 import '../services/db/database_service.dart';
 import '../utils/strings.dart';
+import '../services/store_config.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,6 +19,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final backup = BackupService(context.read<DatabaseService>());
+    final store = context.watch<StoreConfig>();
     return Padding(
       padding: const EdgeInsets.all(16),
       child: ListView(
@@ -50,10 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  AppStrings.defaultShopName,
-                  style: const TextStyle(fontSize: 16),
-                ),
+                Text(store.shopName, style: const TextStyle(fontSize: 16)),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -69,10 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  AppStrings.defaultPhone,
-                  style: const TextStyle(fontSize: 16),
-                ),
+                Text(store.phone, style: const TextStyle(fontSize: 16)),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -89,10 +85,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  AppStrings.defaultAddress,
-                  style: const TextStyle(fontSize: 16),
+                Text(store.address, style: const TextStyle(fontSize: 16)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'نسخة التطبيق',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 4),
+                Text(store.displayVersion,
+                    style: const TextStyle(fontSize: 16)),
               ],
             ),
           ),

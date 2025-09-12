@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../services/print_service.dart';
+import '../services/store_config.dart';
 import '../utils/format.dart';
-import '../utils/strings.dart';
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -3246,16 +3246,10 @@ class _SalesScreenState extends State<SalesScreen> {
     print('نوع الدفع: $_lastType');
     print('نوع الطباعة المختار: $_selectedPrintType');
 
-    final db = context.read<DatabaseService>();
-    final settings = await db.database.query('settings', limit: 1);
-    final shopName = (settings.isNotEmpty
-        ? (settings.first['shop_name']?.toString() ??
-            AppStrings.defaultShopName)
-        : AppStrings.defaultShopName);
-    final phone =
-        (settings.isNotEmpty ? settings.first['phone']?.toString() : null);
-    final address =
-        (settings.isNotEmpty ? settings.first['address']?.toString() : null);
+    final store = context.read<StoreConfig>();
+    final shopName = store.shopName;
+    final phone = store.phone;
+    final address = store.address;
 
     // استخدام خدمة الطباعة مع نوع الطباعة المختار
     final success = await PrintService.printInvoice(

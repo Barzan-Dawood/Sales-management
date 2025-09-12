@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
+import '../services/store_config.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -212,9 +213,9 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'مرحباً بك في لوحة التحكم ( ROJ NET )',
-                  style: TextStyle(
+                Text(
+                  'مرحباً بك في لوحة التحكم ${context.watch<StoreConfig>().shopName}',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
                     fontWeight: FontWeight.bold,

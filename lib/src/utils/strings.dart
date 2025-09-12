@@ -1,12 +1,7 @@
 class AppStrings {
-  // App Information
-  static const String appTitle = 'ROJ NET';
-  static const String appName = 'ROJ NET';
+ 
 
-  // Store Information
-  static const String defaultShopName = 'ROJ NET';
-  static const String defaultPhone = '07512277690';
-  static const String defaultAddress = 'شنكال سايدين حي الشهداء';
+ 
 
   // Developer Information
   static const String developerTitle1 = 'مطور التطبيق';

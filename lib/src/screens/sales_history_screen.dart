@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../services/print_service.dart';
+import '../services/store_config.dart';
 import '../utils/format.dart';
 import 'package:intl/intl.dart';
 
@@ -1089,10 +1090,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           .toList();
 
       // طباعة الفاتورة مع رقم الفاتورة الصحيح
+      final store = context.read<StoreConfig>();
       final success = await PrintService.quickPrint(
-        shopName: 'متجرنا', // يمكن جعل هذا قابل للتخصيص
-        phone: null,
-        address: null,
+        shopName: store.shopName,
+        phone: store.phone,
+        address: store.address,
         items: items,
         paymentType: saleDetails['type'] as String,
         customerName: saleDetails['customer_name'] as String?,

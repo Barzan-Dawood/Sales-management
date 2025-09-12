@@ -975,6 +975,8 @@ class DatabaseService {
     return result.first;
   }
 
+  // updateUserPassword removed: password changes are disabled
+
   Future<List<Map<String, Object?>>> getAllProducts(
       {String? query, int? categoryId}) async {
     final where = <String>[];
@@ -2636,9 +2638,8 @@ class DatabaseService {
             }
           }
         }
-
-       } catch (e) {
-         rethrow;
+      } catch (e) {
+        rethrow;
       }
     });
   }
@@ -2672,28 +2673,26 @@ class DatabaseService {
               switch (type) {
                 case 'trigger':
                   await txn.execute('DROP TRIGGER IF EXISTS $name');
-                   break;
+                  break;
                 case 'view':
                   await txn.execute('DROP VIEW IF EXISTS $name');
-                   break;
+                  break;
                 case 'index':
                   await txn.execute('DROP INDEX IF EXISTS $name');
-                   break;
+                  break;
               }
-            } catch (e) {
-             }
+            } catch (e) {}
           }
         }
 
         // إعادة تفعيل المفاتيح الخارجية
         await txn.execute('PRAGMA foreign_keys = ON');
-
-       } catch (e) {
+      } catch (e) {
         // التأكد من إعادة تفعيل المفاتيح الخارجية حتى لو فشل التنظيف
         try {
           await txn.execute('PRAGMA foreign_keys = ON');
         } catch (_) {}
-         rethrow;
+        rethrow;
       }
     });
   }
@@ -2790,26 +2789,25 @@ class DatabaseService {
     try {
       await _db.execute('PRAGMA foreign_keys = OFF');
 
- 
       // حذف جميع البيانات من الجداول بالترتيب الصحيح
       await _db.delete('payments');
- 
+
       await _db.delete('installments');
- 
+
       await _db.delete('sale_items');
- 
+
       await _db.delete('sales');
- 
+
       await _db.delete('expenses');
- 
+
       await _db.delete('customers');
- 
+
       await _db.delete('suppliers');
- 
+
       await _db.delete('products');
- 
+
       await _db.delete('categories');
- 
+
       // إعادة تعيين AUTO_INCREMENT للجداول
       await _db.execute(
           'DELETE FROM sqlite_sequence WHERE name IN (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -2824,12 +2822,11 @@ class DatabaseService {
             'products',
             'categories'
           ]);
- 
-      await _db.execute('PRAGMA foreign_keys = ON');
 
-     } catch (e) {
       await _db.execute('PRAGMA foreign_keys = ON');
-       rethrow;
+    } catch (e) {
+      await _db.execute('PRAGMA foreign_keys = ON');
+      rethrow;
     }
   }
 
@@ -2872,8 +2869,7 @@ class DatabaseService {
       final saleItemsCount =
           await _db.rawQuery('SELECT COUNT(*) as count FROM sale_items');
       result['عناصر المبيعات'] = saleItemsCount.first['count'] as int;
-
-     } catch (e) {
+    } catch (e) {
       print('خطأ في فحص البيانات: $e');
     }
 
@@ -2884,8 +2880,8 @@ class DatabaseService {
   Future<void> resetAllCustomerDebts() async {
     try {
       await _db.execute('UPDATE customers SET total_debt = 0');
-     } catch (e) {
-       rethrow;
+    } catch (e) {
+      rethrow;
     }
   }
 }
