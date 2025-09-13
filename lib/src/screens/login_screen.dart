@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:office_mangment_system/src/screens/enhanced_privacy_policy_screen.dart';
 import 'package:provider/provider.dart';
-
 import '../services/auth/auth_provider.dart';
-
+ 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -32,7 +32,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const FlutterLogo(size: 64),
+                    Image.asset(
+                      'assets/images/pos.png',
+                      width: 200,
+                      height: 100,
+                      fit: BoxFit.contain,
+                    ),
                     const SizedBox(height: 16),
                     Text('أهلاً بك',
                         style: Theme.of(context).textTheme.headlineSmall),
@@ -94,6 +99,44 @@ class _LoginScreenState extends State<LoginScreen> {
                                     CircularProgressIndicator(strokeWidth: 2))
                             : const Text('تسجيل الدخول'),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    // رابط سياسة الخصوصية
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const EnhancedPrivacyPolicyScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'سياسة الخصوصية',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        const Text(' • ', style: TextStyle(fontSize: 12)),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const EnhancedTermsConditionsScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'شروط الاستخدام',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

@@ -5,6 +5,10 @@ import '../services/backup/backup_service.dart';
 import '../services/db/database_service.dart';
 import '../utils/strings.dart';
 import '../services/store_config.dart';
+import 'support_screen.dart';
+import 'database_management_screen.dart';
+import 'legal_card.dart';
+import 'enhanced_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,6 +18,23 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  String? _backupDirectory;
+
+  @override
+  Widget build(BuildContext context) {
+    return const EnhancedSettingsScreen();
+  }
+}
+
+// Keep the old implementation as backup
+class _OldSettingsScreen extends StatefulWidget {
+  const _OldSettingsScreen();
+
+  @override
+  State<_OldSettingsScreen> createState() => _OldSettingsScreenState();
+}
+
+class _OldSettingsScreenState extends State<_OldSettingsScreen> {
   String? _backupDirectory;
 
   @override
@@ -40,7 +61,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.store, color: Colors.blue.shade600, size: 20),
+                    Image.asset(
+                      'assets/images/pos.png',
+                      width: 20,
+                      height: 20,
+                      color: Colors.blue.shade600,
+                      fit: BoxFit.contain,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       AppStrings.shopNameLabel,
@@ -303,11 +330,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 16),
 
+          // Support Section
+          Text('الدعم والتواصل', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          _SupportCard(),
+
+          const SizedBox(height: 16),
+
           // Database Management Section
           Text('إدارة قاعدة البيانات',
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           _DatabaseManagementCard(),
+
+          const SizedBox(height: 16),
+
+          // Legal Section
+          Text('المعلومات القانونية',
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          const LegalCard(),
         ],
       ),
     );
@@ -536,6 +578,104 @@ class _DatabaseManagementCardState extends State<_DatabaseManagementCard> {
                 style: FilledButton.styleFrom(backgroundColor: Colors.red),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SupportCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.support_agent, color: Colors.blue),
+              title: const Text('الدعم الفني'),
+              subtitle: const Text('تواصل مع فريق الدعم'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SupportScreen(),
+                  ),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.storage, color: Colors.green),
+              title: const Text('إدارة قاعدة البيانات'),
+              subtitle: const Text('نسخ احتياطية وترحيل البيانات'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DatabaseManagementScreen(),
+                  ),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.info, color: Colors.orange),
+              title: const Text('معلومات التطبيق'),
+              subtitle: const Text('الإصدار والميزات'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                _showAppInfoDialog(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAppInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/pos.png',
+              width: 32,
+              height: 32,
+              color: Colors.blue.shade600,
+            ),
+            const SizedBox(width: 12),
+            const Text('نظام إدارة المكتب'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('الإصدار: 1.0.0'),
+            SizedBox(height: 8),
+            Text('تاريخ الإصدار: 2024'),
+            SizedBox(height: 8),
+            Text('المطور: فريق التطوير العراقي'),
+            SizedBox(height: 8),
+            Text('اللغة: العربية'),
+            SizedBox(height: 8),
+            Text('البلد: جمهورية العراق'),
+            SizedBox(height: 8),
+            Text('نوع الترخيص: تجاري'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إغلاق'),
           ),
         ],
       ),

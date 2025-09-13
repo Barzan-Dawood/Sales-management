@@ -125,10 +125,12 @@ class _AppShellState extends State<AppShell> {
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
-                          Icons.store,
+                        child: Image.asset(
+                          'assets/images/pos.png',
+                          width: 28,
+                          height: 28,
                           color: Colors.white,
-                          size: 28,
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(width: 16),
