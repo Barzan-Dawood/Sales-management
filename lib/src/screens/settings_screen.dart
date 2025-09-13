@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
-import '../services/backup/backup_service.dart';
 import '../services/db/database_service.dart';
 import '../utils/strings.dart';
 import '../services/store_config.dart';
 import 'support_screen.dart';
-import 'database_management_screen.dart';
 import 'legal_card.dart';
 import 'enhanced_settings_screen.dart';
 
@@ -18,8 +15,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String? _backupDirectory;
-
   @override
   Widget build(BuildContext context) {
     return const EnhancedSettingsScreen();
@@ -35,11 +30,8 @@ class _OldSettingsScreen extends StatefulWidget {
 }
 
 class _OldSettingsScreenState extends State<_OldSettingsScreen> {
-  String? _backupDirectory;
-
   @override
   Widget build(BuildContext context) {
-    final backup = BackupService(context.read<DatabaseService>());
     final store = context.watch<StoreConfig>();
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -163,51 +155,9 @@ class _OldSettingsScreenState extends State<_OldSettingsScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    FilledButton.icon(
-                      onPressed: () async {
-                        final path = await backup.backupDatabase();
-                        if (!mounted) return;
-                        if (path != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content:
-                                  Text('${AppStrings.backupSaved} $path')));
-                        }
-                      },
-                      icon: const Icon(Icons.backup),
-                      label: const Text('نسخ احتياطي كامل'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final path = await backup.backupProductsAndCategories();
-                        if (!mounted) return;
-                        if (path != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content:
-                                Text('تم حفظ نسخة المنتجات والأقسام: $path'),
-                            backgroundColor: Colors.blue,
-                          ));
-                        }
-                      },
-                      icon: const Icon(Icons.inventory),
-                      label: const Text('نسخ المنتجات والأقسام'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.blue,
-                        side: const BorderSide(color: Colors.blue),
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final name = await backup.restoreDatabase();
-                        if (!mounted) return;
-                        if (name != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content:
-                                  Text('${AppStrings.backupRestored} $name')));
-                        }
-                      },
-                      icon: const Icon(Icons.restore),
-                      label: const Text(AppStrings.restore),
-                    ),
+                    // Backup functionality removed
+                    // Products backup functionality removed
+                    // Restore functionality removed
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -215,62 +165,7 @@ class _OldSettingsScreenState extends State<_OldSettingsScreen> {
                 // Products and Categories Restore
                 Row(
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('تأكيد الاستعادة'),
-                              content: const Text(
-                                'هل تريد استعادة المنتجات والأقسام؟\n'
-                                'سيتم حذف جميع المنتجات والأقسام الحالية واستبدالها بالبيانات من الملف المحدد.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(false),
-                                  child: const Text('إلغاء'),
-                                ),
-                                FilledButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(true),
-                                  child: const Text('استعادة'),
-                                ),
-                              ],
-                            ),
-                          );
-
-                          if (confirmed == true) {
-                            final name =
-                                await backup.restoreProductsAndCategories();
-                            if (!mounted) return;
-                            if (name != null) {
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(
-                                content: Text(
-                                    'تم استعادة المنتجات والأقسام من: $name'),
-                                backgroundColor: Colors.green,
-                              ));
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text('فشل في استعادة المنتجات والأقسام'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        icon: const Icon(Icons.restore_from_trash),
-                        label: const Text('استعادة المنتجات والأقسام'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.orange,
-                          side: const BorderSide(color: Colors.orange),
-                        ),
-                      ),
-                    ),
+                    // Products restore functionality removed
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -278,51 +173,9 @@ class _OldSettingsScreenState extends State<_OldSettingsScreen> {
                 // Backup Directory Selection
                 Row(
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final dir =
-                              await FilePicker.platform.getDirectoryPath();
-                          if (dir != null) {
-                            setState(() => _backupDirectory = dir);
-                          }
-                        },
-                        icon: const Icon(Icons.folder_open),
-                        label: Text(
-                            _backupDirectory ?? 'اختر مجلد النسخ الاحتياطي'),
-                      ),
-                    ),
+                    // Backup directory selection removed
                     const SizedBox(width: 8),
-                    if (_backupDirectory != null)
-                      FilledButton.icon(
-                        onPressed: () async {
-                          try {
-                            final path = await backup
-                                .backupToDirectory(_backupDirectory!);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content:
-                                      Text('تم إنشاء نسخة احتياطية: $path'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content:
-                                        Text('خطأ في النسخ الاحتياطي: $e')),
-                              );
-                            }
-                          }
-                        },
-                        icon: const Icon(Icons.save),
-                        label: const Text('نسخ احتياطي سريع'),
-                        style: FilledButton.styleFrom(
-                            backgroundColor: Colors.green),
-                      ),
+                    // Backup directory functionality removed
                   ],
                 ),
               ],
@@ -615,12 +468,7 @@ class _SupportCard extends StatelessWidget {
               subtitle: const Text('نسخ احتياطية وترحيل البيانات'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const DatabaseManagementScreen(),
-                  ),
-                );
+                // Database management functionality removed
               },
             ),
             const Divider(),
