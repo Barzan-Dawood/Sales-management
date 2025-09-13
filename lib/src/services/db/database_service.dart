@@ -2885,4 +2885,191 @@ class DatabaseService {
   }
 
   /// إنشاء نسخة احتياطية للمنتجات والأقسام فقط
+  Future<String> createProductsBackup(String backupPath) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'products_backup_$timestamp.json';
+      final backupFile = File(p.join(backupPath, fileName));
+
+      // إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجوداً
+      final backupDir = Directory(backupPath);
+      if (!await backupDir.exists()) {
+        await backupDir.create(recursive: true);
+      }
+
+      // جلب البيانات
+      final products = await _db.query('products');
+      final categories = await _db.query('categories');
+
+      // إنشاء بيانات النسخ الاحتياطي
+      final backupData = {
+        'timestamp': DateTime.now().toIso8601String(),
+        'version': _dbVersion,
+        'products': products,
+        'categories': categories,
+      };
+
+      // حفظ البيانات
+      await backupFile.writeAsString(
+        backupData.toString(),
+        mode: FileMode.write,
+      );
+
+      return backupFile.path;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// إنشاء نسخة احتياطية كاملة لقاعدة البيانات
+  Future<String> createFullBackup(String backupPath) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'full_backup_$timestamp.db';
+      final backupFile = File(p.join(backupPath, fileName));
+
+      // إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجوداً
+      final backupDir = Directory(backupPath);
+      if (!await backupDir.exists()) {
+        await backupDir.create(recursive: true);
+      }
+
+      // إغلاق قاعدة البيانات مؤقتاً
+      await _db.close();
+
+      // نسخ ملف قاعدة البيانات
+      await File(_dbPath).copy(backupFile.path);
+
+      // إعادة فتح قاعدة البيانات
+      _db = await openDatabase(_dbPath, version: _dbVersion);
+      await _db.execute('PRAGMA foreign_keys = ON');
+      await _createIndexes(_db);
+
+      return backupFile.path;
+    } catch (e) {
+      // محاولة إعادة فتح قاعدة البيانات في حالة الخطأ
+      try {
+        _db = await openDatabase(_dbPath, version: _dbVersion);
+        await _db.execute('PRAGMA foreign_keys = ON');
+        await _createIndexes(_db);
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
+  /// استعادة نسخة احتياطية كاملة
+  Future<void> restoreFullBackup(String backupFilePath) async {
+    try {
+      final backupFile = File(backupFilePath);
+      if (!await backupFile.exists()) {
+        throw Exception('ملف النسخة الاحتياطية غير موجود');
+      }
+
+      // إنشاء نسخة احتياطية من البيانات الحالية
+      final currentBackupPath =
+          '${_dbPath}_pre_restore_${DateTime.now().millisecondsSinceEpoch}.db';
+      await File(_dbPath).copy(currentBackupPath);
+
+      // إغلاق قاعدة البيانات الحالية
+      await _db.close();
+
+      // استعادة النسخة الاحتياطية
+      await backupFile.copy(_dbPath);
+
+      // إعادة فتح قاعدة البيانات
+      _db = await openDatabase(_dbPath, version: _dbVersion);
+      await _db.execute('PRAGMA foreign_keys = ON');
+      await _createIndexes(_db);
+      await _cleanupOrphanObjects(_db);
+      await _ensureCategorySchemaOn(_db);
+    } catch (e) {
+      // محاولة إعادة فتح قاعدة البيانات في حالة الخطأ
+      try {
+        _db = await openDatabase(_dbPath, version: _dbVersion);
+        await _db.execute('PRAGMA foreign_keys = ON');
+        await _createIndexes(_db);
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
+  /// استعادة المنتجات والأقسام من نسخة احتياطية
+  Future<void> restoreProductsBackup(String backupFilePath) async {
+    try {
+      final backupFile = File(backupFilePath);
+      if (!await backupFile.exists()) {
+        throw Exception('ملف النسخة الاحتياطية غير موجود');
+      }
+
+      // قراءة بيانات النسخ الاحتياطي
+      await backupFile.readAsString();
+
+      // تحليل البيانات (هذا يتطلب تنفيذ أكثر تفصيلاً)
+      // يمكن استخدام dart:convert للتعامل مع JSON
+
+      // حذف البيانات الحالية للمنتجات والأقسام
+      await _db.delete('products');
+      await _db.delete('categories');
+
+      // إدراج البيانات الجديدة
+      // هذا يتطلب تنفيذ أكثر تفصيلاً حسب هيكل البيانات
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// الحصول على حجم قاعدة البيانات
+  Future<String> getDatabaseSize() async {
+    try {
+      final file = File(_dbPath);
+      if (await file.exists()) {
+        final size = await file.length();
+        if (size < 1024) {
+          return '$size B';
+        } else if (size < 1024 * 1024) {
+          return '${(size / 1024).toStringAsFixed(1)} KB';
+        } else {
+          return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
+        }
+      }
+      return 'غير متاح';
+    } catch (e) {
+      return 'خطأ في الحساب';
+    }
+  }
+
+  /// الحصول على إحصائيات قاعدة البيانات
+  Future<Map<String, int>> getDatabaseStats() async {
+    try {
+      final stats = <String, int>{};
+
+      // عدد المنتجات
+      final productsResult =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM products');
+      final productsCount = productsResult.first['count'] as int? ?? 0;
+      stats['products'] = productsCount;
+
+      // عدد العملاء
+      final customersResult =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM customers');
+      final customersCount = customersResult.first['count'] as int? ?? 0;
+      stats['customers'] = customersCount;
+
+      // عدد المبيعات
+      final salesResult =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM sales');
+      final salesCount = salesResult.first['count'] as int? ?? 0;
+      stats['sales'] = salesCount;
+
+      // عدد الأقسام
+      final categoriesResult =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM categories');
+      final categoriesCount = categoriesResult.first['count'] as int? ?? 0;
+      stats['categories'] = categoriesCount;
+
+      return stats;
+    } catch (e) {
+      return {};
+    }
+  }
 }

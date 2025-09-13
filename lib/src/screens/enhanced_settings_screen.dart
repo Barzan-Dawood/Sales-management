@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:office_mangment_system/src/screens/enhanced_privacy_policy_screen.dart';
 import 'package:office_mangment_system/src/screens/app_usage_guide_screen.dart';
+import 'package:office_mangment_system/src/screens/database_settings_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/db/database_service.dart';
@@ -78,6 +79,11 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 // Store Information Section
                 _buildSectionHeader('معلومات المتجر'),
                 _buildStoreInfoSection(),
+                const SizedBox(height: 20),
+
+                // Database Settings Section
+                _buildSectionHeader('إعدادات قاعدة البيانات'),
+                _buildDatabaseSettingsSection(),
                 const SizedBox(height: 20),
 
                 // Support Section
@@ -1316,5 +1322,40 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         );
       }
     }
+  }
+
+  Widget _buildDatabaseSettingsSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildSettingsTile(
+            icon: Icons.storage,
+            title: 'إعدادات قاعدة البيانات',
+            subtitle: 'إدارة النسخ الاحتياطية والاستعادة',
+            trailing: Icons.arrow_forward_ios,
+            iconColor: Colors.orange,
+            onTap: () => _showDatabaseSettingsDialog(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDatabaseSettingsDialog() async {
+    await showDialog(
+      context: context,
+      builder: (context) => const DatabaseSettingsDialog(),
+    );
   }
 }
