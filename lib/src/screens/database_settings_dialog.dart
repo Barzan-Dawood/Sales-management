@@ -65,11 +65,33 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+    final isVerySmallScreen = screenSize.width < 400;
+
+    final dialogWidth = isVerySmallScreen
+        ? screenSize.width * 0.98
+        : isSmallScreen
+            ? screenSize.width * 0.95
+            : screenSize.width * 0.85;
+
+    final dialogHeight = isVerySmallScreen
+        ? screenSize.height * 0.95
+        : isSmallScreen
+            ? screenSize.height * 0.9
+            : screenSize.height * 0.8;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.85,
-        height: MediaQuery.of(context).size.height * 0.8,
+        width: dialogWidth,
+        height: dialogHeight,
+        constraints: BoxConstraints(
+          maxWidth: 800,
+          maxHeight: screenSize.height * 0.9,
+          minWidth: 300,
+          minHeight: 400,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
@@ -85,7 +107,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Colors.blue.shade600, Colors.blue.shade700],
@@ -100,43 +122,48 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.storage,
                       color: Colors.white,
-                      size: 28,
+                      size: isSmallScreen ? 24 : 28,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: isSmallScreen ? 12 : 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'إعدادات قاعدة البيانات',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: isSmallScreen ? 16 : 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          'إدارة النسخ الاحتياطية والاستعادة',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
+                        if (!isSmallScreen)
+                          Text(
+                            'إدارة النسخ الاحتياطية والاستعادة',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: Colors.white),
+                    icon: Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: isSmallScreen ? 20 : 24,
+                    ),
                   ),
                 ],
               ),
@@ -160,18 +187,26 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                 unselectedLabelColor: Colors.grey.shade600,
                 indicatorColor: Colors.blue.shade600,
                 indicatorWeight: 3,
-                tabs: const [
+                isScrollable: isSmallScreen,
+                labelStyle: TextStyle(
+                  fontSize: isSmallScreen ? 12 : 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                unselectedLabelStyle: TextStyle(
+                  fontSize: isSmallScreen ? 11 : 13,
+                ),
+                tabs: [
                   Tab(
-                    icon: Icon(Icons.backup, size: 20),
-                    text: 'النسخ الاحتياطي',
+                    icon: Icon(Icons.backup, size: isSmallScreen ? 18 : 20),
+                    text: isSmallScreen ? 'النسخ' : 'النسخ الاحتياطي',
                   ),
                   Tab(
-                    icon: Icon(Icons.restore, size: 20),
-                    text: 'الاستعادة',
+                    icon: Icon(Icons.restore, size: isSmallScreen ? 18 : 20),
+                    text: isSmallScreen ? 'الاستعادة' : 'الاستعادة',
                   ),
                   Tab(
-                    icon: Icon(Icons.settings, size: 20),
-                    text: 'الإعدادات',
+                    icon: Icon(Icons.settings, size: isSmallScreen ? 18 : 20),
+                    text: isSmallScreen ? 'الإعدادات' : 'الإعدادات',
                   ),
                 ],
               ),
@@ -195,20 +230,23 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
   }
 
   Widget _buildBackupTab() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'النسخ الاحتياطي',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isSmallScreen ? 16 : 18,
               fontWeight: FontWeight.bold,
               color: Colors.blue,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 12 : 16),
 
           // Full Backup
           _buildActionCard(
@@ -219,18 +257,56 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             onTap: () => _createFullBackup(),
           ),
 
-          const SizedBox(height: 12),
+          SizedBox(height: isSmallScreen ? 16 : 20),
 
-          // Products Backup
-          _buildActionCard(
-            icon: Icons.inventory_2,
-            title: 'نسخ المنتجات والأقسام',
-            subtitle: 'نسخ المنتجات والأقسام فقط',
-            color: Colors.orange,
-            onTap: () => _createProductsBackup(),
+          // Information about backup files
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.blue.shade600,
+                  size: isSmallScreen ? 18 : 20,
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ملاحظة حول ملفات النسخ الاحتياطي',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue.shade700,
+                          fontSize: isSmallScreen ? 13 : 14,
+                        ),
+                      ),
+                      SizedBox(height: isSmallScreen ? 2 : 4),
+                      Text(
+                        'يتم إنشاء 3 ملفات مع النسخة الاحتياطية:\n'
+                        '• الملف الرئيسي (.db)\n'
+                        '• ملف السجل (.db-wal)\n'
+                        '• ملف الذاكرة المشتركة (.db-shm)\n'
+                        'هذه الملفات ضرورية لضمان سلامة البيانات.',
+                        style: TextStyle(
+                          color: Colors.blue.shade600,
+                          fontSize: isSmallScreen ? 11 : 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 16 : 20),
 
           // Backup Path
           Container(
@@ -283,20 +359,23 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
   }
 
   Widget _buildRestoreTab() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'الاستعادة',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isSmallScreen ? 16 : 18,
               fontWeight: FontWeight.bold,
               color: Colors.blue,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 12 : 16),
 
           // Full Restore
           _buildActionCard(
@@ -307,22 +386,11 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             onTap: () => _restoreFullBackup(),
           ),
 
-          const SizedBox(height: 12),
-
-          // Products Restore
-          _buildActionCard(
-            icon: Icons.inventory_2,
-            title: 'استعادة المنتجات والأقسام',
-            subtitle: 'استعادة المنتجات والأقسام فقط',
-            color: Colors.purple,
-            onTap: () => _restoreProductsBackup(),
-          ),
-
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 16 : 20),
 
           // Warning
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
               color: Colors.red.shade50,
               borderRadius: BorderRadius.circular(12),
@@ -351,24 +419,27 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
   }
 
   Widget _buildSettingsTab() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'الإعدادات',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isSmallScreen ? 16 : 18,
               fontWeight: FontWeight.bold,
               color: Colors.blue,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isSmallScreen ? 12 : 16),
 
           // Auto Backup Settings
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -448,11 +519,11 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             ),
           ),
 
-          const SizedBox(height: 20),
+          SizedBox(height: isSmallScreen ? 16 : 20),
 
           // Database Info
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(12),
@@ -536,6 +607,9 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
     required Color color,
     required VoidCallback onTap,
   }) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -551,54 +625,68 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
       ),
       child: ListTile(
         leading: Container(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: color, size: 24),
+          child: Icon(
+            icon,
+            color: color,
+            size: isSmallScreen ? 20 : 24,
+          ),
         ),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
-            fontSize: 16,
+            fontSize: isSmallScreen ? 14 : 16,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
             color: Colors.grey.shade600,
-            fontSize: 14,
+            fontSize: isSmallScreen ? 12 : 14,
           ),
         ),
-        trailing: Icon(Icons.arrow_forward_ios,
-            size: 16, color: Colors.grey.shade400),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: isSmallScreen ? 14 : 16,
+          color: Colors.grey.shade400,
+        ),
         onTap: onTap,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 12 : 16,
+          vertical: isSmallScreen ? 4 : 8,
+        ),
       ),
     );
   }
 
   Widget _buildInfoRow(String label, String value) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 120,
+          width: isSmallScreen ? 100 : 120,
           child: Text(
             label,
             style: TextStyle(
               color: Colors.grey.shade600,
-              fontSize: 14,
+              fontSize: isSmallScreen ? 12 : 14,
             ),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w500,
-              fontSize: 14,
+              fontSize: isSmallScreen ? 12 : 14,
             ),
           ),
         ),
@@ -653,37 +741,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
     }
   }
 
-  Future<void> _createProductsBackup() async {
-    // عرض نافذة تأكيد
-    final confirmed = await _showBackupConfirmationDialog(
-      'نسخ المنتجات والأقسام',
-      'هل تريد إنشاء نسخة احتياطية للمنتجات والأقسام؟\n\nسيتم نسخ:\n• جميع المنتجات\n• جميع الأقسام\n• معلومات الأسعار والكميات',
-    );
-
-    if (!confirmed) return;
-
-    try {
-      // عرض مؤشر التحميل
-      _showLoadingDialog('جاري إنشاء نسخة احتياطية للمنتجات...');
-
-      final db = context.read<DatabaseService>();
-      final backupPath = await db.createProductsBackup(_backupPath);
-
-      // إغلاق مؤشر التحميل
-      Navigator.of(context).pop();
-
-      _showSnackBar(
-          'تم إنشاء نسخة احتياطية للمنتجات والأقسام\nالمسار: $backupPath',
-          Colors.green);
-    } catch (e) {
-      // إغلاق مؤشر التحميل في حالة الخطأ
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-      _showSnackBar('خطأ في إنشاء النسخة الاحتياطية: $e', Colors.red);
-    }
-  }
-
   Future<void> _restoreFullBackup() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -698,26 +755,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         await db.restoreFullBackup(backupFilePath);
 
         _showSnackBar('تم استعادة النسخة الاحتياطية بنجاح', Colors.green);
-      }
-    } catch (e) {
-      _showSnackBar('خطأ في الاستعادة: $e', Colors.red);
-    }
-  }
-
-  Future<void> _restoreProductsBackup() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
-
-      if (result != null) {
-        final db = context.read<DatabaseService>();
-        final backupFilePath = result.files.single.path!;
-
-        await db.restoreProductsBackup(backupFilePath);
-
-        _showSnackBar('تم استعادة المنتجات والأقسام بنجاح', Colors.green);
       }
     } catch (e) {
       _showSnackBar('خطأ في الاستعادة: $e', Colors.red);

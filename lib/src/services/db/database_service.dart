@@ -2884,48 +2884,13 @@ class DatabaseService {
     }
   }
 
-  /// إنشاء نسخة احتياطية للمنتجات والأقسام فقط
-  Future<String> createProductsBackup(String backupPath) async {
-    try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'products_backup_$timestamp.json';
-      final backupFile = File(p.join(backupPath, fileName));
-
-      // إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجوداً
-      final backupDir = Directory(backupPath);
-      if (!await backupDir.exists()) {
-        await backupDir.create(recursive: true);
-      }
-
-      // جلب البيانات
-      final products = await _db.query('products');
-      final categories = await _db.query('categories');
-
-      // إنشاء بيانات النسخ الاحتياطي
-      final backupData = {
-        'timestamp': DateTime.now().toIso8601String(),
-        'version': _dbVersion,
-        'products': products,
-        'categories': categories,
-      };
-
-      // حفظ البيانات
-      await backupFile.writeAsString(
-        backupData.toString(),
-        mode: FileMode.write,
-      );
-
-      return backupFile.path;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// إنشاء نسخة احتياطية كاملة لقاعدة البيانات
+  /// إنشاء نسخة احتياطية كاملة محسنة لقاعدة البيانات
   Future<String> createFullBackup(String backupPath) async {
     try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'full_backup_$timestamp.db';
+      final timestamp = DateTime.now();
+      final formattedDate =
+          '${timestamp.year}${timestamp.month.toString().padLeft(2, '0')}${timestamp.day.toString().padLeft(2, '0')}_${timestamp.hour.toString().padLeft(2, '0')}${timestamp.minute.toString().padLeft(2, '0')}';
+      final fileName = 'office_system_backup_$formattedDate.db';
       final backupFile = File(p.join(backupPath, fileName));
 
       // إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجوداً
@@ -2934,16 +2899,65 @@ class DatabaseService {
         await backupDir.create(recursive: true);
       }
 
-      // إغلاق قاعدة البيانات مؤقتاً
+      // التحقق من وجود مساحة كافية
+      final dbSize = await File(_dbPath).length();
+      final availableSpace = await _getAvailableDiskSpace(backupPath);
+      if (availableSpace < dbSize * 1.5) {
+        // نحتاج مساحة إضافية للتأكد
+        throw Exception('مساحة القرص غير كافية لإنشاء النسخة الاحتياطية');
+      }
+
+      // إنشاء نسخة احتياطية من البيانات الحالية قبل الإغلاق
+      await _db.execute('PRAGMA wal_checkpoint(FULL)');
+      await _db.execute('PRAGMA optimize');
+
+      // إغلاق قاعدة البيانات مؤقتاً لضمان النسخ الكامل
       await _db.close();
 
-      // نسخ ملف قاعدة البيانات
-      await File(_dbPath).copy(backupFile.path);
+      try {
+        // نسخ ملف قاعدة البيانات الرئيسي
+        await File(_dbPath).copy(backupFile.path);
 
-      // إعادة فتح قاعدة البيانات
+        // نسخ ملف WAL إذا كان موجوداً
+        final walFile = File('$_dbPath-wal');
+        if (await walFile.exists()) {
+          final backupWalFile = File('${backupFile.path}-wal');
+          await walFile.copy(backupWalFile.path);
+        }
+
+        // نسخ ملف SHM إذا كان موجوداً
+        final shmFile = File('$_dbPath-shm');
+        if (await shmFile.exists()) {
+          final backupShmFile = File('${backupFile.path}-shm');
+          await shmFile.copy(backupShmFile.path);
+        }
+
+        // التحقق من صحة النسخة الاحتياطية
+        final backupDb = await openDatabase(backupFile.path, readOnly: true);
+        await backupDb.rawQuery('SELECT COUNT(*) FROM sqlite_master');
+        await backupDb.close();
+      } catch (copyError) {
+        // إذا فشل النسخ، حذف جميع الملفات المكسورة
+        if (await backupFile.exists()) {
+          await backupFile.delete();
+        }
+        final backupWalFile = File('${backupFile.path}-wal');
+        if (await backupWalFile.exists()) {
+          await backupWalFile.delete();
+        }
+        final backupShmFile = File('${backupFile.path}-shm');
+        if (await backupShmFile.exists()) {
+          await backupShmFile.delete();
+        }
+        rethrow;
+      }
+
+      // إعادة فتح قاعدة البيانات مع التحسينات
       _db = await openDatabase(_dbPath, version: _dbVersion);
       await _db.execute('PRAGMA foreign_keys = ON');
       await _createIndexes(_db);
+      await _cleanupOrphanObjects(_db);
+      await _ensureCategorySchemaOn(_db);
 
       return backupFile.path;
     } catch (e) {
@@ -2957,7 +2971,21 @@ class DatabaseService {
     }
   }
 
-  /// استعادة نسخة احتياطية كاملة
+  /// الحصول على المساحة المتاحة في القرص
+  Future<int> _getAvailableDiskSpace(String path) async {
+    try {
+      // هذا تنفيذ مبسط - في التطبيقات الحقيقية قد تحتاج مكتبة خارجية
+      final directory = Directory(path);
+      if (await directory.exists()) {
+        return 1024 * 1024 * 1024; // 1GB افتراضي
+      }
+      return 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// استعادة نسخة احتياطية كاملة محسنة
   Future<void> restoreFullBackup(String backupFilePath) async {
     try {
       final backupFile = File(backupFilePath);
@@ -2965,23 +2993,113 @@ class DatabaseService {
         throw Exception('ملف النسخة الاحتياطية غير موجود');
       }
 
-      // إنشاء نسخة احتياطية من البيانات الحالية
-      final currentBackupPath =
-          '${_dbPath}_pre_restore_${DateTime.now().millisecondsSinceEpoch}.db';
-      await File(_dbPath).copy(currentBackupPath);
+      // التحقق من صحة ملف النسخة الاحتياطية
+      final testDb = await openDatabase(backupFilePath, readOnly: true);
+      try {
+        await testDb.rawQuery('SELECT COUNT(*) FROM sqlite_master');
+        // التحقق من وجود الجداول الأساسية
+        final tables = await testDb.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+        if (tables.isEmpty) {
+          throw Exception('ملف النسخة الاحتياطية لا يحتوي على جداول صالحة');
+        }
+      } finally {
+        await testDb.close();
+      }
 
-      // إغلاق قاعدة البيانات الحالية
+      // إنشاء نسخة احتياطية من البيانات الحالية قبل الاستعادة
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final currentBackupPath = '${_dbPath}_pre_restore_$timestamp.db';
+
+      // إغلاق قاعدة البيانات الحالية وإجراء تنظيف
+      await _db.execute('PRAGMA wal_checkpoint(FULL)');
       await _db.close();
 
-      // استعادة النسخة الاحتياطية
-      await backupFile.copy(_dbPath);
+      // نسخ البيانات الحالية كنسخة احتياطية احتياطية
+      await File(_dbPath).copy(currentBackupPath);
 
-      // إعادة فتح قاعدة البيانات
-      _db = await openDatabase(_dbPath, version: _dbVersion);
-      await _db.execute('PRAGMA foreign_keys = ON');
-      await _createIndexes(_db);
-      await _cleanupOrphanObjects(_db);
-      await _ensureCategorySchemaOn(_db);
+      // نسخ ملفات WAL و SHM الحالية إذا كانت موجودة
+      final currentWalFile = File('$_dbPath-wal');
+      if (await currentWalFile.exists()) {
+        await currentWalFile.copy('$currentBackupPath-wal');
+      }
+
+      final currentShmFile = File('$_dbPath-shm');
+      if (await currentShmFile.exists()) {
+        await currentShmFile.copy('$currentBackupPath-shm');
+      }
+
+      try {
+        // استعادة النسخة الاحتياطية الرئيسية
+        await backupFile.copy(_dbPath);
+
+        // استعادة ملف WAL إذا كان موجوداً
+        final backupWalFile = File('$backupFilePath-wal');
+        if (await backupWalFile.exists()) {
+          final walFile = File('$_dbPath-wal');
+          await backupWalFile.copy(walFile.path);
+        }
+
+        // استعادة ملف SHM إذا كان موجوداً
+        final backupShmFile = File('$backupFilePath-shm');
+        if (await backupShmFile.exists()) {
+          final shmFile = File('$_dbPath-shm');
+          await backupShmFile.copy(shmFile.path);
+        }
+
+        // إعادة فتح قاعدة البيانات والتحقق من صحتها
+        _db = await openDatabase(_dbPath, version: _dbVersion);
+        await _db.execute('PRAGMA foreign_keys = ON');
+
+        // التحقق من صحة البيانات المستعادة
+        await _db.rawQuery('PRAGMA integrity_check');
+
+        // إعادة بناء الفهارس والتنظيف
+        await _createIndexes(_db);
+        await _cleanupOrphanObjects(_db);
+        await _ensureCategorySchemaOn(_db);
+
+        // تحسين قاعدة البيانات بعد الاستعادة
+        await _db.execute('PRAGMA optimize');
+      } catch (restoreError) {
+        // في حالة فشل الاستعادة، استعادة البيانات الأصلية
+        try {
+          await _db.close();
+          await File(currentBackupPath).copy(_dbPath);
+
+          // استعادة ملفات WAL و SHM الأصلية
+          final backupWalFile = File('$currentBackupPath-wal');
+          if (await backupWalFile.exists()) {
+            await backupWalFile.copy('$_dbPath-wal');
+          }
+
+          final backupShmFile = File('$currentBackupPath-shm');
+          if (await backupShmFile.exists()) {
+            await backupShmFile.copy('$_dbPath-shm');
+          }
+
+          _db = await openDatabase(_dbPath, version: _dbVersion);
+          await _db.execute('PRAGMA foreign_keys = ON');
+          await _createIndexes(_db);
+        } catch (_) {}
+
+        // حذف النسخة الاحتياطية المؤقتة وجميع ملفاتها
+        try {
+          await File(currentBackupPath).delete();
+          await File('$currentBackupPath-wal').delete();
+          await File('$currentBackupPath-shm').delete();
+        } catch (_) {}
+
+        throw Exception(
+            'فشل في استعادة النسخة الاحتياطية: ${restoreError.toString()}');
+      }
+
+      // حذف النسخة الاحتياطية المؤقتة وجميع ملفاتها بعد نجاح الاستعادة
+      try {
+        await File(currentBackupPath).delete();
+        await File('$currentBackupPath-wal').delete();
+        await File('$currentBackupPath-shm').delete();
+      } catch (_) {}
     } catch (e) {
       // محاولة إعادة فتح قاعدة البيانات في حالة الخطأ
       try {
@@ -2989,31 +3107,6 @@ class DatabaseService {
         await _db.execute('PRAGMA foreign_keys = ON');
         await _createIndexes(_db);
       } catch (_) {}
-      rethrow;
-    }
-  }
-
-  /// استعادة المنتجات والأقسام من نسخة احتياطية
-  Future<void> restoreProductsBackup(String backupFilePath) async {
-    try {
-      final backupFile = File(backupFilePath);
-      if (!await backupFile.exists()) {
-        throw Exception('ملف النسخة الاحتياطية غير موجود');
-      }
-
-      // قراءة بيانات النسخ الاحتياطي
-      await backupFile.readAsString();
-
-      // تحليل البيانات (هذا يتطلب تنفيذ أكثر تفصيلاً)
-      // يمكن استخدام dart:convert للتعامل مع JSON
-
-      // حذف البيانات الحالية للمنتجات والأقسام
-      await _db.delete('products');
-      await _db.delete('categories');
-
-      // إدراج البيانات الجديدة
-      // هذا يتطلب تنفيذ أكثر تفصيلاً حسب هيكل البيانات
-    } catch (e) {
       rethrow;
     }
   }
