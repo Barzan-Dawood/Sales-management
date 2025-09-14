@@ -18,6 +18,8 @@ import 'screens/reports_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/debts_screen.dart';
 import 'screens/tests_screen.dart';
+import 'screens/advanced_reports_screen.dart';
+import 'screens/inventory_reports_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -51,6 +53,8 @@ class _AppShellState extends State<AppShell> {
       const AccountingScreen(),
       const DebtsScreen(),
       const ReportsScreen(),
+      const AdvancedReportsScreen(),
+      const InventoryReportsScreen(),
       const TestsScreen(),
       const SettingsScreen(),
     ];
@@ -232,16 +236,28 @@ class _AppShellState extends State<AppShell> {
                         isSelected: _selectedIndex == 10,
                       ),
                       _buildNavItem(
-                        icon: Icons.science,
-                        label: 'الاختبارات',
+                        icon: Icons.account_balance_wallet,
+                        label: 'التقارير المالية',
                         index: 11,
                         isSelected: _selectedIndex == 11,
                       ),
                       _buildNavItem(
-                        icon: Icons.settings,
-                        label: AppStrings.settings,
+                        icon: Icons.inventory_2,
+                        label: 'تقارير الجرد',
                         index: 12,
                         isSelected: _selectedIndex == 12,
+                      ),
+                      _buildNavItem(
+                        icon: Icons.science,
+                        label: 'الاختبارات',
+                        index: 13,
+                        isSelected: _selectedIndex == 13,
+                      ),
+                      _buildNavItem(
+                        icon: Icons.settings,
+                        label: AppStrings.settings,
+                        index: 14,
+                        isSelected: _selectedIndex == 14,
                       ),
                     ],
                   ),

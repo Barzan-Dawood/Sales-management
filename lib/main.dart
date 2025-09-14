@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'src/app_shell.dart';
 import 'src/services/db/database_service.dart';
 import 'src/services/auth/auth_provider.dart';
@@ -10,6 +11,9 @@ import 'src/utils/strings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // تهيئة بيانات اللغة العربية
+  await initializeDateFormatting('ar_IQ', null);
   // Basic crash reporting hook (prints in debug, can be wired to a service later)
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);

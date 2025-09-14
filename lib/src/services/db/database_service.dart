@@ -3316,4 +3316,375 @@ class DatabaseService {
       return {};
     }
   }
+
+  // ==================== التقارير المالية الشاملة ====================
+
+  /// قائمة الدخل الشهرية
+  Future<Map<String, dynamic>> getIncomeStatement(DateTime month) async {
+    try {
+      final startOfMonth = DateTime(month.year, month.month, 1);
+      final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+
+      print(
+          '🔍 البحث عن المبيعات من ${startOfMonth.toIso8601String()} إلى ${endOfMonth.toIso8601String()}');
+
+      // الإيرادات
+      final revenueResult = await _db.rawQuery('''
+        SELECT 
+          COALESCE(SUM(total), 0) as total_revenue,
+          COALESCE(SUM(profit), 0) as gross_profit
+        FROM sales 
+        WHERE created_at >= ? AND created_at <= ?
+      ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+
+      // تكلفة البضائع المباعة
+      final cogsResult = await _db.rawQuery('''
+        SELECT COALESCE(SUM(si.cost * si.quantity), 0) as cogs
+        FROM sale_items si
+        JOIN sales s ON si.sale_id = s.id
+        WHERE s.created_at >= ? AND s.created_at <= ?
+      ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+
+      // المصروفات
+      final expensesResult = await _db.rawQuery('''
+        SELECT COALESCE(SUM(amount), 0) as total_expenses
+        FROM expenses 
+        WHERE created_at >= ? AND created_at <= ?
+      ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+
+      final expenses = expensesResult.first['total_expenses'] as double? ?? 0.0;
+
+      final revenue = revenueResult.first['total_revenue'] as double? ?? 0.0;
+      final grossProfit = revenueResult.first['gross_profit'] as double? ?? 0.0;
+      final cogs = cogsResult.first['cogs'] as double? ?? 0.0;
+      final netProfit = grossProfit - expenses;
+
+      print(
+          '📊 النتائج النهائية: revenue=$revenue, grossProfit=$grossProfit, cogs=$cogs, netProfit=$netProfit');
+
+      return {
+        'revenue': revenue,
+        'cogs': cogs,
+        'gross_profit': grossProfit,
+        'expenses': expenses,
+        'net_profit': netProfit,
+        'month': month.month,
+        'year': month.year,
+      };
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// الميزانية العمومية
+  Future<Map<String, dynamic>> getBalanceSheet(DateTime date) async {
+    try {
+      // الأصول
+      final assetsResult = await _db.rawQuery('''
+        SELECT COALESCE(SUM(price * quantity), 0) as inventory_value
+        FROM products
+      ''');
+
+      // الخصوم (الديون المستحقة)
+      final liabilitiesResult = await _db.rawQuery('''
+        SELECT COALESCE(SUM(amount - paid), 0) as total_debts
+        FROM installments
+        WHERE paid < amount
+      ''');
+
+      // حقوق الملكية (الأرباح المحتجزة)
+      final equityResult = await _db.rawQuery('''
+        SELECT COALESCE(SUM(profit), 0) as retained_earnings
+        FROM sales
+        WHERE created_at <= ?
+      ''', [date.toIso8601String()]);
+
+      final assets = assetsResult.first['inventory_value'] as double? ?? 0.0;
+      final liabilities =
+          liabilitiesResult.first['total_debts'] as double? ?? 0.0;
+      final equity = equityResult.first['retained_earnings'] as double? ?? 0.0;
+
+      return {
+        'assets': assets,
+        'liabilities': liabilities,
+        'equity': equity,
+        'date': date.toIso8601String(),
+      };
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// تحليل الاتجاهات والتنبؤات
+  Future<Map<String, dynamic>> getTrendAnalysis(int months) async {
+    try {
+      final endDate = DateTime.now();
+      final startDate = DateTime(endDate.year, endDate.month - months, 1);
+
+      // بيانات المبيعات الشهرية
+      final monthlySales = await _db.rawQuery('''
+        SELECT 
+          strftime('%Y-%m', created_at) as month,
+          COUNT(*) as sales_count,
+          SUM(total) as total_revenue,
+          SUM(profit) as total_profit,
+          AVG(total) as avg_sale_amount
+        FROM sales
+        WHERE created_at >= ? AND created_at <= ?
+        GROUP BY strftime('%Y-%m', created_at)
+        ORDER BY month
+      ''', [startDate.toIso8601String(), endDate.toIso8601String()]);
+
+      // حساب معدل النمو
+      List<double> revenues = [];
+      for (final row in monthlySales) {
+        revenues.add((row['total_revenue'] as double? ?? 0.0));
+      }
+
+      double growthRate = 0.0;
+      if (revenues.length >= 2) {
+        final currentRevenue = revenues.last;
+        final previousRevenue = revenues[revenues.length - 2];
+        if (previousRevenue > 0) {
+          growthRate =
+              ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+        }
+      }
+
+      // التنبؤ بالشهر القادم
+      double predictedRevenue = 0.0;
+      if (revenues.isNotEmpty) {
+        final avgRevenue = revenues.reduce((a, b) => a + b) / revenues.length;
+        predictedRevenue = avgRevenue * (1 + (growthRate / 100));
+      }
+
+      return {
+        'monthly_data': monthlySales,
+        'growth_rate': growthRate,
+        'predicted_revenue': predictedRevenue,
+        'trend_direction': growthRate > 0
+            ? 'up'
+            : growthRate < 0
+                ? 'down'
+                : 'stable',
+      };
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// مؤشرات الأداء الرئيسية (KPI)
+  Future<Map<String, dynamic>> getKPIs(DateTime date) async {
+    try {
+      final startOfMonth = DateTime(date.year, date.month, 1);
+      final endOfMonth = DateTime(date.year, date.month + 1, 0, 23, 59, 59);
+
+      // إجمالي المبيعات الشهرية
+      final monthlySalesResult = await _db.rawQuery('''
+        SELECT 
+          COUNT(*) as sales_count,
+          SUM(total) as total_revenue,
+          SUM(profit) as total_profit,
+          AVG(total) as avg_sale_amount
+        FROM sales
+        WHERE created_at >= ? AND created_at <= ?
+      ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+
+      // عدد العملاء الجدد
+      final newCustomersResult = await _db.rawQuery('''
+        SELECT COUNT(*) as new_customers
+        FROM customers
+        WHERE created_at >= ? AND created_at <= ?
+      ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+
+      // معدل التحويل (العملاء الذين اشتروا)
+      final totalCustomersResult = await _db.rawQuery('''
+        SELECT COUNT(*) as total_customers
+        FROM customers
+      ''');
+
+      final customersWithSalesResult = await _db.rawQuery('''
+        SELECT COUNT(DISTINCT customer_id) as customers_with_sales
+        FROM sales
+        WHERE created_at >= ? AND created_at <= ? AND customer_id IS NOT NULL
+      ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+
+      // هامش الربح
+      final totalRevenue =
+          monthlySalesResult.first['total_revenue'] as double? ?? 0.0;
+      final totalProfit =
+          monthlySalesResult.first['total_profit'] as double? ?? 0.0;
+      final profitMargin =
+          totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0.0;
+
+      // معدل التحويل
+      final totalCustomers =
+          totalCustomersResult.first['total_customers'] as int? ?? 0;
+      final customersWithSales =
+          customersWithSalesResult.first['customers_with_sales'] as int? ?? 0;
+      final conversionRate = totalCustomers > 0
+          ? (customersWithSales / totalCustomers) * 100
+          : 0.0;
+
+      return {
+        'monthly_revenue': totalRevenue,
+        'monthly_profit': totalProfit,
+        'sales_count': monthlySalesResult.first['sales_count'] as int? ?? 0,
+        'avg_sale_amount':
+            monthlySalesResult.first['avg_sale_amount'] as double? ?? 0.0,
+        'new_customers': newCustomersResult.first['new_customers'] as int? ?? 0,
+        'profit_margin': profitMargin,
+        'conversion_rate': conversionRate,
+        'month': date.month,
+        'year': date.year,
+      };
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// تقرير الضرائب
+  Future<Map<String, dynamic>> getTaxReport(
+      DateTime startDate, DateTime endDate) async {
+    try {
+      // المبيعات الخاضعة للضريبة
+      final taxableSalesResult = await _db.rawQuery('''
+        SELECT 
+          COUNT(*) as sales_count,
+          SUM(total) as total_amount,
+          SUM(profit) as total_profit
+        FROM sales
+        WHERE created_at >= ? AND created_at <= ?
+      ''', [startDate.toIso8601String(), endDate.toIso8601String()]);
+
+      // تفاصيل المبيعات للفاتورة الضريبية
+      final salesDetails = await _db.rawQuery('''
+        SELECT 
+          s.id,
+          s.created_at,
+          s.total,
+          s.profit,
+          s.type,
+          c.name as customer_name,
+          c.phone as customer_phone
+        FROM sales s
+        LEFT JOIN customers c ON s.customer_id = c.id
+        WHERE s.created_at >= ? AND s.created_at <= ?
+        ORDER BY s.created_at DESC
+      ''', [startDate.toIso8601String(), endDate.toIso8601String()]);
+
+      final totalAmount =
+          taxableSalesResult.first['total_amount'] as double? ?? 0.0;
+      final totalProfit =
+          taxableSalesResult.first['total_profit'] as double? ?? 0.0;
+
+      // لا توجد ضرائب - المبلغ الصافي = إجمالي المبيعات
+      const taxRate = 0.0;
+      final taxAmount = 0.0;
+      final netAmount = totalAmount;
+
+      return {
+        'period_start': startDate.toIso8601String(),
+        'period_end': endDate.toIso8601String(),
+        'total_sales': totalAmount,
+        'total_profit': totalProfit,
+        'tax_rate': taxRate * 100,
+        'tax_amount': taxAmount,
+        'net_amount': netAmount,
+        'sales_count': taxableSalesResult.first['sales_count'] as int? ?? 0,
+        'sales_details': salesDetails,
+      };
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// تقرير الجرد الشامل
+  Future<Map<String, dynamic>> getInventoryReport() async {
+    try {
+      // إجمالي المخزون
+      final totalInventoryResult = await _db.rawQuery('''
+        SELECT 
+          COUNT(*) as total_products,
+          SUM(quantity) as total_quantity,
+          SUM(price * quantity) as total_value,
+          SUM(cost * quantity) as total_cost
+        FROM products
+      ''');
+
+      // المنتجات منخفضة الكمية
+      final lowStockResult = await _db.rawQuery('''
+        SELECT COUNT(*) as low_stock_count
+        FROM products
+        WHERE quantity <= 10
+      ''');
+
+      // المنتجات نفدت
+      final outOfStockResult = await _db.rawQuery('''
+        SELECT COUNT(*) as out_of_stock_count
+        FROM products
+        WHERE quantity = 0
+      ''');
+
+      // المنتجات الأكثر مبيعاً
+      final topSellingResult = await _db.rawQuery('''
+        SELECT 
+          p.name,
+          p.barcode,
+          SUM(si.quantity) as total_sold,
+          SUM(si.price * si.quantity) as total_revenue
+        FROM products p
+        JOIN sale_items si ON p.id = si.product_id
+        JOIN sales s ON si.sale_id = s.id
+        WHERE s.created_at >= date('now', '-30 days')
+        GROUP BY p.id, p.name, p.barcode
+        ORDER BY total_sold DESC
+        LIMIT 10
+      ''');
+
+      // المنتجات بطيئة الحركة
+      final slowMovingResult = await _db.rawQuery('''
+        SELECT 
+          p.name,
+          p.barcode,
+          p.quantity,
+          p.price,
+          p.cost
+        FROM products p
+        LEFT JOIN sale_items si ON p.id = si.product_id
+        LEFT JOIN sales s ON si.sale_id = s.id AND s.created_at >= date('now', '-90 days')
+        GROUP BY p.id, p.name, p.barcode, p.quantity, p.price, p.cost
+        HAVING COUNT(si.id) = 0 OR COUNT(si.id) < 3
+        ORDER BY p.quantity DESC
+        LIMIT 10
+      ''');
+
+      final totalValue =
+          totalInventoryResult.first['total_value'] as double? ?? 0.0;
+      final totalCost =
+          totalInventoryResult.first['total_cost'] as double? ?? 0.0;
+      final inventoryTurnover = totalCost > 0 ? (totalValue / totalCost) : 0.0;
+      final profitMargin =
+          totalValue > 0 ? ((totalValue - totalCost) / totalValue) * 100 : 0.0;
+
+      return {
+        'total_products':
+            totalInventoryResult.first['total_products'] as int? ?? 0,
+        'total_quantity':
+            totalInventoryResult.first['total_quantity'] as int? ?? 0,
+        'total_value': totalValue,
+        'total_cost': totalCost,
+        'inventory_turnover': inventoryTurnover,
+        'profit_margin': profitMargin,
+        'low_stock_count': lowStockResult.first['low_stock_count'] as int? ?? 0,
+        'out_of_stock_count':
+            outOfStockResult.first['out_of_stock_count'] as int? ?? 0,
+        'top_selling_products': topSellingResult,
+        'slow_moving_products': slowMovingResult,
+        'report_date': DateTime.now().toIso8601String(),
+      };
+    } catch (e) {
+      return {};
+    }
+  }
 }
