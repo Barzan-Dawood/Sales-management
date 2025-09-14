@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
@@ -2899,6 +2900,9 @@ class DatabaseService {
         await backupDir.create(recursive: true);
       }
 
+      // تنظيف النسخ القديمة (الاحتفاظ بآخر 10 نسخ فقط)
+      await _cleanupOldBackups(backupPath);
+
       // التحقق من وجود مساحة كافية
       final dbSize = await File(_dbPath).length();
       final availableSpace = await _getAvailableDiskSpace(backupPath);
@@ -3132,6 +3136,153 @@ class DatabaseService {
   }
 
   /// الحصول على إحصائيات قاعدة البيانات
+  /// تنظيف النسخ الاحتياطية القديمة (الاحتفاظ بآخر 10 نسخ فقط)
+  Future<void> _cleanupOldBackups(String backupPath) async {
+    try {
+      final backupDir = Directory(backupPath);
+      if (!await backupDir.exists()) return;
+
+      final backupFiles = await backupDir
+          .list()
+          .where((entity) => entity is File && entity.path.endsWith('.db'))
+          .cast<File>()
+          .toList();
+
+      // ترتيب الملفات حسب تاريخ التعديل (الأحدث أولاً)
+      backupFiles
+          .sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+
+      // حذف الملفات الزائدة (الاحتفاظ بآخر 10 نسخ فقط)
+      if (backupFiles.length > 10) {
+        for (int i = 10; i < backupFiles.length; i++) {
+          try {
+            await backupFiles[i].delete();
+          } catch (e) {
+            // تجاهل الأخطاء في الحذف
+          }
+        }
+      }
+    } catch (e) {
+      // تجاهل الأخطاء في التنظيف
+    }
+  }
+
+  /// التحقق من سلامة النسخة الاحتياطية
+  Future<bool> verifyBackup(String backupFilePath) async {
+    try {
+      final backupFile = File(backupFilePath);
+      if (!await backupFile.exists()) return false;
+
+      // فتح قاعدة البيانات للتحقق
+      final testDb = await openDatabase(backupFilePath, readOnly: true);
+      try {
+        // التحقق من وجود الجداول الأساسية
+        final tables = await testDb
+            .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+        final tableNames = tables.map((t) => t['name'] as String).toList();
+
+        final requiredTables = [
+          'users',
+          'products',
+          'categories',
+          'customers',
+          'sales',
+          'sale_items'
+        ];
+        for (final table in requiredTables) {
+          if (!tableNames.contains(table)) return false;
+        }
+
+        // التحقق من سلامة البيانات
+        await testDb.rawQuery('PRAGMA integrity_check');
+
+        return true;
+      } finally {
+        await testDb.close();
+      }
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// الحصول على قائمة النسخ الاحتياطية المتاحة
+  Future<List<Map<String, dynamic>>> getAvailableBackups(
+      String backupPath) async {
+    try {
+      final backupDir = Directory(backupPath);
+      if (!await backupDir.exists()) return [];
+
+      final backupFiles = await backupDir
+          .list()
+          .where((entity) => entity is File && entity.path.endsWith('.db'))
+          .cast<File>()
+          .toList();
+
+      final backups = <Map<String, dynamic>>[];
+      for (final file in backupFiles) {
+        final stat = await file.stat();
+        final size = await file.length();
+        final isValid = await verifyBackup(file.path);
+
+        backups.add({
+          'path': file.path,
+          'name': p.basename(file.path),
+          'size': size,
+          'date': stat.modified,
+          'isValid': isValid,
+        });
+      }
+
+      // ترتيب حسب التاريخ (الأحدث أولاً)
+      backups.sort(
+          (a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
+
+      return backups;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// تشغيل النسخ الاحتياطي التلقائي
+  Future<void> runAutoBackup() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final autoBackupEnabled = prefs.getBool('auto_backup_enabled') ?? false;
+      final autoBackupFrequency =
+          prefs.getString('auto_backup_frequency') ?? 'weekly';
+      final backupPath = prefs.getString('backup_path') ?? '';
+
+      if (!autoBackupEnabled || backupPath.isEmpty) return;
+
+      // التحقق من موعد آخر نسخة احتياطية
+      final lastBackupTime = prefs.getInt('last_auto_backup_time') ?? 0;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final timeSinceLastBackup = now - lastBackupTime;
+
+      bool shouldBackup = false;
+      switch (autoBackupFrequency) {
+        case 'daily':
+          shouldBackup = timeSinceLastBackup >= 24 * 60 * 60 * 1000; // 24 ساعة
+          break;
+        case 'weekly':
+          shouldBackup =
+              timeSinceLastBackup >= 7 * 24 * 60 * 60 * 1000; // 7 أيام
+          break;
+        case 'monthly':
+          shouldBackup =
+              timeSinceLastBackup >= 30 * 24 * 60 * 60 * 1000; // 30 يوم
+          break;
+      }
+
+      if (shouldBackup) {
+        await createFullBackup(backupPath);
+        await prefs.setInt('last_auto_backup_time', now);
+      }
+    } catch (e) {
+      // تسجيل الخطأ (يمكن إضافة نظام logging لاحقاً)
+    }
+  }
+
   Future<Map<String, int>> getDatabaseStats() async {
     try {
       final stats = <String, int>{};

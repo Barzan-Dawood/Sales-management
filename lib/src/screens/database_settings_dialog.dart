@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -255,6 +256,17 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             subtitle: 'نسخ جميع البيانات (مبيعات، عملاء، منتجات، إلخ)',
             color: Colors.green,
             onTap: () => _createFullBackup(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // View Available Backups
+          _buildActionCard(
+            icon: Icons.folder_open,
+            title: 'عرض النسخ المتاحة',
+            subtitle: 'عرض وإدارة النسخ الاحتياطية الموجودة',
+            color: Colors.purple,
+            onTap: () => _showAvailableBackups(),
           ),
 
           SizedBox(height: isSmallScreen ? 16 : 20),
@@ -758,6 +770,250 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
       }
     } catch (e) {
       _showSnackBar('خطأ في الاستعادة: $e', Colors.red);
+    }
+  }
+
+  Future<void> _showAvailableBackups() async {
+    try {
+      final db = context.read<DatabaseService>();
+      final backups = await db.getAvailableBackups(_backupPath);
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => _buildBackupsListDialog(backups),
+      );
+    } catch (e) {
+      _showSnackBar('خطأ في عرض النسخ الاحتياطية: $e', Colors.red);
+    }
+  }
+
+  Widget _buildBackupsListDialog(List<Map<String, dynamic>> backups) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.8,
+        height: MediaQuery.of(context).size.height * 0.7,
+        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.purple.shade600, Colors.purple.shade700],
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.folder_open,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Text(
+                      'النسخ الاحتياطية المتاحة',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: backups.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.folder_open, size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text(
+                            'لا توجد نسخ احتياطية',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: backups.length,
+                      itemBuilder: (context, index) {
+                        final backup = backups[index];
+                        return _buildBackupItem(backup);
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackupItem(Map<String, dynamic> backup) {
+    final name = backup['name'] as String;
+    final size = backup['size'] as int;
+    final date = backup['date'] as DateTime;
+    final isValid = backup['isValid'] as bool;
+
+    String formatSize(int bytes) {
+      if (bytes < 1024) return '$bytes B';
+      if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isValid ? Colors.green.shade200 : Colors.red.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isValid ? Colors.green.shade100 : Colors.red.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            isValid ? Icons.check_circle : Icons.error,
+            color: isValid ? Colors.green.shade600 : Colors.red.shade600,
+            size: 24,
+          ),
+        ),
+        title: Text(
+          name,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('الحجم: ${formatSize(size)}'),
+            Text('التاريخ: ${date.toString().split('.')[0]}'),
+            Text(
+              isValid ? 'صالح' : 'تالف',
+              style: TextStyle(
+                color: isValid ? Colors.green.shade600 : Colors.red.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) => _handleBackupAction(value, backup),
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'restore',
+              child: Row(
+                children: [
+                  Icon(Icons.restore, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Text('استعادة'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'verify',
+              child: Row(
+                children: [
+                  Icon(Icons.verified, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text('التحقق'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('حذف'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleBackupAction(
+      String action, Map<String, dynamic> backup) async {
+    final path = backup['path'] as String;
+    final db = context.read<DatabaseService>();
+
+    switch (action) {
+      case 'restore':
+        try {
+          await db.restoreFullBackup(path);
+          _showSnackBar('تم استعادة النسخة الاحتياطية بنجاح', Colors.green);
+        } catch (e) {
+          _showSnackBar('خطأ في الاستعادة: $e', Colors.red);
+        }
+        break;
+      case 'verify':
+        try {
+          final isValid = await db.verifyBackup(path);
+          _showSnackBar(
+            isValid ? 'النسخة الاحتياطية صالحة' : 'النسخة الاحتياطية تالفة',
+            isValid ? Colors.green : Colors.red,
+          );
+        } catch (e) {
+          _showSnackBar('خطأ في التحقق: $e', Colors.red);
+        }
+        break;
+      case 'delete':
+        try {
+          final file = File(path);
+          await file.delete();
+          _showSnackBar('تم حذف النسخة الاحتياطية', Colors.orange);
+          // إعادة تحميل القائمة
+          _showAvailableBackups();
+        } catch (e) {
+          _showSnackBar('خطأ في الحذف: $e', Colors.red);
+        }
+        break;
     }
   }
 

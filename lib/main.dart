@@ -42,6 +42,16 @@ Future<void> main() async {
       }());
     }
 
+    // تشغيل النسخ الاحتياطي التلقائي
+    try {
+      await databaseService.runAutoBackup();
+    } catch (e) {
+      assert(() {
+        print('Error during auto backup: $e');
+        return true;
+      }());
+    }
+
     // Check database integrity and perform cleanup if needed
     final issues = await databaseService.checkDatabaseIntegrity();
     if (issues.isNotEmpty) {
