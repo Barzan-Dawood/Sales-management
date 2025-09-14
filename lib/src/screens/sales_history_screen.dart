@@ -1079,32 +1079,73 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         return;
       }
 
-      // تحويل عناصر المبيعات إلى تنسيق مناسب للطباعة
+      // عرض خيارات الطباعة
+      final printOptions = await PrintService.showPrintOptionsDialog(context);
+      if (printOptions == null) {
+        // المستخدم ألغى العملية
+        return;
+      }
+
+      // تحويل عناصر المبيعات إلى تنسيق مناسب للطباعة مع جميع التفاصيل
       final items = saleItems
           .map((item) => {
-                'name': item['product_name'],
-                'price': item['price'],
-                'quantity': item['quantity'],
+                'name': item['product_name'] ?? 'منتج غير محدد',
+                'price': item['price'] ?? 0,
+                'quantity': item['quantity'] ?? 1,
                 'cost': item['cost'] ?? 0,
+                'barcode': item['barcode'] ?? '',
               })
           .toList();
 
-      // طباعة الفاتورة مع رقم الفاتورة الصحيح
+      // الحصول على معلومات العميل الكاملة
+      final customerName = saleDetails['customer_name'] as String?;
+      final customerPhone = saleDetails['customer_phone'] as String?;
+      final customerAddress = saleDetails['customer_address'] as String?;
+
+      // الحصول على تاريخ الاستحقاق
+      DateTime? dueDate;
+      if (saleDetails['due_date'] != null) {
+        try {
+          dueDate = DateTime.parse(saleDetails['due_date'] as String);
+        } catch (e) {
+          print('خطأ في تحليل تاريخ الاستحقاق: $e');
+        }
+      }
+
+      // الحصول على معلومات الأقساط إذا كانت متوفرة
+      List<Map<String, Object?>>? installments;
+      double? totalDebt;
+      double? downPayment;
+
+      if (saleDetails['type'] == 'installment') {
+        try {
+          installments = await db.getInstallments(saleId: saleId);
+          totalDebt = saleDetails['total'] as double?;
+          downPayment = saleDetails['down_payment'] as double?;
+        } catch (e) {
+          print('خطأ في الحصول على معلومات الأقساط: $e');
+        }
+      }
+
+      // طباعة الفاتورة مع جميع التفاصيل والخيارات المختارة
       final store = context.read<StoreConfig>();
-      final success = await PrintService.quickPrint(
+      final success = await PrintService.printInvoice(
         shopName: store.shopName,
         phone: store.phone,
         address: store.address,
         items: items,
         paymentType: saleDetails['type'] as String,
-        customerName: saleDetails['customer_name'] as String?,
-        customerPhone: saleDetails['customer_phone'] as String?,
-        customerAddress: null,
-        dueDate: saleDetails['due_date'] != null
-            ? DateTime.parse(saleDetails['due_date'] as String)
-            : null,
-        invoiceNumber:
-            saleId.toString(), // استخدام رقم الفاتورة من قاعدة البيانات
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerAddress: customerAddress,
+        dueDate: dueDate,
+        invoiceNumber: saleId.toString(),
+        installments: installments,
+        totalDebt: totalDebt,
+        downPayment: downPayment,
+        pageFormat: printOptions['pageFormat'] as String,
+        showLogo: printOptions['showLogo'] as bool,
+        showBarcode: printOptions['showBarcode'] as bool,
         context: context,
       );
 
@@ -1113,8 +1154,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تم طباعة الفاتورة #$saleId بنجاح'),
+            content: Text('تم طباعة الفاتورة #$saleId بنجاح مع جميع التفاصيل'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
       } else {

@@ -95,14 +95,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                             color: color,
                             iconData: iconData,
                             onTap: () {
-                              Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => CategoryProductsScreen(
-                                  categoryId: c['id'] as int,
-                                  categoryName:
-                                      c['name']?.toString() ?? 'القسم',
-                                  categoryColor: color,
-                                ),
-                              ));
+                              _showCategoryProductsDialog(
+                                context,
+                                c['id'] as int,
+                                c['name']?.toString() ?? 'القسم',
+                                color,
+                              );
                             },
                             onEdit: () => _openEditor(category: c),
                             onDelete: () => _delete(c['id'] as int),
@@ -160,10 +158,16 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: Dialog(
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
+              constraints: const BoxConstraints(
+                maxWidth: 500,
+                maxHeight: 600,
+                minWidth: 400,
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: SingleChildScrollView(
                   child: Form(
                     key: formKey,
@@ -734,3 +738,29 @@ const _colorOptions = <Color>[
   Color(0xFF9E9E9E), // رمادي
   Color(0xFF424242), // رمادي داكن
 ];
+
+void _showCategoryProductsDialog(
+  BuildContext context,
+  int categoryId,
+  String categoryName,
+  Color categoryColor,
+) {
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: 1200,
+          maxHeight: 800,
+          minWidth: 900,
+        ),
+        child: CategoryProductsScreen(
+          categoryId: categoryId,
+          categoryName: categoryName,
+          categoryColor: categoryColor,
+        ),
+      ),
+    ),
+  );
+}

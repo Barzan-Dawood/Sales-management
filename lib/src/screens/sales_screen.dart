@@ -2090,20 +2090,20 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                         // Primary action buttons row
                                                                         Row(
                                                                           children: [
-                                                                            // زر اختيار نوع الطباعة
+                                                                            // زر اختيار خيارات الطباعة
                                                                             Expanded(
                                                                               child: ElevatedButton.icon(
                                                                                 onPressed: () async {
-                                                                                  // عرض حوار اختيار نوع الطباعة
-                                                                                  final result = await _showPrintTypeDialog(context);
+                                                                                  // عرض حوار خيارات الطباعة المتقدم
+                                                                                  final result = await PrintService.showPrintOptionsDialog(context);
                                                                                   if (result != null) {
                                                                                     setDialogState(() {
-                                                                                      _selectedPrintType = result;
+                                                                                      _selectedPrintType = result['pageFormat'] as String;
                                                                                     });
                                                                                     if (context.mounted) {
                                                                                       ScaffoldMessenger.of(context).showSnackBar(
                                                                                         SnackBar(
-                                                                                          content: Text('تم اختيار طابعة: ${_getPrintTypeDisplayName(result)}'),
+                                                                                          content: Text('تم تحديث إعدادات الطباعة: ${_getPrintTypeDisplayName(result['pageFormat'] as String)}'),
                                                                                           backgroundColor: Colors.blue,
                                                                                           duration: const Duration(seconds: 2),
                                                                                         ),
@@ -2112,9 +2112,9 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                   }
                                                                                 },
                                                                                 icon: const Icon(Icons.settings, size: 20),
-                                                                                label: Text(
-                                                                                  _getPrintTypeDisplayName(_selectedPrintType),
-                                                                                  style: const TextStyle(
+                                                                                label: const Text(
+                                                                                  'اختر نوع طباعة',
+                                                                                  style: TextStyle(
                                                                                     fontSize: 12,
                                                                                     fontWeight: FontWeight.w600,
                                                                                   ),
@@ -2206,7 +2206,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                     // عرض رسالة النجاح
                                                                                     ScaffoldMessenger.of(context).showSnackBar(
                                                                                       const SnackBar(
-                                                                                        content: Text('تم حفظ الطلب بنجاح'),
+                                                                                        content: Text('تم البيع بنجاح'),
                                                                                         backgroundColor: Colors.green,
                                                                                         duration: Duration(seconds: 2),
                                                                                       ),
@@ -2214,9 +2214,9 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                   }
                                                                                 },
                                                                                 icon: const Icon(Icons.check, size: 20),
-                                                                                label: const Text('موافق'),
+                                                                                label: const Text('تأكيد البيع'),
                                                                                 style: ElevatedButton.styleFrom(
-                                                                                  backgroundColor: Colors.green.shade600,
+                                                                                  backgroundColor: Colors.purple.shade600,
                                                                                   foregroundColor: Colors.white,
                                                                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                                                                   shape: RoundedRectangleBorder(
@@ -3009,237 +3009,6 @@ class _SalesScreenState extends State<SalesScreen> {
     }
   }
 
-  // دالة عرض حوار اختيار نوع الطباعة
-  Future<String?> _showPrintTypeDialog(BuildContext context) async {
-    return await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.print,
-                color: Theme.of(context).colorScheme.primary,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              const Text('اختيار نوع الطباعة'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'اختر نوع الورق المناسب للطباعة:',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 20),
-
-              // طابعة حرارية 58mm
-              Container(
-                decoration: BoxDecoration(
-                  color: _selectedPrintType == '58'
-                      ? Colors.orange.shade50
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  border: _selectedPrintType == '58'
-                      ? Border.all(color: Colors.orange.shade300, width: 2)
-                      : null,
-                ),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.receipt,
-                    color: _selectedPrintType == '58'
-                        ? Colors.orange.shade700
-                        : Colors.orange,
-                  ),
-                  title: Text(
-                    'طابعة حرارية 58mm',
-                    style: TextStyle(
-                      fontWeight: _selectedPrintType == '58'
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: _selectedPrintType == '58'
-                          ? Colors.orange.shade700
-                          : null,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'فواتير صغيرة ومضغوطة',
-                    style: TextStyle(
-                      color: _selectedPrintType == '58'
-                          ? Colors.orange.shade600
-                          : null,
-                    ),
-                  ),
-                  trailing: _selectedPrintType == '58'
-                      ? Icon(Icons.check_circle, color: Colors.orange.shade700)
-                      : null,
-                  onTap: () {
-                    Navigator.of(context).pop('58');
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // طابعة حرارية 80mm
-              Container(
-                decoration: BoxDecoration(
-                  color: _selectedPrintType == '80'
-                      ? Colors.blue.shade50
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  border: _selectedPrintType == '80'
-                      ? Border.all(color: Colors.blue.shade300, width: 2)
-                      : null,
-                ),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.receipt_long,
-                    color: _selectedPrintType == '80'
-                        ? Colors.blue.shade700
-                        : Colors.blue,
-                  ),
-                  title: Text(
-                    'طابعة حرارية 80mm',
-                    style: TextStyle(
-                      fontWeight: _selectedPrintType == '80'
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: _selectedPrintType == '80'
-                          ? Colors.blue.shade700
-                          : null,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'فواتير عادية ومقروءة',
-                    style: TextStyle(
-                      color: _selectedPrintType == '80'
-                          ? Colors.blue.shade600
-                          : null,
-                    ),
-                  ),
-                  trailing: _selectedPrintType == '80'
-                      ? Icon(Icons.check_circle, color: Colors.blue.shade700)
-                      : null,
-                  onTap: () {
-                    Navigator.of(context).pop('80');
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // ورقة A5
-              Container(
-                decoration: BoxDecoration(
-                  color: _selectedPrintType == 'A5'
-                      ? Colors.green.shade50
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  border: _selectedPrintType == 'A5'
-                      ? Border.all(color: Colors.green.shade300, width: 2)
-                      : null,
-                ),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.description,
-                    color: _selectedPrintType == 'A5'
-                        ? Colors.green.shade700
-                        : Colors.green,
-                  ),
-                  title: Text(
-                    'ورقة A5',
-                    style: TextStyle(
-                      fontWeight: _selectedPrintType == 'A5'
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: _selectedPrintType == 'A5'
-                          ? Colors.green.shade700
-                          : null,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'فواتير متوسطة الحجم',
-                    style: TextStyle(
-                      color: _selectedPrintType == 'A5'
-                          ? Colors.green.shade600
-                          : null,
-                    ),
-                  ),
-                  trailing: _selectedPrintType == 'A5'
-                      ? Icon(Icons.check_circle, color: Colors.green.shade700)
-                      : null,
-                  onTap: () {
-                    Navigator.of(context).pop('A5');
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // ورقة A4
-              Container(
-                decoration: BoxDecoration(
-                  color: _selectedPrintType == 'A4'
-                      ? Colors.purple.shade50
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  border: _selectedPrintType == 'A4'
-                      ? Border.all(color: Colors.purple.shade300, width: 2)
-                      : null,
-                ),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.picture_as_pdf,
-                    color: _selectedPrintType == 'A4'
-                        ? Colors.purple.shade700
-                        : Colors.purple,
-                  ),
-                  title: Text(
-                    'ورقة A4',
-                    style: TextStyle(
-                      fontWeight: _selectedPrintType == 'A4'
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: _selectedPrintType == 'A4'
-                          ? Colors.purple.shade700
-                          : null,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'فواتير تفصيلية ومهنية',
-                    style: TextStyle(
-                      color: _selectedPrintType == 'A4'
-                          ? Colors.purple.shade600
-                          : null,
-                    ),
-                  ),
-                  trailing: _selectedPrintType == 'A4'
-                      ? Icon(Icons.check_circle, color: Colors.purple.shade700)
-                      : null,
-                  onTap: () {
-                    Navigator.of(context).pop('A4');
-                  },
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('إلغاء'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _printInvoice(BuildContext context) async {
     print('=== بدء عملية طباعة الفاتورة ===');
     print('عدد المنتجات في آخر فاتورة: ${_lastInvoiceItems.length}');
@@ -3251,7 +3020,10 @@ class _SalesScreenState extends State<SalesScreen> {
     final phone = store.phone;
     final address = store.address;
 
-    // استخدام خدمة الطباعة مع نوع الطباعة المختار
+    // الحصول على الإعدادات المحفوظة من PrintService
+    final savedSettings = PrintService.getSavedSettings();
+
+    // استخدام خدمة الطباعة مع الإعدادات المحفوظة
     final success = await PrintService.printInvoice(
       shopName: shopName,
       phone: phone,
@@ -3263,9 +3035,11 @@ class _SalesScreenState extends State<SalesScreen> {
       customerAddress:
           _lastCustomerAddress.isNotEmpty ? _lastCustomerAddress : null,
       dueDate: _lastDueDate,
-      pageFormat: _selectedPrintType, // استخدام نوع الطباعة المختار
-      showLogo: true, // إظهار الشعار
-      showBarcode: true, // إظهار الباركود
+      pageFormat:
+          savedSettings['pageFormat'] as String, // استخدام الإعدادات المحفوظة
+      showLogo: savedSettings['showLogo'] as bool, // إظهار الشعار حسب الإعدادات
+      showBarcode:
+          savedSettings['showBarcode'] as bool, // إظهار الباركود حسب الإعدادات
       invoiceNumber: _lastInvoiceId?.toString(), // تمرير رقم الفاتورة
       installments: _lastInstallments, // معلومات الأقساط
       totalDebt: _lastTotalDebt, // إجمالي الدين
@@ -3277,7 +3051,7 @@ class _SalesScreenState extends State<SalesScreen> {
       print('تمت عملية الطباعة بنجاح');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('تم طباعة الفاتورة بنجاح'),
+          content: Text('تم طباعة الفاتورة بنجاح مع الإعدادات المختارة'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
         ),

@@ -604,15 +604,16 @@ class PrintService {
           ),
           content: ConstrainedBox(
             constraints: const BoxConstraints(
-              maxWidth: 350,
-              minWidth: 300,
+              maxWidth: 650,
+              minWidth: 600,
+              maxHeight: 750,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // اختيار نوع الورق
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: Colors.grey[50],
                     borderRadius: BorderRadius.circular(8),
@@ -628,42 +629,122 @@ class PrintService {
                           fontSize: 14,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: selectedFormat,
                         isExpanded: true,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                                color: Colors.blue.shade400, width: 2),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 16),
+                          prefixIcon: Icon(
+                            Icons.print,
+                            color: Colors.blue.shade600,
+                            size: 20,
+                          ),
+                          hintText: 'اختر نوع الورق',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 11,
+                          ),
                         ),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                        dropdownColor: Colors.white,
+                        selectedItemBuilder: (BuildContext context) {
+                          return InvoicePdf.getAvailablePageFormats()
+                              .map<Widget>((String format) {
+                            final info = InvoicePdf.getPageFormatInfo(format);
+                            return Container(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                info['description'] ?? format,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList();
+                        },
                         items:
                             InvoicePdf.getAvailablePageFormats().map((format) {
                           final info = InvoicePdf.getPageFormatInfo(format);
-                          return DropdownMenuItem(
+                          return DropdownMenuItem<String>(
                             value: format,
                             child: Container(
-                              constraints: const BoxConstraints(minHeight: 40),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 8),
+                              constraints: const BoxConstraints(
+                                  minHeight: 65, maxHeight: 75),
+                              child: Row(
                                 children: [
-                                  Flexible(
-                                    child: Text(
-                                      info['description'] ?? format,
-                                      style: const TextStyle(fontSize: 12),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 2,
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade400,
+                                      shape: BoxShape.circle,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${info['width']?.toStringAsFixed(0)} x ${info['height']?.toStringAsFixed(0)}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey[600],
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          info['description'] ?? format,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 2,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${info['width']?.toStringAsFixed(0)} × ${info['height']?.toStringAsFixed(0)} مم',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ],
                                     ),
-                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Icon(
+                                    Icons.check_circle_outline,
+                                    color: selectedFormat == format
+                                        ? Colors.green.shade600
+                                        : Colors.transparent,
+                                    size: 20,
                                   ),
                                 ],
                               ),
@@ -777,8 +858,8 @@ class PrintService {
                   'showBarcode': showBarcode,
                 });
               },
-              icon: const Icon(Icons.print),
-              label: const Text('طباعة'),
+              icon: const Icon(Icons.check),
+              label: const Text('موافق'),
             ),
           ],
         ),
