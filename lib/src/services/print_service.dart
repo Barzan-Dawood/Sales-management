@@ -556,7 +556,7 @@ class PrintService {
 
       return true;
     } catch (e) {
-       if (context != null) {
+      if (context != null) {
         String errorMessage = 'خطأ في الطباعة';
 
         // تحسين رسائل الخطأ
@@ -827,10 +827,9 @@ class PrintService {
     String? invoiceNumber, // رقم الفاتورة من قاعدة البيانات
     BuildContext? context,
   }) async {
-  
     // فحص أن هناك منتجات للطباعة
     if (items.isEmpty) {
-       if (context != null) {
+      if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('لا توجد منتجات للطباعة'),
@@ -857,6 +856,589 @@ class PrintService {
       showBarcode: _savedShowBarcode,
       invoiceNumber: invoiceNumber,
       context: context,
+    );
+  }
+
+  // طباعة التقارير المالية
+  static Future<bool> printFinancialReport({
+    required String reportType,
+    required String title,
+    required List<MapEntry<String, String>> items,
+    required DateTime reportDate,
+    String? shopName,
+    String? phone,
+    String? address,
+    BuildContext? context,
+  }) async {
+    try {
+      debugPrint('=== بدء طباعة التقرير المالي ===');
+      debugPrint('نوع التقرير: $reportType');
+      debugPrint('العنوان: $title');
+
+      final pdfBytes = await _generateFinancialReportPDF(
+        reportType: reportType,
+        title: title,
+        items: items,
+        reportDate: reportDate,
+        shopName: shopName,
+        phone: phone,
+        address: address,
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+        name: '${reportType}_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      debugPrint('تم طباعة التقرير المالي بنجاح');
+      return true;
+    } catch (e) {
+      debugPrint('خطأ في طباعة التقرير المالي: $e');
+      if (context != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في طباعة التقرير: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
+  // طباعة تقارير الجرد
+  static Future<bool> printInventoryReport({
+    required String reportType,
+    required String title,
+    required List<MapEntry<String, String>> items,
+    required DateTime reportDate,
+    String? shopName,
+    String? phone,
+    String? address,
+    BuildContext? context,
+  }) async {
+    try {
+      debugPrint('=== بدء طباعة تقرير الجرد ===');
+      debugPrint('نوع التقرير: $reportType');
+      debugPrint('العنوان: $title');
+
+      final pdfBytes = await _generateInventoryReportPDF(
+        reportType: reportType,
+        title: title,
+        items: items,
+        reportDate: reportDate,
+        shopName: shopName,
+        phone: phone,
+        address: address,
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+        name: '${reportType}_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      debugPrint('تم طباعة تقرير الجرد بنجاح');
+      return true;
+    } catch (e) {
+      debugPrint('خطأ في طباعة تقرير الجرد: $e');
+      if (context != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في طباعة التقرير: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
+  // طباعة تقارير الجدول (مثل الأكثر مبيعاً)
+  static Future<bool> printTableReport({
+    required String reportType,
+    required String title,
+    required List<String> headers,
+    required List<List<String>> rows,
+    required DateTime reportDate,
+    String? shopName,
+    String? phone,
+    String? address,
+    BuildContext? context,
+  }) async {
+    try {
+      debugPrint('=== بدء طباعة تقرير الجدول ===');
+      debugPrint('نوع التقرير: $reportType');
+      debugPrint('العنوان: $title');
+      debugPrint('عدد الصفوف: ${rows.length}');
+
+      final pdfBytes = await _generateTableReportPDF(
+        reportType: reportType,
+        title: title,
+        headers: headers,
+        rows: rows,
+        reportDate: reportDate,
+        shopName: shopName,
+        phone: phone,
+        address: address,
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+        name: '${reportType}_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      debugPrint('تم طباعة تقرير الجدول بنجاح');
+      return true;
+    } catch (e) {
+      debugPrint('خطأ في طباعة تقرير الجدول: $e');
+      if (context != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في طباعة التقرير: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
+  // إنشاء PDF للتقارير المالية
+  static Future<Uint8List> _generateFinancialReportPDF({
+    required String reportType,
+    required String title,
+    required List<MapEntry<String, String>> items,
+    required DateTime reportDate,
+    String? shopName,
+    String? phone,
+    String? address,
+  }) async {
+    final doc = pw.Document();
+    final date = DateFormat('d - M - yyyy').format(reportDate);
+    final arabicFont = await _loadArabicFont();
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (context) {
+          return pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // رأس التقرير
+                _buildReportHeader(
+                    title, date, shopName, phone, address, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // محتوى التقرير
+                _buildFinancialReportContent(items, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // تذييل التقرير
+                _buildReportFooter(arabicFont),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return doc.save();
+  }
+
+  // إنشاء PDF لتقارير الجرد
+  static Future<Uint8List> _generateInventoryReportPDF({
+    required String reportType,
+    required String title,
+    required List<MapEntry<String, String>> items,
+    required DateTime reportDate,
+    String? shopName,
+    String? phone,
+    String? address,
+  }) async {
+    final doc = pw.Document();
+    final date = DateFormat('d - M - yyyy').format(reportDate);
+    final arabicFont = await _loadArabicFont();
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (context) {
+          return pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // رأس التقرير
+                _buildReportHeader(
+                    title, date, shopName, phone, address, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // محتوى التقرير
+                _buildInventoryReportContent(items, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // تذييل التقرير
+                _buildReportFooter(arabicFont),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return doc.save();
+  }
+
+  // إنشاء PDF لتقارير الجدول
+  static Future<Uint8List> _generateTableReportPDF({
+    required String reportType,
+    required String title,
+    required List<String> headers,
+    required List<List<String>> rows,
+    required DateTime reportDate,
+    String? shopName,
+    String? phone,
+    String? address,
+  }) async {
+    final doc = pw.Document();
+    final date = DateFormat('d - M - yyyy').format(reportDate);
+    final arabicFont = await _loadArabicFont();
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (context) {
+          return pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // رأس التقرير
+                _buildReportHeader(
+                    title, date, shopName, phone, address, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // محتوى التقرير
+                _buildTableReportContent(headers, rows, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // تذييل التقرير
+                _buildReportFooter(arabicFont),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return doc.save();
+  }
+
+  // بناء رأس التقرير
+  static pw.Widget _buildReportHeader(
+    String title,
+    String date,
+    String? shopName,
+    String? phone,
+    String? address,
+    pw.Font arabicFont,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(
+            title,
+            style: pw.TextStyle(
+              fontSize: 18,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          if (shopName != null) ...[
+            pw.SizedBox(height: 8),
+            pw.Text(
+              shopName,
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                font: arabicFont,
+              ),
+              textAlign: pw.TextAlign.center,
+            ),
+          ],
+          if (phone != null) ...[
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'الهاتف: $phone',
+              style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              textAlign: pw.TextAlign.center,
+            ),
+          ],
+          if (address != null) ...[
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'العنوان: $address',
+              style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              textAlign: pw.TextAlign.center,
+            ),
+          ],
+          pw.SizedBox(height: 8),
+          pw.Divider(),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            'تاريخ التقرير: $date',
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // بناء محتوى التقرير المالي
+  static pw.Widget _buildFinancialReportContent(
+    List<MapEntry<String, String>> items,
+    pw.Font arabicFont,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Table(
+        border: pw.TableBorder.all(width: 0.5, color: PdfColors.grey),
+        columnWidths: {
+          0: const pw.FlexColumnWidth(2),
+          1: const pw.FlexColumnWidth(1),
+        },
+        children: [
+          // رأس الجدول
+          pw.TableRow(
+            decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+            children: [
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Text(
+                  'البند',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    font: arabicFont,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Text(
+                  'القيمة',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    font: arabicFont,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+          // صفوف البيانات
+          ...items.map((item) => pw.TableRow(
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      item.key,
+                      style: pw.TextStyle(fontSize: 10, font: arabicFont),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      item.value,
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: arabicFont,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                ],
+              )),
+        ],
+      ),
+    );
+  }
+
+  // بناء محتوى تقرير الجرد
+  static pw.Widget _buildInventoryReportContent(
+    List<MapEntry<String, String>> items,
+    pw.Font arabicFont,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Table(
+        border: pw.TableBorder.all(width: 0.5, color: PdfColors.grey),
+        columnWidths: {
+          0: const pw.FlexColumnWidth(2),
+          1: const pw.FlexColumnWidth(1),
+        },
+        children: [
+          // رأس الجدول
+          pw.TableRow(
+            decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+            children: [
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Text(
+                  'المؤشر',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    font: arabicFont,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Text(
+                  'القيمة',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    font: arabicFont,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+          // صفوف البيانات
+          ...items.map((item) => pw.TableRow(
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      item.key,
+                      style: pw.TextStyle(fontSize: 10, font: arabicFont),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      item.value,
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: arabicFont,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                ],
+              )),
+        ],
+      ),
+    );
+  }
+
+  // بناء محتوى تقرير الجدول
+  static pw.Widget _buildTableReportContent(
+    List<String> headers,
+    List<List<String>> rows,
+    pw.Font arabicFont,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Table(
+        border: pw.TableBorder.all(width: 0.5, color: PdfColors.grey),
+        children: [
+          // رأس الجدول
+          pw.TableRow(
+            decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+            children: headers.reversed
+                .map((header) => pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        header,
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          fontWeight: pw.FontWeight.bold,
+                          font: arabicFont,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ))
+                .toList(),
+          ),
+          // صفوف البيانات
+          ...rows.map((row) => pw.TableRow(
+                children: row.reversed
+                    .map((cell) => pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: pw.Text(
+                            cell,
+                            style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ))
+                    .toList(),
+              )),
+        ],
+      ),
+    );
+  }
+
+  // بناء تذييل التقرير
+  static pw.Widget _buildReportFooter(pw.Font arabicFont) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        pw.Divider(),
+        pw.SizedBox(height: 8),
+        pw.Text(
+          'تم إنشاء هذا التقرير بواسطة نظام إدارة المكتب',
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: pw.FontWeight.bold,
+            font: arabicFont,
+          ),
+          textAlign: pw.TextAlign.center,
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          'تاريخ الطباعة: ${DateFormat('d - M - yyyy HH:mm').format(DateTime.now())}',
+          style: pw.TextStyle(fontSize: 8, font: arabicFont),
+          textAlign: pw.TextAlign.center,
+        ),
+      ],
     );
   }
 }

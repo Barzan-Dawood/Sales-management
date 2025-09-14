@@ -61,17 +61,37 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(store.appTitle),
+        backgroundColor: Colors.blue.shade600,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        shadowColor: Colors.blue.shade200,
+        title: Text(
+          store.appTitle,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: _selectedIndex != 0
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => setState(() => _selectedIndex = 0),
+                tooltip: 'العودة للرئيسية',
+              )
+            : null,
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Center(
-              child: Text(auth.currentUser?['name']?.toString() ?? ''),
+              child: Text(
+                auth.currentUser?['name']?.toString() ?? '',
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ),
           IconButton(
             tooltip: AppStrings.logout,
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () => context.read<AuthProvider>().logout(),
           ),
         ],

@@ -3687,4 +3687,247 @@ class DatabaseService {
       return {};
     }
   }
+
+  /// حذف جميع البيانات من قاعدة البيانات (نسخة محدثة)
+  Future<void> deleteAllDataNew() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف جميع الجداول بالترتيب الصحيح لتجنب مشاكل المفاتيح الخارجية
+        await txn.delete('installments');
+        await txn.delete('sale_items');
+        await txn.delete('sales');
+        await txn.delete('products');
+        await txn.delete('categories');
+        await txn.delete('customers');
+        await txn.delete('users');
+
+        // إعادة تعيين AUTO_INCREMENT
+        await txn.execute('DELETE FROM sqlite_sequence');
+
+        // إعادة إنشاء البيانات الأساسية
+        await _seedData(_db);
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف جميع البيانات: $e');
+    }
+  }
+
+  /// حذف المنتجات والأقسام فقط
+  Future<void> deleteProductsAndCategories() async {
+    try {
+      await _db.transaction((txn) async {
+        // تعطيل المفاتيح الخارجية مؤقتاً
+        await txn.execute('PRAGMA foreign_keys = OFF');
+
+        // حذف sale_items أولاً (لأنها مرتبطة بالمنتجات)
+        final saleItemsDeleted = await txn.delete('sale_items');
+        print('تم حذف $saleItemsDeleted سجل مبيعات');
+
+        // حذف المنتجات
+        final productsDeleted = await txn.delete('products');
+        print('تم حذف $productsDeleted منتج');
+
+        // حذف الأقسام
+        final categoriesDeleted = await txn.delete('categories');
+        print('تم حذف $categoriesDeleted قسم');
+
+        // إعادة تعيين AUTO_INCREMENT للمنتجات والأقسام
+        await txn.execute(
+            'DELETE FROM sqlite_sequence WHERE name IN ("products", "categories", "sale_items")');
+
+        // لا يتم إنشاء أي قسم جديد - حذف كامل فقط
+
+        // إعادة تفعيل المفاتيح الخارجية
+        await txn.execute('PRAGMA foreign_keys = ON');
+      });
+    } catch (e) {
+      // التأكد من إعادة تفعيل المفاتيح الخارجية حتى في حالة الخطأ
+      try {
+        await _db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+      print('خطأ في حذف المنتجات والأقسام: $e');
+      throw Exception('خطأ في حذف المنتجات والأقسام: $e');
+    }
+  }
+
+  /// حذف الإحصائيات والتقارير
+  Future<void> deleteReportsAndStatistics() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف سجلات الأداء إذا كانت موجودة
+        try {
+          await txn.execute('DELETE FROM performance_logs');
+        } catch (e) {
+          // الجدول قد لا يكون موجوداً
+        }
+
+        // حذف التقارير المؤقتة إذا كانت موجودة
+        try {
+          await txn.execute('DELETE FROM temp_reports');
+        } catch (e) {
+          // الجدول قد لا يكون موجوداً
+        }
+
+        // حذف سجلات النسخ الاحتياطي إذا كانت موجودة
+        try {
+          await txn.execute('DELETE FROM backup_logs');
+        } catch (e) {
+          // الجدول قد لا يكون موجوداً
+        }
+
+        // حذف البيانات الإحصائية من الجداول الموجودة
+        // حذف سجلات المدفوعات (إحصائيات مالية)
+        await txn.delete('payments');
+
+        // حذف سجلات المصروفات (إحصائيات مالية)
+        await txn.delete('expenses');
+
+        // حذف الأقساط (إحصائيات مالية)
+        await txn.delete('installments');
+
+        // إعادة تعيين AUTO_INCREMENT للجداول المحذوفة
+        await txn.execute(
+            'DELETE FROM sqlite_sequence WHERE name IN ("payments", "expenses", "installments")');
+
+        // تنظيف أي جداول مؤقتة أخرى
+        await txn
+            .execute('DELETE FROM sqlite_sequence WHERE name LIKE "%temp%"');
+        await txn
+            .execute('DELETE FROM sqlite_sequence WHERE name LIKE "%log%"');
+        await txn
+            .execute('DELETE FROM sqlite_sequence WHERE name LIKE "%report%"');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف الإحصائيات والتقارير: $e');
+    }
+  }
+
+  /// حذف المبيعات فقط
+  Future<void> deleteSalesOnly() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف الأقساط أولاً (لأنها مرتبطة بالمبيعات)
+        await txn.delete('installments');
+
+        // حذف سجلات المبيعات
+        await txn.delete('sale_items');
+
+        // حذف المبيعات
+        await txn.delete('sales');
+
+        // إعادة تعيين AUTO_INCREMENT
+        await txn.execute(
+            'DELETE FROM sqlite_sequence WHERE name IN ("sales", "sale_items", "installments")');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف المبيعات: $e');
+    }
+  }
+
+  /// حذف العملاء فقط
+  Future<void> deleteCustomersOnly() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف المدفوعات المرتبطة بالعملاء
+        await txn.delete('payments');
+
+        // حذف العملاء
+        await txn.delete('customers');
+
+        // إعادة تعيين AUTO_INCREMENT
+        await txn.execute(
+            'DELETE FROM sqlite_sequence WHERE name IN ("customers", "payments")');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف العملاء: $e');
+    }
+  }
+
+  /// حذف المدفوعات فقط
+  Future<void> deletePaymentsOnly() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف المدفوعات
+        await txn.delete('payments');
+
+        // إعادة تعيين AUTO_INCREMENT
+        await txn
+            .execute('DELETE FROM sqlite_sequence WHERE name = "payments"');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف المدفوعات: $e');
+    }
+  }
+
+  /// حذف المصروفات فقط
+  Future<void> deleteExpensesOnly() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف المصروفات
+        await txn.delete('expenses');
+
+        // إعادة تعيين AUTO_INCREMENT
+        await txn
+            .execute('DELETE FROM sqlite_sequence WHERE name = "expenses"');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف المصروفات: $e');
+    }
+  }
+
+  /// حذف الأقساط فقط
+  Future<void> deleteInstallmentsOnly() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف الأقساط
+        await txn.delete('installments');
+
+        // إعادة تعيين AUTO_INCREMENT
+        await txn
+            .execute('DELETE FROM sqlite_sequence WHERE name = "installments"');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف الأقساط: $e');
+    }
+  }
+
+  /// حذف المستخدمين فقط
+  Future<void> deleteUsersOnly() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف المستخدمين
+        await txn.delete('users');
+
+        // إعادة تعيين AUTO_INCREMENT
+        await txn.execute('DELETE FROM sqlite_sequence WHERE name = "users"');
+
+        // إعادة إنشاء المستخدم الافتراضي
+        await txn.insert('users', {
+          'name': 'مدير النظام',
+          'username': 'admin',
+          'password': 'admin123',
+          'role': 'manager',
+          'active': 1,
+        });
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف المستخدمين: $e');
+    }
+  }
+
+  /// حذف الموردين فقط
+  Future<void> deleteSuppliersOnly() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف الموردين
+        await txn.delete('suppliers');
+
+        // إعادة تعيين AUTO_INCREMENT
+        await txn
+            .execute('DELETE FROM sqlite_sequence WHERE name = "suppliers"');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف الموردين: $e');
+    }
+  }
 }

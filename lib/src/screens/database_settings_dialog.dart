@@ -24,7 +24,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadSettings();
   }
 
@@ -209,6 +209,11 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                     icon: Icon(Icons.settings, size: isSmallScreen ? 18 : 20),
                     text: isSmallScreen ? 'الإعدادات' : 'الإعدادات',
                   ),
+                  Tab(
+                    icon: Icon(Icons.delete_forever,
+                        size: isSmallScreen ? 18 : 20),
+                    text: isSmallScreen ? 'الحذف' : 'حذف البيانات',
+                  ),
                 ],
               ),
             ),
@@ -221,6 +226,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   _buildBackupTab(),
                   _buildRestoreTab(),
                   _buildSettingsTab(),
+                  _buildDeleteTab(),
                 ],
               ),
             ),
@@ -1176,5 +1182,650 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         );
       },
     );
+  }
+
+  Widget _buildDeleteTab() {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'حذف البيانات',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 16 : 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Warning
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.red.shade600),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'تحذير: عمليات الحذف لا يمكن التراجع عنها. تأكد من إنشاء نسخة احتياطية قبل الحذف.',
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: isSmallScreen ? 16 : 20),
+
+          // Delete Products and Categories
+          _buildDeleteActionCard(
+            icon: Icons.inventory,
+            title: 'حذف المنتجات والأقسام',
+            subtitle:
+                'حذف جميع المنتجات والأقسام وسجلات المبيعات (لن يتم إنشاء أي قسم جديد)',
+            color: Colors.orange,
+            onTap: () => _deleteProductsAndCategories(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Reports and Statistics
+          _buildDeleteActionCard(
+            icon: Icons.analytics,
+            title: 'حذف الإحصائيات والتقارير',
+            subtitle:
+                'حذف المدفوعات والمصروفات والأقساط (سيتم الاحتفاظ بالبيانات الأساسية)',
+            color: Colors.purple,
+            onTap: () => _deleteReportsAndStatistics(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Sales Only
+          _buildDeleteActionCard(
+            icon: Icons.shopping_cart,
+            title: 'حذف المبيعات فقط',
+            subtitle:
+                'حذف جميع المبيعات وسجلات المبيعات (سيتم الاحتفاظ بالمنتجات والعملاء)',
+            color: Colors.blue,
+            onTap: () => _deleteSalesOnly(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Customers Only
+          _buildDeleteActionCard(
+            icon: Icons.people,
+            title: 'حذف العملاء فقط',
+            subtitle: 'حذف جميع العملاء (سيتم الاحتفاظ بالمبيعات والمنتجات)',
+            color: Colors.green,
+            onTap: () => _deleteCustomersOnly(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Payments Only
+          _buildDeleteActionCard(
+            icon: Icons.payment,
+            title: 'حذف المدفوعات فقط',
+            subtitle:
+                'حذف جميع سجلات المدفوعات (سيتم الاحتفاظ بالبيانات الأخرى)',
+            color: Colors.teal,
+            onTap: () => _deletePaymentsOnly(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Expenses Only
+          _buildDeleteActionCard(
+            icon: Icons.receipt,
+            title: 'حذف المصروفات فقط',
+            subtitle:
+                'حذف جميع سجلات المصروفات (سيتم الاحتفاظ بالبيانات الأخرى)',
+            color: Colors.indigo,
+            onTap: () => _deleteExpensesOnly(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Installments Only
+          _buildDeleteActionCard(
+            icon: Icons.schedule,
+            title: 'حذف الأقساط فقط',
+            subtitle: 'حذف جميع سجلات الأقساط (سيتم الاحتفاظ بالبيانات الأخرى)',
+            color: Colors.cyan,
+            onTap: () => _deleteInstallmentsOnly(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Users Only
+          _buildDeleteActionCard(
+            icon: Icons.person,
+            title: 'حذف المستخدمين فقط',
+            subtitle: 'حذف جميع المستخدمين (سيتم الاحتفاظ بالبيانات الأخرى)',
+            color: Colors.brown,
+            onTap: () => _deleteUsersOnly(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Suppliers Only
+          _buildDeleteActionCard(
+            icon: Icons.local_shipping,
+            title: 'حذف الموردين فقط',
+            subtitle: 'حذف جميع الموردين (سيتم الاحتفاظ بالبيانات الأخرى)',
+            color: Colors.deepOrange,
+            onTap: () => _deleteSuppliersOnly(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 16 : 20),
+
+          // Delete All Data - Moved to the end
+          _buildDeleteActionCard(
+            icon: Icons.delete_forever,
+            title: 'حذف جميع البيانات',
+            subtitle:
+                'حذف جميع البيانات من قاعدة البيانات (مبيعات، عملاء، منتجات، أقسام، إحصائيات)',
+            color: Colors.red,
+            onTap: () => _deleteAllData(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 16 : 20),
+
+          // Information about deletion
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.blue.shade600,
+                  size: isSmallScreen ? 18 : 20,
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'معلومات حول عمليات الحذف',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue.shade700,
+                          fontSize: isSmallScreen ? 13 : 14,
+                        ),
+                      ),
+                      SizedBox(height: isSmallScreen ? 2 : 4),
+                      Text(
+                        '• حذف جميع البيانات: يمسح كل شيء من قاعدة البيانات\n'
+                        '• حذف المنتجات والأقسام: يحتفظ بالمبيعات والعملاء\n'
+                        '• حذف الإحصائيات: يحذف المدفوعات والمصروفات والأقساط\n'
+                        '• جميع عمليات الحذف نهائية ولا يمكن التراجع عنها',
+                        style: TextStyle(
+                          color: Colors.blue.shade600,
+                          fontSize: isSmallScreen ? 11 : 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeleteActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: isSmallScreen ? 20 : 24,
+          ),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: isSmallScreen ? 14 : 16,
+            color: color,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: isSmallScreen ? 12 : 14,
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: isSmallScreen ? 14 : 16,
+          color: color.withOpacity(0.7),
+        ),
+        onTap: onTap,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 12 : 16,
+          vertical: isSmallScreen ? 4 : 8,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteAllData() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف جميع البيانات',
+      'هل أنت متأكد من حذف جميع البيانات؟\n\nسيتم حذف:\n• جميع المبيعات\n• جميع العملاء\n• جميع المنتجات\n• جميع الأقسام\n• جميع الإحصائيات والتقارير\n• جميع البيانات الأخرى\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف الكل',
+      Colors.red,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف جميع البيانات...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteAllDataNew();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف جميع البيانات بنجاح', Colors.red);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف البيانات: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteProductsAndCategories() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف المنتجات والأقسام',
+      'هل أنت متأكد من حذف جميع المنتجات والأقسام؟\n\nسيتم حذف:\n• جميع المنتجات\n• جميع الأقسام\n• جميع سجلات المبيعات (sale_items)\n\nملاحظة: لن يتم إنشاء أي قسم جديد تلقائياً\n\nسيتم الاحتفاظ بـ:\n• المبيعات الأساسية\n• العملاء\n• الإحصائيات\n• المستخدمين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف المنتجات والأقسام',
+      Colors.orange,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف المنتجات والأقسام...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteProductsAndCategories();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف المنتجات والأقسام بنجاح', Colors.orange);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف المنتجات والأقسام: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteReportsAndStatistics() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف الإحصائيات والتقارير',
+      'هل أنت متأكد من حذف جميع الإحصائيات والتقارير؟\n\nسيتم حذف:\n• جميع المدفوعات\n• جميع المصروفات\n• جميع الأقساط\n• سجلات الأداء والنسخ الاحتياطي\n\nسيتم الاحتفاظ بـ:\n• المبيعات\n• العملاء\n• المنتجات\n• الأقسام\n• المستخدمين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف الإحصائيات والتقارير',
+      Colors.purple,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف الإحصائيات والتقارير...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteReportsAndStatistics();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف الإحصائيات والتقارير بنجاح', Colors.purple);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف الإحصائيات والتقارير: $e', Colors.red);
+    }
+  }
+
+  /// عرض نافذة تأكيد للحذف
+  Future<bool> _showDeleteConfirmationDialog(
+      String title, String message, String confirmText, Color color) async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.delete_forever,
+                      color: color,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning,
+                          color: Colors.red.shade600,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'هذه العملية لا يمكن التراجع عنها!',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey.shade600,
+                  ),
+                  child: const Text('إلغاء'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(confirmText),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+  }
+
+  // دوال الحذف المنفصلة
+  Future<void> _deleteSalesOnly() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف المبيعات فقط',
+      'هل أنت متأكد من حذف جميع المبيعات؟\n\nسيتم حذف:\n• جميع المبيعات\n• جميع سجلات المبيعات\n• جميع الأقساط المرتبطة\n\nسيتم الاحتفاظ بـ:\n• العملاء\n• المنتجات\n• الأقسام\n• المستخدمين\n• الموردين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف المبيعات',
+      Colors.blue,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف المبيعات...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteSalesOnly();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف المبيعات بنجاح', Colors.blue);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف المبيعات: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteCustomersOnly() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف العملاء فقط',
+      'هل أنت متأكد من حذف جميع العملاء؟\n\nسيتم حذف:\n• جميع العملاء\n• جميع المدفوعات المرتبطة\n\nسيتم الاحتفاظ بـ:\n• المبيعات\n• المنتجات\n• الأقسام\n• المستخدمين\n• الموردين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف العملاء',
+      Colors.green,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف العملاء...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteCustomersOnly();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف العملاء بنجاح', Colors.green);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف العملاء: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deletePaymentsOnly() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف المدفوعات فقط',
+      'هل أنت متأكد من حذف جميع المدفوعات؟\n\nسيتم حذف:\n• جميع سجلات المدفوعات\n\nسيتم الاحتفاظ بـ:\n• المبيعات\n• العملاء\n• المنتجات\n• الأقسام\n• المستخدمين\n• الموردين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف المدفوعات',
+      Colors.teal,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف المدفوعات...');
+
+      final db = context.read<DatabaseService>();
+      await db.deletePaymentsOnly();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف المدفوعات بنجاح', Colors.teal);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف المدفوعات: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteExpensesOnly() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف المصروفات فقط',
+      'هل أنت متأكد من حذف جميع المصروفات؟\n\nسيتم حذف:\n• جميع سجلات المصروفات\n\nسيتم الاحتفاظ بـ:\n• المبيعات\n• العملاء\n• المنتجات\n• الأقسام\n• المستخدمين\n• الموردين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف المصروفات',
+      Colors.indigo,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف المصروفات...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteExpensesOnly();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف المصروفات بنجاح', Colors.indigo);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف المصروفات: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteInstallmentsOnly() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف الأقساط فقط',
+      'هل أنت متأكد من حذف جميع الأقساط؟\n\nسيتم حذف:\n• جميع سجلات الأقساط\n\nسيتم الاحتفاظ بـ:\n• المبيعات\n• العملاء\n• المنتجات\n• الأقسام\n• المستخدمين\n• الموردين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف الأقساط',
+      Colors.cyan,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف الأقساط...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteInstallmentsOnly();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف الأقساط بنجاح', Colors.cyan);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف الأقساط: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteUsersOnly() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف المستخدمين فقط',
+      'هل أنت متأكد من حذف جميع المستخدمين؟\n\nسيتم حذف:\n• جميع المستخدمين\n\nتحذير: قد تفقد القدرة على تسجيل الدخول!\n\nسيتم الاحتفاظ بـ:\n• المبيعات\n• العملاء\n• المنتجات\n• الأقسام\n• الموردين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف المستخدمين',
+      Colors.brown,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف المستخدمين...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteUsersOnly();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف المستخدمين بنجاح', Colors.brown);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف المستخدمين: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteSuppliersOnly() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف الموردين فقط',
+      'هل أنت متأكد من حذف جميع الموردين؟\n\nسيتم حذف:\n• جميع الموردين\n\nسيتم الاحتفاظ بـ:\n• المبيعات\n• العملاء\n• المنتجات\n• الأقسام\n• المستخدمين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف الموردين',
+      Colors.deepOrange,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف الموردين...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteSuppliersOnly();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف الموردين بنجاح', Colors.deepOrange);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف الموردين: $e', Colors.red);
+    }
   }
 }

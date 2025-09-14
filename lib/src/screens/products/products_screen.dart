@@ -280,6 +280,70 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       }
                       final products = snapshot.data!;
 
+                      // فحص إذا كانت القائمة فارغة
+                      if (products.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(40),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.inventory_2_outlined,
+                                      size: 80,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      'لا توجد منتجات',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'لم يتم العثور على أي منتجات في النظام',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _openEditor(context,
+                                          product: const {}),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('إضافة منتج جديد'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue.shade600,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 24,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
                       return Column(
                         children: [
                           // Table body - منفصل عن الرأس
@@ -748,8 +812,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => _openEditor(context, product: const {}),
-          icon: const Icon(Icons.add),
-          label: const Text('إضافة منتج'),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text(
+            'إضافة منتج',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.blue.shade600,
+          foregroundColor: Colors.white,
+          elevation: 8,
+          extendedPadding: const EdgeInsets.symmetric(horizontal: 20),
         ),
       ),
     );

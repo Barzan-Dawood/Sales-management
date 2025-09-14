@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
 import '../utils/export.dart';
+import '../services/print_service.dart';
+import '../services/store_config.dart';
 
 class InventoryReportsScreen extends StatefulWidget {
   const InventoryReportsScreen({super.key});
@@ -40,6 +42,11 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
             icon: const Icon(Icons.picture_as_pdf),
             tooltip: 'تصدير PDF',
             onPressed: () => _exportCurrentTab(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.print),
+            tooltip: 'طباعة التقرير',
+            onPressed: () => _printCurrentTab(),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -1039,6 +1046,156 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
       filename: 'تحليل_المخزون_$dateStr.pdf',
       title: 'تحليل المخزون الشامل - ${_formatDateForDisplay(now)}',
       items: items,
+    );
+  }
+
+  // دالة الطباعة
+  Future<void> _printCurrentTab() async {
+    final currentIndex = _tabController.index;
+    final db = context.read<DatabaseService>();
+    final storeConfig = context.read<StoreConfig>();
+
+    try {
+      switch (currentIndex) {
+        case 0: // ملخص الجرد
+          await _printInventorySummary(db, storeConfig);
+          break;
+        case 1: // الأكثر مبيعاً
+          await _printTopSelling(db, storeConfig);
+          break;
+        case 2: // بطيء الحركة
+          await _printSlowMoving(db, storeConfig);
+          break;
+        case 3: // تحليل المخزون
+          await _printInventoryAnalysis(db, storeConfig);
+          break;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في الطباعة: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _printInventorySummary(
+      DatabaseService db, StoreConfig storeConfig) async {
+    final data = await db.getInventoryReport();
+    final items = <MapEntry<String, String>>[
+      MapEntry('إجمالي المنتجات', '${data['total_products'] ?? 0} منتج'),
+      MapEntry('إجمالي الكمية', '${data['total_quantity'] ?? 0} وحدة'),
+      MapEntry('القيمة الإجمالية',
+          Formatters.currencyIQD(data['total_value'] ?? 0.0)),
+      MapEntry('التكلفة الإجمالية',
+          Formatters.currencyIQD(data['total_cost'] ?? 0.0)),
+      MapEntry('معدل دوران المخزون',
+          '${(data['inventory_turnover'] ?? 0.0).toStringAsFixed(2)} مرة'),
+      MapEntry('منخفض الكمية', '${data['low_stock_count'] ?? 0} منتج'),
+      MapEntry('نفد من المخزون', '${data['out_of_stock_count'] ?? 0} منتج'),
+    ];
+
+    await PrintService.printInventoryReport(
+      reportType: 'ملخص_الجرد',
+      title: 'ملخص الجرد الشامل',
+      items: items,
+      reportDate: DateTime.now(),
+      shopName: storeConfig.shopName,
+      phone: storeConfig.phone,
+      address: storeConfig.address,
+      context: context,
+    );
+  }
+
+  Future<void> _printTopSelling(
+      DatabaseService db, StoreConfig storeConfig) async {
+    final data = await db.getInventoryReport();
+    final topSelling = data['top_selling_products'] as List<dynamic>? ?? [];
+
+    final headers = ['المنتج', 'الكمية المباعة', 'القيمة'];
+    final rows = topSelling
+        .map((product) => [
+              product['name'] as String? ?? '',
+              '${product['total_sold'] ?? 0}',
+              Formatters.currencyIQD(product['total_revenue'] ?? 0.0),
+            ])
+        .toList();
+
+    await PrintService.printTableReport(
+      reportType: 'الأكثر_مبيعاً',
+      title: 'المنتجات الأكثر مبيعاً',
+      headers: headers,
+      rows: rows,
+      reportDate: DateTime.now(),
+      shopName: storeConfig.shopName,
+      phone: storeConfig.phone,
+      address: storeConfig.address,
+      context: context,
+    );
+  }
+
+  Future<void> _printSlowMoving(
+      DatabaseService db, StoreConfig storeConfig) async {
+    final data = await db.getInventoryReport();
+    final slowMoving = data['slow_moving_products'] as List<dynamic>? ?? [];
+
+    final headers = [
+      'المنتج',
+      'الباركود',
+      'الكمية المتاحة',
+      'السعر',
+      'التكلفة'
+    ];
+    final rows = slowMoving
+        .map((product) => [
+              product['name'] as String? ?? '',
+              product['barcode'] as String? ?? '',
+              '${product['quantity'] ?? 0}',
+              Formatters.currencyIQD(product['price'] ?? 0.0),
+              Formatters.currencyIQD(product['cost'] ?? 0.0),
+            ])
+        .toList();
+
+    await PrintService.printTableReport(
+      reportType: 'بطيء_الحركة',
+      title: 'المنتجات بطيئة الحركة',
+      headers: headers,
+      rows: rows,
+      reportDate: DateTime.now(),
+      shopName: storeConfig.shopName,
+      phone: storeConfig.phone,
+      address: storeConfig.address,
+      context: context,
+    );
+  }
+
+  Future<void> _printInventoryAnalysis(
+      DatabaseService db, StoreConfig storeConfig) async {
+    final data = await db.getInventoryReport();
+    final items = <MapEntry<String, String>>[
+      MapEntry('إجمالي المنتجات', '${data['total_products'] ?? 0} منتج'),
+      MapEntry('إجمالي الكمية', '${data['total_quantity'] ?? 0} وحدة'),
+      MapEntry('القيمة الإجمالية',
+          Formatters.currencyIQD(data['total_value'] ?? 0.0)),
+      MapEntry('التكلفة الإجمالية',
+          Formatters.currencyIQD(data['total_cost'] ?? 0.0)),
+      MapEntry('معدل دوران المخزون',
+          '${(data['inventory_turnover'] ?? 0.0).toStringAsFixed(2)} مرة'),
+      MapEntry('منخفض الكمية', '${data['low_stock_count'] ?? 0} منتج'),
+      MapEntry('نفد من المخزون', '${data['out_of_stock_count'] ?? 0} منتج'),
+      MapEntry('هامش الربح',
+          '${(data['profit_margin'] ?? 0.0).toStringAsFixed(1)}%'),
+    ];
+
+    await PrintService.printInventoryReport(
+      reportType: 'تحليل_المخزون',
+      title: 'تحليل المخزون الشامل',
+      items: items,
+      reportDate: DateTime.now(),
+      shopName: storeConfig.shopName,
+      phone: storeConfig.phone,
+      address: storeConfig.address,
+      context: context,
     );
   }
 }

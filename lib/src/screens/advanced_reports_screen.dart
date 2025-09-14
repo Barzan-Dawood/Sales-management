@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
 import '../utils/export.dart';
+import '../services/print_service.dart';
+import '../services/store_config.dart';
 
 class AdvancedReportsScreen extends StatefulWidget {
   const AdvancedReportsScreen({super.key});
@@ -43,6 +45,11 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
             icon: const Icon(Icons.picture_as_pdf),
             tooltip: 'تصدير PDF',
             onPressed: () => _exportCurrentTab(db),
+          ),
+          IconButton(
+            icon: const Icon(Icons.print),
+            tooltip: 'طباعة التقرير',
+            onPressed: () => _printCurrentTab(db),
           ),
           IconButton(
             icon: const Icon(Icons.calendar_today),
@@ -1306,6 +1313,166 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
       filename: 'تقرير_المبيعات_$dateStr.pdf',
       title: 'تقرير المبيعات - ${_formatDateForDisplay(_selectedDate)}',
       items: items,
+    );
+  }
+
+  // دالة الطباعة
+  Future<void> _printCurrentTab(DatabaseService db) async {
+    final currentIndex = _tabController.index;
+    final storeConfig = context.read<StoreConfig>();
+
+    try {
+      switch (currentIndex) {
+        case 0: // قائمة الدخل
+          await _printIncomeStatement(db, storeConfig);
+          break;
+        case 1: // الميزانية
+          await _printBalanceSheet(db, storeConfig);
+          break;
+        case 2: // مؤشرات الأداء
+          await _printKPIs(db, storeConfig);
+          break;
+        case 3: // تحليل الاتجاهات
+          await _printTrendAnalysis(db, storeConfig);
+          break;
+        case 4: // تقرير المبيعات
+          await _printSalesReport(db, storeConfig);
+          break;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في الطباعة: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _printIncomeStatement(
+      DatabaseService db, StoreConfig storeConfig) async {
+    final data = await db.getIncomeStatement(_selectedDate);
+    final items = <MapEntry<String, String>>[
+      MapEntry('الإيرادات', Formatters.currencyIQD(data['revenue'] ?? 0.0)),
+      MapEntry(
+          'تكلفة البضائع المباعة', Formatters.currencyIQD(data['cogs'] ?? 0.0)),
+      MapEntry(
+          'إجمالي الربح', Formatters.currencyIQD(data['gross_profit'] ?? 0.0)),
+      MapEntry('المصروفات', Formatters.currencyIQD(data['expenses'] ?? 0.0)),
+      MapEntry('صافي الربح', Formatters.currencyIQD(data['net_profit'] ?? 0.0)),
+    ];
+
+    await PrintService.printFinancialReport(
+      reportType: 'قائمة_الدخل',
+      title: 'قائمة الدخل',
+      items: items,
+      reportDate: _selectedDate,
+      shopName: storeConfig.shopName,
+      phone: storeConfig.phone,
+      address: storeConfig.address,
+      context: context,
+    );
+  }
+
+  Future<void> _printBalanceSheet(
+      DatabaseService db, StoreConfig storeConfig) async {
+    final data = await db.getBalanceSheet(_selectedDate);
+    final items = <MapEntry<String, String>>[
+      MapEntry('الأصول', Formatters.currencyIQD(data['assets'] ?? 0.0)),
+      MapEntry('الخصوم', Formatters.currencyIQD(data['liabilities'] ?? 0.0)),
+      MapEntry('حقوق الملكية', Formatters.currencyIQD(data['equity'] ?? 0.0)),
+    ];
+
+    await PrintService.printFinancialReport(
+      reportType: 'الميزانية_العمومية',
+      title: 'الميزانية العمومية',
+      items: items,
+      reportDate: _selectedDate,
+      shopName: storeConfig.shopName,
+      phone: storeConfig.phone,
+      address: storeConfig.address,
+      context: context,
+    );
+  }
+
+  Future<void> _printKPIs(DatabaseService db, StoreConfig storeConfig) async {
+    final data = await db.getKPIs(_selectedDate);
+    final items = <MapEntry<String, String>>[
+      MapEntry('إجمالي المبيعات',
+          Formatters.currencyIQD(data['monthly_revenue'] ?? 0.0)),
+      MapEntry(
+          'صافي الربح', Formatters.currencyIQD(data['monthly_profit'] ?? 0.0)),
+      MapEntry('عدد المبيعات', '${data['sales_count'] ?? 0} مبيعة'),
+      MapEntry('متوسط قيمة المبيعة',
+          Formatters.currencyIQD(data['avg_sale_amount'] ?? 0.0)),
+      MapEntry('عملاء جدد', '${data['new_customers'] ?? 0} عميل'),
+      MapEntry('هامش الربح',
+          '${(data['profit_margin'] ?? 0.0).toStringAsFixed(1)}%'),
+      MapEntry('معدل التحويل',
+          '${(data['conversion_rate'] ?? 0.0).toStringAsFixed(1)}%'),
+    ];
+
+    await PrintService.printFinancialReport(
+      reportType: 'مؤشرات_الأداء',
+      title: 'مؤشرات الأداء',
+      items: items,
+      reportDate: _selectedDate,
+      shopName: storeConfig.shopName,
+      phone: storeConfig.phone,
+      address: storeConfig.address,
+      context: context,
+    );
+  }
+
+  Future<void> _printTrendAnalysis(
+      DatabaseService db, StoreConfig storeConfig) async {
+    final data = await db.getTrendAnalysis(_selectedMonths);
+    final monthlyData = data['monthly_data'] as List<dynamic>? ?? [];
+
+    final headers = ['الشهر', 'الإيرادات', 'الأرباح', 'عدد المبيعات'];
+    final rows = monthlyData
+        .map((month) => [
+              month['month'] as String? ?? '',
+              Formatters.currencyIQD(month['revenue'] ?? 0.0),
+              Formatters.currencyIQD(month['profit'] ?? 0.0),
+              '${month['sales_count'] ?? 0}',
+            ])
+        .toList();
+
+    await PrintService.printTableReport(
+      reportType: 'تحليل_الاتجاهات',
+      title: 'تحليل الاتجاهات - آخر $_selectedMonths أشهر',
+      headers: headers,
+      rows: rows,
+      reportDate: _selectedDate,
+      shopName: storeConfig.shopName,
+      phone: storeConfig.phone,
+      address: storeConfig.address,
+      context: context,
+    );
+  }
+
+  Future<void> _printSalesReport(
+      DatabaseService db, StoreConfig storeConfig) async {
+    final startDate = DateTime(_selectedDate.year, _selectedDate.month, 1);
+    final endDate = DateTime(_selectedDate.year, _selectedDate.month + 1, 0);
+    final data = await db.getTaxReport(startDate, endDate);
+
+    final items = <MapEntry<String, String>>[
+      MapEntry('إجمالي المبيعات',
+          Formatters.currencyIQD(data['total_sales'] ?? 0.0)),
+      MapEntry('إجمالي الأرباح',
+          Formatters.currencyIQD(data['total_profit'] ?? 0.0)),
+    ];
+
+    await PrintService.printFinancialReport(
+      reportType: 'تقرير_المبيعات',
+      title: 'تقرير المبيعات',
+      items: items,
+      reportDate: _selectedDate,
+      shopName: storeConfig.shopName,
+      phone: storeConfig.phone,
+      address: storeConfig.address,
+      context: context,
     );
   }
 }
