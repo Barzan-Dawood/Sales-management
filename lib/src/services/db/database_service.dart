@@ -3691,7 +3691,10 @@ class DatabaseService {
   /// حذف جميع البيانات من قاعدة البيانات (نسخة محدثة)
   Future<void> deleteAllDataNew() async {
     try {
+      // نفّذ الحذف داخل معاملة واحدة مع تعطيل المفاتيح الخارجية مؤقتاً
       await _db.transaction((txn) async {
+        await txn.execute('PRAGMA foreign_keys = OFF');
+
         // حذف جميع الجداول بالترتيب الصحيح لتجنب مشاكل المفاتيح الخارجية
         await txn.delete('installments');
         await txn.delete('sale_items');
@@ -3704,9 +3707,12 @@ class DatabaseService {
         // إعادة تعيين AUTO_INCREMENT
         await txn.execute('DELETE FROM sqlite_sequence');
 
-        // إعادة إنشاء البيانات الأساسية
-        await _seedData(_db);
+        // إعادة تفعيل المفاتيح الخارجية
+        await txn.execute('PRAGMA foreign_keys = ON');
       });
+
+      // إعادة إنشاء البيانات الأساسية خارج المعاملة لتجنب أي تعارض مع txn
+      await _seedData(_db);
     } catch (e) {
       throw Exception('خطأ في حذف جميع البيانات: $e');
     }

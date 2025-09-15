@@ -44,9 +44,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 if (!snapshot.hasData)
                   return const Center(child: CircularProgressIndicator());
                 final items = snapshot.data!;
-
+                                              
                 if (items.isEmpty) {
-                  return Center(
+                  return Center(   
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
