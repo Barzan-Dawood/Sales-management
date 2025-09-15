@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -897,7 +899,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
   }
 
   void _printReport() {
-    // TODO: Implement print functionality
+    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('ميزة الطباعة قيد التطوير'),

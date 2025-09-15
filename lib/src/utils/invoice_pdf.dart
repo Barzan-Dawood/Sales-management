@@ -897,8 +897,7 @@ class InvoicePdf {
         installmentHeight.isNaN ||
         installmentHeight.isInfinite ||
         installmentHeight <= 0) {
-      print('تحذير: قيم غير صحيحة في حساب عدد الأقساط، استخدام قيمة افتراضية');
-      return 5; // قيمة افتراضية آمنة
+       return 5; // قيمة افتراضية آمنة
     }
 
     final result = (availableHeight / installmentHeight).floor();

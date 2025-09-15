@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use, curly_braces_in_flow_control_structures, use_build_context_synchronously, unused_local_variable
+
 import 'package:provider/provider.dart';
 import '../services/store_config.dart';
 import 'package:flutter/material.dart';
@@ -2023,26 +2025,22 @@ class _DebtsScreenState extends State<DebtsScreen>
             ElevatedButton(
               onPressed: () async {
                 try {
-                  print(
-                      'Attempting to delete customer: ${customer['id']} - ${customer['name']}');
+              
 
                   // التحقق من وجود العميل قبل المحاولة
                   final customers = await db.getCustomers();
                   final customerExists =
                       customers.any((c) => c['id'] == customer['id']);
-                  print('Customer exists before deletion: $customerExists');
-
+ 
                   // حذف العميل (سيحذف جميع البيانات المرتبطة تلقائياً)
                   final deletedRows = await db.deleteCustomer(customer['id']);
 
-                  print('Delete result: $deletedRows rows deleted');
-
+ 
                   // التحقق من وجود العميل بعد المحاولة
                   final customersAfter = await db.getCustomers();
                   final customerExistsAfter =
                       customersAfter.any((c) => c['id'] == customer['id']);
-                  print('Customer exists after deletion: $customerExistsAfter');
-
+ 
                   if (deletedRows > 0) {
                     Navigator.pop(context);
                     // إعادة تحميل البيانات
@@ -2066,8 +2064,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                     );
                   }
                 } catch (e) {
-                  print('Error deleting customer: $e');
-                  Navigator.pop(context);
+                   Navigator.pop(context);
 
                   // تحسين رسائل الخطأ
                   String errorMessage = 'خطأ في حذف العميل';

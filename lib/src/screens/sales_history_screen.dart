@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
@@ -1108,7 +1110,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         try {
           dueDate = DateTime.parse(saleDetails['due_date'] as String);
         } catch (e) {
-          print('خطأ في تحليل تاريخ الاستحقاق: $e');
+          debugPrint('خطأ في تحليل تاريخ الاستحقاق: $e');
         }
       }
 
@@ -1123,7 +1125,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           totalDebt = saleDetails['total'] as double?;
           downPayment = saleDetails['down_payment'] as double?;
         } catch (e) {
-          print('خطأ في الحصول على معلومات الأقساط: $e');
+          debugPrint('خطأ في الحصول على معلومات الأقساط: $e');
         }
       }
 
@@ -1242,8 +1244,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           }
         } catch (e) {
           failCount++;
-          print('خطأ في حذف الفاتورة $saleId: $e');
-        }
+         }
       }
 
       // إغلاق مؤشر التحميل

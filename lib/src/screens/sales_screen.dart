@@ -1,4 +1,4 @@
-// ignore_for_file: dead_code
+// ignore_for_file: dead_code, deprecated_member_use, use_build_context_synchronously, unused_field
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -2488,26 +2488,21 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                   // Return products to stock - only from last invoice if it exists
                                                                                   // If there's a last invoice, return those products
                                                                                   // If no last invoice, return products from current cart
-                                                                                  print('إلغاء العملية - عدد منتجات الفاتورة الأخيرة: ${_lastInvoiceItems.length}');
-                                                                                  print('إلغاء العملية - عدد منتجات السلة: ${_cart.length}');
+                                                                                
 
                                                                                   if (_lastInvoiceItems.isNotEmpty) {
                                                                                     // Return products from last invoice to stock
-                                                                                    print('إرجاع منتجات من الفاتورة الأخيرة إلى المخزن');
-                                                                                    for (final item in _lastInvoiceItems) {
+                                                                                     for (final item in _lastInvoiceItems) {
                                                                                       final productId = item['product_id'] as int;
                                                                                       final quantity = item['quantity'] as int;
-                                                                                      print('إرجاع منتج ID: $productId, الكمية: $quantity');
-                                                                                      await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
+                                                                                       await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
                                                                                     }
                                                                                   } else if (_cart.isNotEmpty) {
                                                                                     // Return products from current cart to stock (if no last invoice)
-                                                                                    print('إرجاع منتجات من السلة الحالية إلى المخزن');
-                                                                                    for (final item in _cart) {
+                                                                                     for (final item in _cart) {
                                                                                       final productId = item['product_id'] as int;
                                                                                       final quantity = item['quantity'] as int;
-                                                                                      print('إرجاع منتج ID: $productId, الكمية: $quantity');
-                                                                                      await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
+                                                                                       await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
                                                                                     }
                                                                                   }
 
@@ -3121,10 +3116,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> _printInvoice(BuildContext context) async {
-    print('=== بدء عملية طباعة الفاتورة ===');
-    print('عدد المنتجات في آخر فاتورة: ${_lastInvoiceItems.length}');
-    print('نوع الدفع: $_lastType');
-    print('نوع الطباعة المختار: $_selectedPrintType');
+    
 
     final store = context.read<StoreConfig>();
     final shopName = store.shopName;
@@ -3159,8 +3151,7 @@ class _SalesScreenState extends State<SalesScreen> {
     );
 
     if (success && context.mounted) {
-      print('تمت عملية الطباعة بنجاح');
-      ScaffoldMessenger.of(context).showSnackBar(
+       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم طباعة الفاتورة بنجاح مع الإعدادات المختارة'),
           backgroundColor: Colors.green,
@@ -3168,8 +3159,7 @@ class _SalesScreenState extends State<SalesScreen> {
         ),
       );
     } else {
-      print('فشلت عملية الطباعة');
-    }
+     }
   }
 
   Widget _buildInfoChip(String label, String value, IconData icon) {

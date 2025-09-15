@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:office_mangment_system/src/screens/enhanced_privacy_policy_screen.dart';
 import 'package:provider/provider.dart';

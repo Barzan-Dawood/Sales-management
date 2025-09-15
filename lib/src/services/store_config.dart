@@ -47,8 +47,7 @@ class StoreConfig extends ChangeNotifier {
       // Keep defaults on failure
       if (kDebugMode) {
         // ignore: avoid_print
-        print('StoreConfig load failed: $e');
-      }
+       }
     }
   }
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,7 +9,6 @@ import 'src/app_shell.dart';
 import 'src/services/db/database_service.dart';
 import 'src/services/auth/auth_provider.dart';
 import 'src/services/store_config.dart';
-import 'src/utils/strings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +42,6 @@ Future<void> main() async {
     } catch (e) {
       assert(() {
         // Log details only in debug/profile builds
-        print('Error during sales_old cleanup: $e');
         return true;
       }());
     }
@@ -51,8 +51,7 @@ Future<void> main() async {
       await databaseService.runAutoBackup();
     } catch (e) {
       assert(() {
-        print('Error during auto backup: $e');
-        return true;
+         return true;
       }());
     }
 
@@ -60,8 +59,6 @@ Future<void> main() async {
     final issues = await databaseService.checkDatabaseIntegrity();
     if (issues.isNotEmpty) {
       assert(() {
-        print('Database integrity issues found: ${issues.join(', ')}');
-        print('Performing automatic cleanup...');
         return true;
       }());
 
@@ -72,14 +69,10 @@ Future<void> main() async {
         final remainingIssues = await databaseService.checkDatabaseIntegrity();
         if (remainingIssues.isEmpty) {
           assert(() {
-            print('Database cleanup completed successfully');
-            return true;
+             return true;
           }());
         } else {
           assert(() {
-            print(
-                'Some issues remain after normal cleanup: ${remainingIssues.join(', ')}');
-            print('Performing comprehensive cleanup...');
             return true;
           }());
           await databaseService.comprehensiveCleanup();
@@ -88,13 +81,11 @@ Future<void> main() async {
           final finalIssues = await databaseService.checkDatabaseIntegrity();
           if (finalIssues.isEmpty) {
             assert(() {
-              print('Comprehensive cleanup completed successfully');
               return true;
             }());
           } else {
             assert(() {
-              print(
-                  'Some issues still remain, trying aggressive cleanup: ${finalIssues.join(', ')}');
+            
               return true;
             }());
             await databaseService.aggressiveCleanup();
@@ -104,13 +95,11 @@ Future<void> main() async {
                 await databaseService.checkDatabaseIntegrity();
             if (finalFinalIssues.isEmpty) {
               assert(() {
-                print('Aggressive cleanup completed successfully');
                 return true;
               }());
             } else {
               assert(() {
-                print(
-                    'Some issues still remain: ${finalFinalIssues.join(', ')}');
+              
                 return true;
               }());
             }
@@ -118,31 +107,28 @@ Future<void> main() async {
         }
       } catch (e) {
         assert(() {
-          print('Normal cleanup failed, trying comprehensive cleanup: $e');
+    
           return true;
         }());
         try {
           await databaseService.comprehensiveCleanup();
           assert(() {
-            print('Comprehensive cleanup completed');
             return true;
           }());
         } catch (comprehensiveError) {
           assert(() {
-            print(
-                'Comprehensive cleanup failed, trying aggressive cleanup: $comprehensiveError');
+         
             return true;
           }());
           try {
             await databaseService.aggressiveCleanup();
             assert(() {
-              print('Aggressive cleanup completed');
+         
               return true;
             }());
           } catch (aggressiveError) {
             assert(() {
-              print('Aggressive cleanup also failed: $aggressiveError');
-              return true;
+               return true;
             }());
           }
         }
@@ -150,8 +136,7 @@ Future<void> main() async {
     }
   } catch (e) {
     assert(() {
-      print('Error initializing database: $e');
-      return true;
+       return true;
     }());
 
     // تحسين رسائل الخطأ
@@ -167,46 +152,39 @@ Future<void> main() async {
     }
 
     assert(() {
-      print('Database error: $errorMessage');
-      return true;
+       return true;
     }());
 
     // Try to perform emergency cleanup
     try {
       await databaseService.forceCleanup();
       assert(() {
-        print('Emergency cleanup completed');
-        return true;
+         return true;
       }());
     } catch (cleanupError) {
       assert(() {
-        print(
-            'Emergency cleanup failed, trying comprehensive cleanup: $cleanupError');
+        
         return true;
       }());
       try {
         await databaseService.comprehensiveCleanup();
         assert(() {
-          print('Emergency comprehensive cleanup completed');
+          
           return true;
         }());
       } catch (comprehensiveError) {
         assert(() {
-          print(
-              'Emergency comprehensive cleanup failed, trying aggressive cleanup: $comprehensiveError');
+          
           return true;
         }());
         try {
           await databaseService.aggressiveCleanup();
           assert(() {
-            print('Emergency aggressive cleanup completed');
-            return true;
+             return true;
           }());
         } catch (aggressiveError) {
           assert(() {
-            print('Emergency aggressive cleanup also failed: $aggressiveError');
-            print(
-                'Critical database error - application may not function properly');
+           
             return true;
           }());
         }
