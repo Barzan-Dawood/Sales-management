@@ -314,10 +314,10 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                childAspectRatio: 1.5,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+                crossAxisCount: 5,
+                childAspectRatio: 1.1,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
                 children: [
                   _buildKPICard(
                     'إجمالي المبيعات',
@@ -626,10 +626,10 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
   Widget _buildKPICard(
       String title, double value, String unit, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
@@ -642,22 +642,22 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 6),
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade700,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             _formatKPIValue(value, unit),
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
               color: color,
             ),

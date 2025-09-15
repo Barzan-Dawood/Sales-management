@@ -416,6 +416,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         ),
                         items: const [
                           DropdownMenuItem(
+                            value: '',
+                            child: Text('الكل', style: TextStyle(fontSize: 12)),
+                          ),
+                          DropdownMenuItem(
                             value: 'cash',
                             child: Text('نقدي', style: TextStyle(fontSize: 12)),
                           ),
@@ -1244,7 +1248,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           }
         } catch (e) {
           failCount++;
-         }
+        }
       }
 
       // إغلاق مؤشر التحميل

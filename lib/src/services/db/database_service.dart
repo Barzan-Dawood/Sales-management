@@ -322,7 +322,7 @@ class DatabaseService {
         // Consider logging or notifying the user
       }
 
-        // Ensure all core tables exist
+      // Ensure all core tables exist
       await _db.execute('''
         CREATE TABLE IF NOT EXISTS sales (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1832,7 +1832,8 @@ class DatabaseService {
                 }
               }
             }
-          } catch (e) {   // ignore
+          } catch (e) {
+            // ignore
           }
 
           // إنشاء الأقساط
@@ -1853,14 +1854,14 @@ class DatabaseService {
                 final salesCheck = await txn.rawQuery(
                     "SELECT name FROM sqlite_master WHERE type='table' AND name='sales'");
                 if (salesCheck.isEmpty) {
-                   throw Exception('جدول sales غير موجود');
+                  throw Exception('جدول sales غير موجود');
                 }
 
                 // التأكد من أن المبيعة موجودة
                 final saleCheck = await txn
                     .rawQuery('SELECT id FROM sales WHERE id = ?', [saleId]);
                 if (saleCheck.isEmpty) {
-                   throw Exception('المبيعة غير موجودة');
+                  throw Exception('المبيعة غير موجودة');
                 }
 
                 // إعادة المحاولة
@@ -1871,8 +1872,8 @@ class DatabaseService {
                   'paid': 0,
                   'paid_at': null,
                 });
-               } catch (retryError) {
-                 rethrow;
+              } catch (retryError) {
+                rethrow;
               }
             }
             // إضافة شهر للأقساط الشهرية
@@ -2201,13 +2202,11 @@ class DatabaseService {
       ''', [customerId]);
 
       if (unpaidInstallments.isEmpty) {
-         return;
+        return;
       }
 
       final installmentCount = unpaidInstallments.length;
       final amountPerInstallment = paymentAmount / installmentCount;
-
-      
 
       for (final installment in unpaidInstallments) {
         final installmentId = installment['id'] as int;
@@ -2215,7 +2214,6 @@ class DatabaseService {
         final newAmount =
             (currentAmount - amountPerInstallment).clamp(0.0, double.infinity);
 
- 
         if (newAmount <= 0) {
           // القسط مدفوع بالكامل
           await txn.update(
@@ -2228,7 +2226,7 @@ class DatabaseService {
             where: 'id = ?',
             whereArgs: [installmentId],
           );
-         } else {
+        } else {
           // تقليل مبلغ القسط
           await txn.update(
             'installments',
@@ -2236,11 +2234,10 @@ class DatabaseService {
             where: 'id = ?',
             whereArgs: [installmentId],
           );
-         }
+        }
       }
-
-     } catch (e) {
-       // لا نريد إيقاف العملية إذا فشل تقليل الأقساط
+    } catch (e) {
+      // لا نريد إيقاف العملية إذا فشل تقليل الأقساط
     }
   }
 
@@ -2442,7 +2439,6 @@ class DatabaseService {
   /// دالة شاملة لتنظيف قاعدة البيانات من المراجع القديمة
   Future<void> comprehensiveCleanup() async {
     try {
- 
       await _db.execute('PRAGMA foreign_keys = OFF');
 
       // حذف جدول sales_old إذا كان موجوداً
@@ -2455,8 +2451,6 @@ class DatabaseService {
         AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
         ORDER BY type, name
       ''');
-
-      
 
       for (final row in mainObjects) {
         final type = row['type']?.toString();
@@ -2500,8 +2494,6 @@ class DatabaseService {
         ORDER BY type, name
       ''');
 
-      
-
       for (final row in tempObjects) {
         final type = row['type']?.toString();
         final name = row['name']?.toString();
@@ -2529,9 +2521,9 @@ class DatabaseService {
                 continue;
             }
             await _db.execute(dropCommand);
-           } catch (e) {
-              debugPrint('Error dropping temp schema $type $name: $e');
-            }
+          } catch (e) {
+            debugPrint('Error dropping temp schema $type $name: $e');
+          }
         }
       }
 
@@ -3363,8 +3355,6 @@ class DatabaseService {
       final startOfMonth = DateTime(month.year, month.month, 1);
       final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
 
-      
-
       // الإيرادات
       final revenueResult = await _db.rawQuery('''
         SELECT 
@@ -3389,14 +3379,15 @@ class DatabaseService {
         WHERE created_at >= ? AND created_at <= ?
       ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
 
-      final expenses = expensesResult.first['total_expenses'] as double? ?? 0.0;
+      final expenses =
+          (expensesResult.first['total_expenses'] as num?)?.toDouble() ?? 0.0;
 
-      final revenue = revenueResult.first['total_revenue'] as double? ?? 0.0;
-      final grossProfit = revenueResult.first['gross_profit'] as double? ?? 0.0;
-      final cogs = cogsResult.first['cogs'] as double? ?? 0.0;
+      final revenue =
+          (revenueResult.first['total_revenue'] as num?)?.toDouble() ?? 0.0;
+      final grossProfit =
+          (revenueResult.first['gross_profit'] as num?)?.toDouble() ?? 0.0;
+      final cogs = (cogsResult.first['cogs'] as num?)?.toDouble() ?? 0.0;
       final netProfit = grossProfit - expenses;
-
- 
 
       return {
         'revenue': revenue,
@@ -3435,10 +3426,12 @@ class DatabaseService {
         WHERE created_at <= ?
       ''', [date.toIso8601String()]);
 
-      final assets = assetsResult.first['inventory_value'] as double? ?? 0.0;
+      final assets =
+          (assetsResult.first['inventory_value'] as num?)?.toDouble() ?? 0.0;
       final liabilities =
-          liabilitiesResult.first['total_debts'] as double? ?? 0.0;
-      final equity = equityResult.first['retained_earnings'] as double? ?? 0.0;
+          (liabilitiesResult.first['total_debts'] as num?)?.toDouble() ?? 0.0;
+      final equity =
+          (equityResult.first['retained_earnings'] as num?)?.toDouble() ?? 0.0;
 
       return {
         'assets': assets,
@@ -3474,7 +3467,7 @@ class DatabaseService {
       // حساب معدل النمو
       List<double> revenues = [];
       for (final row in monthlySales) {
-        revenues.add((row['total_revenue'] as double? ?? 0.0));
+        revenues.add((row['total_revenue'] as num?)?.toDouble() ?? 0.0);
       }
 
       double growthRate = 0.0;
@@ -3513,7 +3506,8 @@ class DatabaseService {
   Future<Map<String, dynamic>> getKPIs(DateTime date) async {
     try {
       final startOfMonth = DateTime(date.year, date.month, 1);
-      final endOfMonth = DateTime(date.year, date.month + 1, 0, 23, 59, 59);
+      // Use half-open [start, nextMonthStart) to be consistent
+      final nextMonthStart = DateTime(date.year, date.month + 1, 1);
 
       // إجمالي المبيعات الشهرية
       final monthlySalesResult = await _db.rawQuery('''
@@ -3523,15 +3517,30 @@ class DatabaseService {
           SUM(profit) as total_profit,
           AVG(total) as avg_sale_amount
         FROM sales
-        WHERE created_at >= ? AND created_at <= ?
-      ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+        WHERE created_at >= ? AND created_at < ?
+      ''', [startOfMonth.toIso8601String(), nextMonthStart.toIso8601String()]);
 
       // عدد العملاء الجدد
-      final newCustomersResult = await _db.rawQuery('''
-        SELECT COUNT(*) as new_customers
-        FROM customers
-        WHERE created_at >= ? AND created_at <= ?
-      ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+      int newCustomersCount = 0;
+      try {
+        final newCustomersResult = await _db.rawQuery('''
+          SELECT COUNT(*) as new_customers
+          FROM customers
+          WHERE created_at >= ? AND created_at < ?
+        ''',
+            [startOfMonth.toIso8601String(), nextMonthStart.toIso8601String()]);
+        newCustomersCount =
+            (newCustomersResult.first['new_customers'] as num?)?.toInt() ?? 0;
+      } catch (_) {
+        // Fallback if customers.created_at doesn't exist: distinct customers from sales this month
+        final fallback = await _db.rawQuery('''
+          SELECT COUNT(DISTINCT customer_id) as cnt
+          FROM sales
+          WHERE customer_id IS NOT NULL AND created_at >= ? AND created_at < ?
+        ''',
+            [startOfMonth.toIso8601String(), nextMonthStart.toIso8601String()]);
+        newCustomersCount = (fallback.first['cnt'] as num?)?.toInt() ?? 0;
+      }
 
       // معدل التحويل (العملاء الذين اشتروا)
       final totalCustomersResult = await _db.rawQuery('''
@@ -3542,14 +3551,15 @@ class DatabaseService {
       final customersWithSalesResult = await _db.rawQuery('''
         SELECT COUNT(DISTINCT customer_id) as customers_with_sales
         FROM sales
-        WHERE created_at >= ? AND created_at <= ? AND customer_id IS NOT NULL
-      ''', [startOfMonth.toIso8601String(), endOfMonth.toIso8601String()]);
+        WHERE created_at >= ? AND created_at < ? AND customer_id IS NOT NULL
+      ''', [startOfMonth.toIso8601String(), nextMonthStart.toIso8601String()]);
 
       // هامش الربح
       final totalRevenue =
-          monthlySalesResult.first['total_revenue'] as double? ?? 0.0;
+          (monthlySalesResult.first['total_revenue'] as num?)?.toDouble() ??
+              0.0;
       final totalProfit =
-          monthlySalesResult.first['total_profit'] as double? ?? 0.0;
+          (monthlySalesResult.first['total_profit'] as num?)?.toDouble() ?? 0.0;
       final profitMargin =
           totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0.0;
 
@@ -3567,8 +3577,9 @@ class DatabaseService {
         'monthly_profit': totalProfit,
         'sales_count': monthlySalesResult.first['sales_count'] as int? ?? 0,
         'avg_sale_amount':
-            monthlySalesResult.first['avg_sale_amount'] as double? ?? 0.0,
-        'new_customers': newCustomersResult.first['new_customers'] as int? ?? 0,
+            (monthlySalesResult.first['avg_sale_amount'] as num?)?.toDouble() ??
+                0.0,
+        'new_customers': newCustomersCount,
         'profit_margin': profitMargin,
         'conversion_rate': conversionRate,
         'month': date.month,
@@ -3610,9 +3621,9 @@ class DatabaseService {
       ''', [startDate.toIso8601String(), endDate.toIso8601String()]);
 
       final totalAmount =
-          taxableSalesResult.first['total_amount'] as double? ?? 0.0;
+          (taxableSalesResult.first['total_amount'] as num?)?.toDouble() ?? 0.0;
       final totalProfit =
-          taxableSalesResult.first['total_profit'] as double? ?? 0.0;
+          (taxableSalesResult.first['total_profit'] as num?)?.toDouble() ?? 0.0;
 
       // لا توجد ضرائب - المبلغ الصافي = إجمالي المبيعات
       const taxRate = 0.0;
@@ -3763,13 +3774,13 @@ class DatabaseService {
 
         // حذف sale_items أولاً (لأنها مرتبطة بالمنتجات)
         final saleItemsDeleted = await txn.delete('sale_items');
- 
+
         // حذف المنتجات
         final productsDeleted = await txn.delete('products');
- 
+
         // حذف الأقسام
         final categoriesDeleted = await txn.delete('categories');
- 
+
         // إعادة تعيين AUTO_INCREMENT للمنتجات والأقسام
         await txn.execute(
             'DELETE FROM sqlite_sequence WHERE name IN ("products", "categories", "sale_items")');
@@ -3784,7 +3795,7 @@ class DatabaseService {
       try {
         await _db.execute('PRAGMA foreign_keys = ON');
       } catch (_) {}
-       throw Exception('خطأ في حذف المنتجات والأقسام: $e');
+      throw Exception('خطأ في حذف المنتجات والأقسام: $e');
     }
   }
 
