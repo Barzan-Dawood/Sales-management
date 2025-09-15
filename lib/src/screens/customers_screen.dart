@@ -23,21 +23,60 @@ class _CustomersScreenState extends State<CustomersScreen> {
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          Row(children: [
-            Expanded(
-              child: TextField(
-                decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'بحث بالاسم أو الهاتف'),
-                onChanged: (v) => setState(() => _query = v),
-              ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
             ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
+            child: Row(children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'بحث بالاسم أو الهاتف',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
                 onPressed: () => _openEditor(),
                 icon: const Icon(Icons.add),
-                label: const Text('إضافة عميل')),
-          ]),
+                label: const Text('إضافة عميل'),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 12),
+          // ملاحظة توضيحية
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.blue.shade100),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'الدين: هو المبلغ المستحق استلامه من العميل. تظهر القيمة باللون الأحمر إن كان عليه دين وبالأخضر إذا لا يوجد دين.',
+                    style: TextStyle(fontSize: 12, color: Colors.blue.shade900),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: FutureBuilder<List<Map<String, Object?>>>(
@@ -46,9 +85,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 if (!snapshot.hasData)
                   return const Center(child: CircularProgressIndicator());
                 final items = snapshot.data!;
-                                              
+
                 if (items.isEmpty) {
-                  return Center(   
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -111,26 +150,118 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   );
                 }
 
-                return Card(
-                  child: ListView.separated(
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, i) {
-                      final c = items[i];
-                      return ListTile(
-                        title: Text(c['name']?.toString() ?? ''),
-                        subtitle: Text(c['phone']?.toString() ?? ''),
-                        trailing: Text(Formatters.currencyIQD(
-                            (c['total_debt'] as num?) ?? 0)),
-                        onTap: () => _openEditor(customer: c),
-                        leading: IconButton(
-                          tooltip: 'حذف',
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => _delete(c['id'] as int),
+                return ListView.builder(
+                  itemCount: items.length,
+                  padding: const EdgeInsets.only(bottom: 12),
+                  itemBuilder: (context, i) {
+                    final c = items[i];
+                    final name = c['name']?.toString() ?? '';
+                    final phone = c['phone']?.toString() ?? '';
+                    final debt = (c['total_debt'] as num?)?.toDouble() ?? 0.0;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: null,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              // Avatar circle
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: Colors.blue.shade50,
+                                child: const Icon(Icons.person,
+                                    color: Colors.blue, size: 18),
+                              ),
+                              const SizedBox(width: 10),
+                              // Name & phone
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.phone,
+                                            size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            phone.isEmpty ? '-' : phone,
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Debt with label
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('الدين',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade600,
+                                          fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    Formatters.currencyIQD(debt),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: debt > 0
+                                          ? Colors.red.shade600
+                                          : Colors.green.shade600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'تعديل',
+                                        onPressed: () =>
+                                            _openEditor(customer: c),
+                                        icon: const Icon(Icons.edit_outlined,
+                                            size: 18),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'حذف',
+                                        onPressed: () =>
+                                            _delete(c['id'] as int),
+                                        icon: const Icon(Icons.delete_outline,
+                                            size: 18),
+                                      ),
+                                    ],
+                                  )
+                                ],
+                              )
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 );
               },
             ),

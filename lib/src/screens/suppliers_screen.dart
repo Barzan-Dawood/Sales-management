@@ -22,21 +22,59 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(children: [
-        Row(children: [
-          Expanded(
-            child: TextField(
-              decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'بحث بالاسم أو الهاتف'),
-              onChanged: (v) => setState(() => _query = v),
-            ),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
           ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-              onPressed: () => _openEditor(),
-              icon: const Icon(Icons.add),
-              label: const Text('إضافة مورد')),
-        ]),
+          child: Row(children: [
+            Expanded(
+              child: TextField(
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: 'بحث بالاسم أو الهاتف',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                onChanged: (v) => setState(() => _query = v),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+                onPressed: () => _openEditor(),
+                icon: const Icon(Icons.add),
+                label: const Text('إضافة مورد')),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        // ملاحظة توضيحية
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.orange.shade100),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.orange, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'المستحق: هو المبلغ الواجب دفعه للمورد (الحسابات الدائنة). يظهر بالبرتقالي إن كان عليك مستحقات وبالأخضر إن لم يكن.',
+                  style: TextStyle(fontSize: 12, color: Colors.orange.shade900),
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 12),
         Expanded(
           child: FutureBuilder<List<Map<String, Object?>>>(
@@ -110,26 +148,112 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 );
               }
 
-              return Card(
-                child: ListView.separated(
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, i) {
-                    final s = items[i];
-                    return ListTile(
-                      title: Text(s['name']?.toString() ?? ''),
-                      subtitle: Text(s['phone']?.toString() ?? ''),
-                      trailing: Text(Formatters.currencyIQD(
-                          (s['total_payable'] as num?) ?? 0)),
-                      onTap: () => _openEditor(supplier: s),
-                      leading: IconButton(
-                        tooltip: 'حذف',
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _delete(s['id'] as int),
+              return ListView.builder(
+                itemCount: items.length,
+                padding: const EdgeInsets.only(bottom: 12),
+                itemBuilder: (context, i) {
+                  final s = items[i];
+                  final name = s['name']?.toString() ?? '';
+                  final phone = s['phone']?.toString() ?? '';
+                  final payable =
+                      (s['total_payable'] as num?)?.toDouble() ?? 0.0;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: null,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Colors.purple.shade50,
+                              child: const Icon(Icons.business,
+                                  color: Colors.purple, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.phone,
+                                          size: 14, color: Colors.grey),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          phone.isEmpty ? '-' : phone,
+                                          style: const TextStyle(
+                                              fontSize: 12, color: Colors.grey),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('المستحق',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.w500)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  Formatters.currencyIQD(payable),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: payable > 0
+                                        ? Colors.orange.shade700
+                                        : Colors.green.shade600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'تعديل',
+                                      onPressed: () => _openEditor(supplier: s),
+                                      icon: const Icon(Icons.edit_outlined,
+                                          size: 18),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'حذف',
+                                      onPressed: () => _delete(s['id'] as int),
+                                      icon: const Icon(Icons.delete_outline,
+                                          size: 18),
+                                    ),
+                                  ],
+                                )
+                              ],
+                            )
+                          ],
+                        ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               );
             },
           ),

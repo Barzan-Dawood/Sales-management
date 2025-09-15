@@ -342,35 +342,20 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
               ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.grey.shade50,
-              Colors.white,
-            ],
-          ),
-        ),
+        color: Colors.grey.shade50,
         child: Column(
           children: [
             // Filters Section - محسن
             Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                border: Border.all(color: Colors.grey.shade200),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(8),
                 child: Row(
                   children: [
                     // Search Field
@@ -385,9 +370,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
+                              horizontal: 12, vertical: 10),
                           isDense: true,
                         ),
                         onChanged: (value) {
@@ -397,68 +380,71 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Payment Type Filter
+                    // Payment Type Filter (ChoiceChips for consistency)
                     Expanded(
-                      flex: 2,
-                      child: DropdownButtonFormField<String>(
-                        initialValue:
-                            _selectedType.isEmpty ? null : _selectedType,
-                        decoration: InputDecoration(
-                          hintText: 'نوع الدفع',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          isDense: true,
+                      flex: 3,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            _typeChip('الكل', ''),
+                            _typeChip('نقدي', 'cash'),
+                            _typeChip('أجل', 'credit'),
+                            _typeChip('أقساط', 'installment'),
+                          ],
                         ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: '',
-                            child: Text('الكل', style: TextStyle(fontSize: 12)),
-                          ),
-                          DropdownMenuItem(
-                            value: 'cash',
-                            child: Text('نقدي', style: TextStyle(fontSize: 12)),
-                          ),
-                          DropdownMenuItem(
-                            value: 'credit',
-                            child: Text('أجل', style: TextStyle(fontSize: 12)),
-                          ),
-                          DropdownMenuItem(
-                            value: 'installment',
-                            child:
-                                Text('أقساط', style: TextStyle(fontSize: 12)),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() => _selectedType = value ?? '');
-                          _loadSales();
-                        },
                       ),
                     ),
                     const SizedBox(width: 8),
                     // Date Range Filter
                     Expanded(
                       flex: 2,
-                      child: OutlinedButton.icon(
-                        onPressed: _selectDateRange,
-                        icon: const Icon(Icons.date_range, size: 16),
-                        label: Text(
-                          _fromDate != null && _toDate != null
-                              ? '${DateFormat('MM/dd').format(_fromDate!)} - ${DateFormat('MM/dd').format(_toDate!)}'
-                              : 'الفترة',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        style: OutlinedButton.styleFrom(
+                      child: InkWell(
+                        onTap: _selectDateRange,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 10,
+                              horizontal: 10, vertical: 10),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(10),
+                            color: Colors.white,
                           ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.date_range,
+                                  size: 16, color: Colors.black54),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _fromDate != null && _toDate != null
+                                      ? '${DateFormat('MM/dd').format(_fromDate!)} - ${DateFormat('MM/dd').format(_toDate!)}'
+                                      : 'الفترة',
+                                  style: const TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              if (_fromDate != null || _toDate != null) ...[
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _fromDate = null;
+                                      _toDate = null;
+                                    });
+                                    _loadSales();
+                                  },
+                                  child: const Icon(Icons.close,
+                                      size: 14, color: Colors.black45),
+                                ),
+                              ]
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -519,6 +505,29 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     );
   }
 
+  Widget _typeChip(String label, String value) {
+    final bool selected =
+        _selectedType == value || (_selectedType.isEmpty && value.isEmpty);
+    final Color color =
+        selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade400;
+    return ChoiceChip(
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      selected: selected,
+      selectedColor: color.withOpacity(0.15),
+      labelStyle: TextStyle(
+        color: selected
+            ? Theme.of(context).colorScheme.primary
+            : Colors.grey.shade700,
+        fontWeight: FontWeight.w600,
+      ),
+      side: BorderSide(color: color.withOpacity(0.4)),
+      onSelected: (_) {
+        setState(() => _selectedType = value);
+        _loadSales();
+      },
+    );
+  }
+
   Widget _buildCompactSaleCard(Map<String, Object?> sale) {
     final saleId = sale['id'] as int;
     final total = (sale['total'] as num).toDouble();
@@ -529,296 +538,170 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     final isSelected = _selectedSales.contains(saleId);
 
     Color typeColor;
-    IconData typeIcon;
+    // Removed unused icon variable to match simplified card design
+    // Icon kept in switch for readability before, but no longer used
+    // Keeping declaration removed to satisfy linter
     String typeText;
 
     switch (type) {
       case 'cash':
         typeColor = Colors.green;
-        typeIcon = Icons.money;
         typeText = 'نقدي';
         break;
       case 'credit':
         typeColor = Colors.orange;
-        typeIcon = Icons.schedule;
         typeText = 'أجل';
         break;
       case 'installment':
         typeColor = Colors.blue;
-        typeIcon = Icons.credit_card;
         typeText = 'أقساط';
         break;
       default:
         typeColor = Colors.grey;
-        typeIcon = Icons.receipt;
         typeText = 'غير محدد';
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isSelected ? typeColor.withOpacity(0.08) : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: isSelected
-                ? typeColor.withOpacity(0.15)
-                : Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 1),
-            spreadRadius: 0,
-          ),
-        ],
         border: Border.all(
-          color: isSelected ? typeColor : Colors.grey.shade200,
-          width: isSelected ? 1.5 : 0.5,
-        ),
+            color: isSelected ? typeColor : Colors.grey.shade200,
+            width: isSelected ? 1.2 : 0.8),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: _isSelectionMode ? () => _toggleSaleSelection(saleId) : null,
           borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              children: [
-                // Header Row - Compact
-                Row(
-                  children: [
-                    // Checkbox في وضع التحديد
-                    if (_isSelectionMode) ...[
-                      Checkbox(
-                        value: isSelected,
-                        onChanged: (value) => _toggleSaleSelection(saleId),
-                        activeColor: typeColor,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    // Icon - أصغر
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: typeColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        typeIcon,
-                        color: typeColor,
-                        size: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Sale info - مضغوط
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
+            children: [
+              // Accent bar
+              Container(
+                width: 4,
+                height: 82,
+                decoration: BoxDecoration(
+                  color: typeColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    bottomLeft: Radius.circular(12),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Text(
-                            '#$saleId',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: typeColor,
+                          if (_isSelectionMode) ...[
+                            Checkbox(
+                              value: isSelected,
+                              onChanged: (value) =>
+                                  _toggleSaleSelection(saleId),
+                              activeColor: typeColor,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          Text('#$saleId',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: typeColor)),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: typeColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              typeText,
+                              style: TextStyle(
+                                color: typeColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.schedule,
+                              size: 16, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
                           Text(
                             DateFormat('MM/dd HH:mm').format(createdAt),
                             style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey.shade600,
-                            ),
+                                fontSize: 11, color: Colors.grey.shade700),
                           ),
-                        ],
-                      ),
-                    ),
-                    // Type badge - أصغر
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: typeColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        typeText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 9,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // Info Row - Compact
-                Row(
-                  children: [
-                    // Customer - مضغوط
-                    Expanded(
-                      flex: 2,
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.person_outline,
-                            size: 11,
-                            color: Colors.blue.shade600,
-                          ),
-                          const SizedBox(width: 3),
-                          Expanded(
-                            child: Text(
-                              customerName ?? 'عميل عام',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: customerName != null
-                                    ? Colors.blue.shade700
-                                    : Colors.grey.shade600,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Amount - مضغوط
-                    Expanded(
-                      flex: 1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
+                          const Spacer(),
                           Text(
                             Formatters.currencyIQD(total),
                             style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                          Text(
-                            'ربح: ${Formatters.currencyIQD(profit)}',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: profit > 0 ? Colors.blue : Colors.red,
-                              fontWeight: FontWeight.w500,
-                            ),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.green),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // Action Buttons - Compact (تظهر فقط في الوضع العادي)
-                if (!_isSelectionMode) ...[
-                  Row(
-                    children: [
-                      // زر التفاصيل - مضغوط
-                      Expanded(
-                        child: Container(
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: typeColor.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: typeColor.withOpacity(0.2),
-                              width: 0.5,
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.person_outline,
+                              size: 16, color: Colors.blue.shade600),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              customerName ?? 'عميل عام',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.blue.shade700),
                             ),
                           ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
+                          const SizedBox(width: 6),
+                          Text(
+                            'ربح: ${Formatters.currencyIQD(profit)}',
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: profit > 0 ? Colors.blue : Colors.red,
+                                fontWeight: FontWeight.w600),
+                          ),
+                          if (!_isSelectionMode) ...[
+                            const SizedBox(width: 8),
+                            InkWell(
                               onTap: () => _showSaleDetails(saleId),
-                              borderRadius: BorderRadius.circular(6),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.visibility_outlined,
-                                    color: typeColor,
-                                    size: 12,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    'التفاصيل',
-                                    style: TextStyle(
-                                      color: typeColor,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              child: Icon(Icons.visibility_outlined,
+                                  size: 20, color: typeColor),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      // زر الطباعة - مضغوط
-                      Container(
-                        height: 28,
-                        width: 28,
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: Colors.blue.withOpacity(0.2),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _printInvoice(saleId),
-                            borderRadius: BorderRadius.circular(6),
-                            child: const Icon(
-                              Icons.print_outlined,
-                              color: Colors.blue,
-                              size: 14,
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: () => _printInvoice(saleId),
+                              child: const Icon(Icons.print_outlined,
+                                  size: 20, color: Colors.blue),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      // زر الحذف - مضغوط
-                      Container(
-                        height: 28,
-                        width: 28,
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: Colors.red.withOpacity(0.2),
-                            width: 0.5,
-                          ),
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _confirmDeleteSale(saleId),
-                            borderRadius: BorderRadius.circular(6),
-                            child: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
-                              size: 14,
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: () => _confirmDeleteSale(saleId),
+                              child: const Icon(Icons.delete_outline,
+                                  size: 20, color: Colors.red),
                             ),
-                          ),
-                        ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
