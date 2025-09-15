@@ -34,7 +34,7 @@ class InvoicePdf {
       return pw.Font.ttf(fontData);
     } catch (e) {
       // إذا فشل تحميل الخط العربي، استخدم الخط الافتراضي
-       return pw.Font.helvetica();
+      return pw.Font.helvetica();
     }
   }
 
@@ -57,7 +57,7 @@ class InvoicePdf {
   // دالة مساعدة لتنظيف القيم الرقمية
   static double _cleanNumber(num value, {double defaultValue = 0.0}) {
     if (!_isValidNumber(value)) {
-        return defaultValue;
+      return defaultValue;
     }
     return value.toDouble();
   }
@@ -123,7 +123,6 @@ class InvoicePdf {
     double? totalDebt, // إجمالي الدين
     double? downPayment, // المبلغ المقدم
   }) async {
-  
     // فحص البيانات قبل المعالجة (للتشخيص فقط)
     // يمكن إزالة هذا الجزء بعد التأكد من استقرار النظام
 
@@ -144,7 +143,7 @@ class InvoicePdf {
 
     // تحديد نوع الورق
     final format = _pageFormats[pageFormat] ?? PdfPageFormat.roll80;
-  
+
     // إضافة الصفحات مع دعم التقسيم
     _addPagesWithPagination(
         doc,
@@ -250,7 +249,7 @@ class InvoicePdf {
       double? downPayment) {
     // حساب عدد الأقساط التي يمكن عرضها في الصفحة الواحدة
     final maxInstallmentsPerPage = _calculateMaxInstallmentsPerPage(format);
- 
+
     // تقسيم الأقساط على الصفحات
     final pages = <List<Map<String, Object?>>>[];
     for (int i = 0; i < installments.length; i += maxInstallmentsPerPage) {
@@ -338,10 +337,10 @@ class InvoicePdf {
       double? downPayment}) {
     // حساب عدد المنتجات التي يمكن عرضها في الصفحة الواحدة
     final maxItemsPerPage = _calculateMaxItemsPerPage(format);
-  
+
     // فحص أن maxItemsPerPage صحيح
     if (maxItemsPerPage <= 0) {
-       final safeMaxItems = 10;
+      final safeMaxItems = 10;
       // تقسيم المنتجات على الصفحات بقيمة آمنة
       final pages = <List<Map<String, Object?>>>[];
       for (int i = 0; i < items.length; i += safeMaxItems) {
@@ -888,12 +887,9 @@ class InvoicePdf {
 
   // حساب الحد الأقصى لعدد الأقساط في الصفحة الواحدة
   static int _calculateMaxInstallmentsPerPage(PdfPageFormat format) {
- 
     // حساب المساحة المتاحة للأقساط
     final availableHeight = format.height - 120; // مساحة أقل للرأس والذيل
     final installmentHeight = 25; // ارتفاع كل قسط
-
-    
 
     // فحص القيم للتأكد من صحتها
     if (availableHeight.isNaN ||
@@ -906,10 +902,10 @@ class InvoicePdf {
     }
 
     final result = (availableHeight / installmentHeight).floor();
- 
+
     // التأكد من أن النتيجة صحيحة
     if (result.isNaN || result.isInfinite || result < 0) {
-       return 5;
+      return 5;
     }
 
     // تحديد حد أقصى مناسب حسب نوع الورق
@@ -926,27 +922,25 @@ class InvoicePdf {
 
   // حساب الحد الأقصى لعدد المنتجات في الصفحة الواحدة
   static int _calculateMaxItemsPerPage(PdfPageFormat format) {
-  
     // حساب المساحة المتاحة للجدول
     final availableHeight =
         format.height - 180; // طرح مساحة أقل للرأس والذيل والمجموع (تحسين)
     final itemHeight = 35; // ارتفاع كل منتج (أكبر قليلاً)
 
- 
     // فحص القيم للتأكد من صحتها
     if (availableHeight.isNaN ||
         availableHeight.isInfinite ||
         itemHeight.isNaN ||
         itemHeight.isInfinite ||
         itemHeight <= 0) {
-       return 8; // قيمة افتراضية آمنة أقل
+      return 8; // قيمة افتراضية آمنة أقل
     }
 
     final result = (availableHeight / itemHeight).floor();
- 
+
     // التأكد من أن النتيجة صحيحة
     if (result.isNaN || result.isInfinite || result < 0) {
-       return 8;
+      return 8;
     }
 
     // تحديد حد أقصى مناسب حسب نوع الورق
@@ -970,22 +964,22 @@ class InvoicePdf {
 
     // طابعة حرارية 58mm - عرض محدود جداً
     if (width < 70) {
-        return _buildCompactThermalItemsTable(items, format, arabicFont,
+      return _buildCompactThermalItemsTable(items, format, arabicFont,
           is58mm: true, startIndex: startIndex);
     }
     // طابعة حرارية 80mm - عرض متوسط
     else if (width < 120) {
-       return _buildCompactThermalItemsTable(items, format, arabicFont,
+      return _buildCompactThermalItemsTable(items, format, arabicFont,
           is58mm: false, startIndex: startIndex);
     }
     // ورقة A5 - عرض جيد
     else if (width < 450) {
-       return _buildStandardItemsTable(items, format, arabicFont,
+      return _buildStandardItemsTable(items, format, arabicFont,
           isA5: true, startIndex: startIndex);
     }
     // ورقة A4 - عرض كبير
     else {
-       return _buildStandardItemsTable(items, format, arabicFont,
+      return _buildStandardItemsTable(items, format, arabicFont,
           isA5: false, startIndex: startIndex);
     }
   }
@@ -1014,7 +1008,12 @@ class InvoicePdf {
           final name = e['name']?.toString() ?? '';
           final quantity =
               _cleanNumber(e['quantity'] as num, defaultValue: 0.0);
-          final price = _cleanNumber(e['price'] as num, defaultValue: 0.0);
+          final basePrice = _cleanNumber(e['price'] as num, defaultValue: 0.0);
+          final discountPercent = _cleanNumber(
+                  (e['discount_percent'] ?? 0) as num,
+                  defaultValue: 0.0)
+              .clamp(0, 100);
+          final price = basePrice * (1 - (discountPercent / 100));
 
           final qty = quantity.isFinite ? quantity.toInt() : 0;
           final lineTotal = price * qty;
@@ -1059,7 +1058,9 @@ class InvoicePdf {
                 children: [
                   // الكمية والسعر
                   pw.Text(
-                    '$qty × ${Formatters.currencyIQD(price)}',
+                    discountPercent > 0
+                        ? '$qty × ${Formatters.currencyIQD(basePrice)}  خصم ${discountPercent.toStringAsFixed(0)}%'
+                        : '$qty × ${Formatters.currencyIQD(basePrice)}',
                     style: _getArabicTextStyle(arabicFont, is58mm ? 6 : 7),
                     textAlign: pw.TextAlign.right,
                   ),
@@ -1202,7 +1203,13 @@ class InvoicePdf {
             final name = e['name']?.toString() ?? '';
             final quantity =
                 _cleanNumber(e['quantity'] as num, defaultValue: 0.0);
-            final price = _cleanNumber(e['price'] as num, defaultValue: 0.0);
+            final basePrice =
+                _cleanNumber(e['price'] as num, defaultValue: 0.0);
+            final discountPercent = _cleanNumber(
+                    (e['discount_percent'] ?? 0) as num,
+                    defaultValue: 0.0)
+                .clamp(0, 100);
+            final price = basePrice * (1 - (discountPercent / 100));
 
             final qty = quantity.isFinite ? quantity.toInt() : 0;
             final lineTotal = price * qty;
@@ -1230,11 +1237,11 @@ class InvoicePdf {
                 pw.Padding(
                   padding: pw.EdgeInsets.all(padding),
                   child: pw.Text(
-                    NumberFormat.currency(
-                      locale: 'ar_IQ',
-                      symbol: '',
-                      decimalDigits: 0,
-                    ).format(price),
+                    discountPercent > 0
+                        ? '${NumberFormat.currency(locale: 'ar_IQ', symbol: '', decimalDigits: 0).format(price)}\n(خصم ${discountPercent.toStringAsFixed(0)}%)'
+                        : NumberFormat.currency(
+                                locale: 'ar_IQ', symbol: '', decimalDigits: 0)
+                            .format(price),
                     style: _getArabicTextStyle(arabicFont, fontSize),
                     textAlign: pw.TextAlign.center,
                   ),

@@ -1333,6 +1333,75 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             onTap: () => _deleteSuppliersOnly(),
           ),
 
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Products Only
+          _buildDeleteActionCard(
+            icon: Icons.inventory_2,
+            title: 'حذف المنتجات فقط',
+            subtitle:
+                'حذف جميع المنتجات وعناصر المبيعات المرتبطة بها مع الإبقاء على الأقسام',
+            color: Colors.deepPurple,
+            onTap: () => _deleteProductsOnly(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Empty Categories
+          _buildDeleteActionCard(
+            icon: Icons.category_outlined,
+            title: 'حذف الأقسام الفارغة فقط',
+            subtitle: 'حذف الأقسام التي لا تحتوي على أي منتجات',
+            color: Colors.blueGrey,
+            onTap: () => _deleteEmptyCategories(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Customers Without Sales
+          _buildDeleteActionCard(
+            icon: Icons.person_off_outlined,
+            title: 'حذف العملاء بدون مبيعات',
+            subtitle: 'تنظيف العملاء الذين لا يمتلكون أي فواتير مبيعات',
+            color: Colors.teal,
+            onTap: () => _deleteCustomersWithoutSales(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Delete Sales Before Date
+          _buildDeleteActionCard(
+            icon: Icons.history_toggle_off,
+            title: 'حذف المبيعات قبل تاريخ...',
+            subtitle:
+                'حدد تاريخًا لحذف الفواتير الأقدم (مع العناصر والأقساط المتعلقة بها)',
+            color: Colors.orange,
+            onTap: () => _deleteSalesBeforeDate(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Reset Inventory Quantities To Zero
+          _buildDeleteActionCard(
+            icon: Icons.layers_clear,
+            title: 'تصفير كميات المخزون',
+            subtitle:
+                'إعادة تعيين كميات جميع المنتجات إلى صفر بدون حذف المنتجات',
+            color: Colors.redAccent,
+            onTap: () => _resetInventoryToZero(),
+          ),
+
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Vacuum Database
+          _buildDeleteActionCard(
+            icon: Icons.cleaning_services,
+            title: 'تنظيف قاعدة البيانات',
+            subtitle: 'تنظيم القاعدة وإزالة المساحة غير المستخدمة بعد الحذف',
+            color: Colors.brown,
+            onTap: () => _vacuumDatabase(),
+          ),
+
           SizedBox(height: isSmallScreen ? 16 : 20),
 
           // Delete All Data - Moved to the end
@@ -1491,7 +1560,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
   Future<void> _deleteProductsAndCategories() async {
     final confirmed = await _showDeleteConfirmationDialog(
       'حذف المنتجات والأقسام',
-      'هل أنت متأكد من حذف جميع المنتجات والأقسام؟\n\nسيتم حذف:\n• جميع المنتجات\n• جميع الأقسام\n• جميع سجلات المبيعات (sale_items)\n\nملاحظة: لن يتم إنشاء أي قسم جديد تلقائياً\n\nسيتم الاحتفاظ بـ:\n• المبيعات الأساسية\n• العملاء\n• الإحصائيات\n• المستخدمين\n\nهذه العملية لا يمكن التراجع عنها!',
+      'هل أنت متأكد من حذف جميع المنتجات والأقسام؟\n\nسيتم حذف:\n• جميع المنتجات\n• جميع الأقسام\n• جميع عناصر المبيعات\n\nملاحظة: لن يتم إنشاء أي قسم جديد تلقائياً\n\nسيتم الاحتفاظ بـ:\n• المبيعات الأساسية\n• العملاء\n• الإحصائيات\n• المستخدمين\n\nهذه العملية لا يمكن التراجع عنها!',
       'حذف المنتجات والأقسام',
       Colors.orange,
     );
@@ -1537,6 +1606,166 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         Navigator.of(context).pop();
       }
       _showSnackBar('خطأ في حذف الإحصائيات والتقارير: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteProductsOnly() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف المنتجات فقط',
+      'هل أنت متأكد من حذف جميع المنتجات؟\n\nسيتم حذف:\n• جميع المنتجات\n• جميع عناصر المبيعات\n\nسيتم الاحتفاظ بـ:\n• الأقسام\n• المبيعات\n• العملاء\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف المنتجات',
+      Colors.deepPurple,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف المنتجات...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteProductsOnly();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف المنتجات بنجاح', Colors.deepPurple);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف المنتجات: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteEmptyCategories() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف الأقسام الفارغة فقط',
+      'سيتم حذف جميع الأقسام التي لا تحتوي على أي منتجات.\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف الأقسام الفارغة',
+      Colors.blueGrey,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف الأقسام الفارغة...');
+
+      final db = context.read<DatabaseService>();
+      final deleted = await db.deleteEmptyCategories();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف $deleted قسم فارغ', Colors.blueGrey);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف الأقسام الفارغة: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteCustomersWithoutSales() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف العملاء بدون مبيعات',
+      'سيتم حذف كل عميل لا يمتلك أي فواتير مبيعات، مع حذف مدفوعاته المرتبطة.\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف العملاء بدون مبيعات',
+      Colors.teal,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف العملاء بدون مبيعات...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteCustomersWithoutSales();
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف العملاء بدون مبيعات بنجاح', Colors.teal);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف العملاء بدون مبيعات: $e', Colors.red);
+    }
+  }
+
+  Future<void> _deleteSalesBeforeDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().subtract(const Duration(days: 30)),
+      firstDate: DateTime(2000, 1, 1),
+      lastDate: DateTime.now(),
+      helpText: 'اختر التاريخ الحد الفاصل',
+      cancelText: 'إلغاء',
+      confirmText: 'تأكيد',
+    );
+    if (date == null) return;
+
+    final confirmed = await _showDeleteConfirmationDialog(
+      'حذف المبيعات قبل ${date.toString().split(' ')[0]}',
+      'سيتم حذف كل المبيعات الأقدم من التاريخ المحدد مع العناصر والأقساط المرتبطة بها.\n\nهذه العملية لا يمكن التراجع عنها!',
+      'حذف المبيعات القديمة',
+      Colors.orange,
+    );
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري حذف المبيعات القديمة...');
+
+      final db = context.read<DatabaseService>();
+      await db.deleteSalesBefore(DateTime(date.year, date.month, date.day));
+
+      Navigator.of(context).pop();
+      _showSnackBar('تم حذف المبيعات القديمة بنجاح', Colors.orange);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في حذف المبيعات القديمة: $e', Colors.red);
+    }
+  }
+
+  Future<void> _resetInventoryToZero() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'تصفير كميات المخزون',
+      'سيتم إعادة تعيين كمية جميع المنتجات إلى صفر.\n\nتحذير: هذا الإجراء خطير وقد يؤثر على تقارير المخزون.\n\nهل أنت متأكد؟',
+      'تأكيد التصفير',
+      Colors.redAccent,
+    );
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري تصفير كميات المخزون...');
+      final db = context.read<DatabaseService>();
+      await db.resetInventoryToZero();
+      Navigator.of(context).pop();
+      _showSnackBar('تم تصفير كميات المخزون بنجاح', Colors.redAccent);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في تصفير كميات المخزون: $e', Colors.red);
+    }
+  }
+
+  Future<void> _vacuumDatabase() async {
+    final confirmed = await _showDeleteConfirmationDialog(
+      'تنظيف قاعدة البيانات',
+      'سيتم تنظيف قاعدة البيانات وإزالة المساحة غير المستخدمة. قد تستغرق العملية وقتاً حسب حجم البيانات.',
+      'بدء التنظيف',
+      Colors.brown,
+    );
+    if (!confirmed) return;
+
+    try {
+      _showLoadingDialog('جاري تنظيف قاعدة البيانات...');
+      final db = context.read<DatabaseService>();
+      await db.vacuumDatabase();
+      Navigator.of(context).pop();
+      _showSnackBar('تم تنظيف قاعدة البيانات بنجاح', Colors.brown);
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      _showSnackBar('خطأ في تنظيف قاعدة البيانات: $e', Colors.red);
     }
   }
 

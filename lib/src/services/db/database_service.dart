@@ -57,6 +57,7 @@ class DatabaseService {
     await _ensureAdminPlainCredentials();
     // Ensure new tables/columns exist even if version didn't change
     await _ensureCategorySchemaOn(_db);
+    await _ensureSaleItemsDiscountColumn(_db);
     // Clean up any sales_old references
     await cleanupSalesOldReferences();
 
@@ -74,7 +75,23 @@ class DatabaseService {
     await _createIndexes(_db);
     await _cleanupOrphanObjects(_db);
     await _ensureCategorySchemaOn(_db);
+    await _ensureSaleItemsDiscountColumn(_db);
     await cleanupSalesOldReferences();
+  }
+
+  /// Ensure discount_percent column exists on sale_items
+  Future<void> _ensureSaleItemsDiscountColumn(DatabaseExecutor db) async {
+    try {
+      final cols = await db.rawQuery("PRAGMA table_info('sale_items')");
+      final hasDiscount =
+          cols.any((c) => (c['name']?.toString() ?? '') == 'discount_percent');
+      if (!hasDiscount) {
+        await db.execute(
+            "ALTER TABLE sale_items ADD COLUMN discount_percent REAL NOT NULL DEFAULT 0");
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   /// Force a complete cleanup of orphaned database objects
@@ -276,6 +293,7 @@ class DatabaseService {
               price REAL NOT NULL,
               cost REAL NOT NULL,
               quantity INTEGER NOT NULL,
+              discount_percent REAL NOT NULL DEFAULT 0,
               FOREIGN KEY(sale_id) REFERENCES sales(id),
               FOREIGN KEY(product_id) REFERENCES products(id)
             );
@@ -488,6 +506,7 @@ class DatabaseService {
           price REAL NOT NULL,
           cost REAL NOT NULL,
           quantity INTEGER NOT NULL,
+          discount_percent REAL NOT NULL DEFAULT 0,
           FOREIGN KEY(sale_id) REFERENCES sales(id),
           FOREIGN KEY(product_id) REFERENCES products(id)
         );
@@ -829,6 +848,7 @@ class DatabaseService {
         price REAL NOT NULL,
         cost REAL NOT NULL,
         quantity INTEGER NOT NULL,
+        discount_percent REAL NOT NULL DEFAULT 0,
         FOREIGN KEY(sale_id) REFERENCES sales(id),
         FOREIGN KEY(product_id) REFERENCES products(id)
       );
@@ -1675,7 +1695,10 @@ class DatabaseService {
       double total = 0;
       double profit = 0;
       for (final it in items) {
-        final price = (it['price'] as num).toDouble();
+        final rawPrice = (it['price'] as num).toDouble();
+        final discountPercent =
+            ((it['discount_percent'] ?? 0) as num).toDouble();
+        final price = rawPrice * (1 - (discountPercent.clamp(0, 100) / 100));
         final cost = (it['cost'] as num).toDouble();
         final quantity = (it['quantity'] as num).toDouble();
 
@@ -1725,12 +1748,20 @@ class DatabaseService {
       // إضافة عناصر البيع
       for (final it in items) {
         try {
+          final rawPrice = (it['price'] as num).toDouble();
+          final discountPercent =
+              ((it['discount_percent'] ?? 0) as num).toDouble();
+          final effectivePrice =
+              rawPrice * (1 - (discountPercent.clamp(0, 100) / 100));
+          final cost = (it['cost'] as num).toDouble();
+          final quantity = (it['quantity'] as num).toDouble();
           await txn.insert('sale_items', {
             'sale_id': saleId,
             'product_id': it['product_id'],
-            'price': it['price'],
-            'cost': it['cost'],
-            'quantity': it['quantity'],
+            'price': effectivePrice,
+            'cost': cost,
+            'quantity': quantity.toInt(),
+            'discount_percent': discountPercent,
           });
           if (decrementStock) {
             await txn.rawUpdate(
@@ -3934,6 +3965,133 @@ class DatabaseService {
       });
     } catch (e) {
       throw Exception('خطأ في حذف الموردين: $e');
+    }
+  }
+
+  /// حذف المنتجات فقط (مع حذف سجلات sale_items المرتبطة)
+  Future<void> deleteProductsOnly() async {
+    try {
+      await _db.transaction((txn) async {
+        await txn.execute('PRAGMA foreign_keys = OFF');
+
+        // حذف عناصر المبيعات المرتبطة بالمنتجات
+        await txn.delete('sale_items');
+
+        // حذف المنتجات فقط
+        await txn.delete('products');
+
+        // إعادة تعيين AUTO_INCREMENT
+        await txn.execute(
+            'DELETE FROM sqlite_sequence WHERE name IN ("products", "sale_items")');
+
+        await txn.execute('PRAGMA foreign_keys = ON');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف المنتجات: $e');
+    }
+  }
+
+  /// حذف الأقسام الفارغة فقط (التي لا تحتوي على منتجات)
+  Future<int> deleteEmptyCategories() async {
+    try {
+      return await _db.transaction<int>((txn) async {
+        final deleted = await txn.rawDelete('''
+          DELETE FROM categories
+          WHERE id NOT IN (
+            SELECT DISTINCT IFNULL(category_id, -1) FROM products
+          )
+        ''');
+        await txn
+            .execute('DELETE FROM sqlite_sequence WHERE name = "categories"');
+        return deleted;
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف الأقسام الفارغة: $e');
+    }
+  }
+
+  /// حذف العملاء الذين ليس لديهم أي مبيعات (مع حذف مدفوعاتهم)
+  Future<void> deleteCustomersWithoutSales() async {
+    try {
+      await _db.transaction((txn) async {
+        // حذف المدفوعات للعملاء الذين لا يملكون مبيعات
+        await txn.execute('''
+          DELETE FROM payments
+          WHERE customer_id IN (
+            SELECT c.id FROM customers c
+            LEFT JOIN sales s ON s.customer_id = c.id
+            WHERE s.id IS NULL
+          )
+        ''');
+
+        // حذف العملاء الذين لا يملكون مبيعات
+        await txn.execute('''
+          DELETE FROM customers
+          WHERE id IN (
+            SELECT c.id FROM customers c
+            LEFT JOIN sales s ON s.customer_id = c.id
+            WHERE s.id IS NULL
+          )
+        ''');
+
+        await txn
+            .execute('DELETE FROM sqlite_sequence WHERE name = "customers"');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف العملاء بدون مبيعات: $e');
+    }
+  }
+
+  /// حذف المبيعات الأقدم من تاريخ محدد (مع العناصر والأقساط)
+  Future<void> deleteSalesBefore(DateTime cutoff) async {
+    try {
+      final cutoffIso = cutoff.toIso8601String();
+      await _db.transaction((txn) async {
+        // حذف الأقساط المرتبطة بمبيعات قديمة
+        await txn.execute('''
+          DELETE FROM installments
+          WHERE sale_id IN (
+            SELECT id FROM sales WHERE created_at < ?
+          )
+        ''', [cutoffIso]);
+
+        // حذف عناصر المبيعات للمبيعات القديمة
+        await txn.execute('''
+          DELETE FROM sale_items
+          WHERE sale_id IN (
+            SELECT id FROM sales WHERE created_at < ?
+          )
+        ''', [cutoffIso]);
+
+        // حذف المبيعات القديمة
+        await txn
+            .delete('sales', where: 'created_at < ?', whereArgs: [cutoffIso]);
+
+        await txn.execute(
+            'DELETE FROM sqlite_sequence WHERE name IN ("sales", "sale_items", "installments")');
+      });
+    } catch (e) {
+      throw Exception('خطأ في حذف المبيعات القديمة: $e');
+    }
+  }
+
+  /// إعادة تعيين كميات المخزون إلى صفر لجميع المنتجات
+  Future<void> resetInventoryToZero() async {
+    try {
+      await _db.transaction((txn) async {
+        await txn.execute('UPDATE products SET quantity = 0');
+      });
+    } catch (e) {
+      throw Exception('خطأ في إعادة تعيين كميات المخزون: $e');
+    }
+  }
+
+  /// ضغط قاعدة البيانات لتقليل الحجم بعد عمليات الحذف الكبيرة
+  Future<void> vacuumDatabase() async {
+    try {
+      await _db.execute('VACUUM');
+    } catch (e) {
+      throw Exception('خطأ في ضغط قاعدة البيانات: $e');
     }
   }
 }

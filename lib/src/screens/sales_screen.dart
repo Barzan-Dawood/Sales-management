@@ -1168,8 +1168,17 @@ class _SalesScreenState extends State<SalesScreen> {
                                           const SizedBox(height: 6),
                                       itemBuilder: (context, i) {
                                         final c = _cart[i];
-                                        final lineTotal = (c['price'] as num) *
-                                            (c['quantity'] as num);
+                                        final basePrice =
+                                            (c['price'] as num).toDouble();
+                                        final discount =
+                                            ((c['discount_percent'] ?? 0)
+                                                    as num)
+                                                .toDouble()
+                                                .clamp(0, 100);
+                                        final effPrice =
+                                            basePrice * (1 - (discount / 100));
+                                        final lineTotal =
+                                            effPrice * (c['quantity'] as num);
 
                                         return Container(
                                           decoration: BoxDecoration(
@@ -1272,11 +1281,38 @@ class _SalesScreenState extends State<SalesScreen> {
                                                   ),
                                                 ),
 
-                                                // Quantity Controls
+                                                // Quantity Controls + Delete + Discount
                                                 Row(
                                                   mainAxisSize:
                                                       MainAxisSize.min,
                                                   children: [
+                                                    // Delete near minus (swapped position)
+                                                    IconButton(
+                                                      tooltip: 'حذف',
+                                                      icon: const Icon(
+                                                        Icons.delete_outline,
+                                                        color: Colors.red,
+                                                      ),
+                                                      onPressed: () {
+                                                        final qty = (_cart[i]
+                                                                ['quantity']
+                                                            as int);
+                                                        final productId = _cart[
+                                                                i]['product_id']
+                                                            as int;
+                                                        context
+                                                            .read<
+                                                                DatabaseService>()
+                                                            .adjustProductQuantity(
+                                                                productId, qty);
+                                                        setState(() {
+                                                          _cart.removeAt(i);
+                                                          _addedToCartProducts
+                                                              .remove(
+                                                                  productId);
+                                                        });
+                                                      },
+                                                    ),
                                                     IconButton(
                                                       tooltip: 'إنقاص',
                                                       icon: const Icon(Icons
@@ -1346,12 +1382,99 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             .green.shade600,
                                                       ),
                                                     ),
+                                                    const SizedBox(width: 8),
+                                                    Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        SizedBox(
+                                                          width: 64,
+                                                          child: Stack(
+                                                            alignment: Alignment
+                                                                .centerRight,
+                                                            children: [
+                                                              TextFormField(
+                                                                initialValue:
+                                                                    discount
+                                                                        .toStringAsFixed(
+                                                                            0),
+                                                                decoration:
+                                                                    InputDecoration(
+                                                                  labelText:
+                                                                      'الخصم',
+                                                                  labelStyle: TextStyle(
+                                                                      fontSize:
+                                                                          9,
+                                                                      color: Theme.of(
+                                                                              context)
+                                                                          .hintColor),
+                                                                  floatingLabelStyle:
+                                                                      const TextStyle(
+                                                                          fontSize:
+                                                                              9),
+                                                                  isDense: true,
+                                                                  contentPadding: const EdgeInsets
+                                                                      .symmetric(
+                                                                      horizontal:
+                                                                          6,
+                                                                      vertical:
+                                                                          6),
+                                                                  border:
+                                                                      const OutlineInputBorder(),
+                                                                  counterText:
+                                                                      '',
+                                                                  suffixText:
+                                                                      '%',
+                                                                  suffixStyle: const TextStyle(
+                                                                      fontSize:
+                                                                          10,
+                                                                      color: Colors
+                                                                          .grey),
+                                                                ),
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                style:
+                                                                    const TextStyle(
+                                                                        fontSize:
+                                                                            12),
+                                                                maxLength: 3,
+                                                                keyboardType:
+                                                                    const TextInputType
+                                                                        .numberWithOptions(
+                                                                        decimal:
+                                                                            false),
+                                                                onChanged:
+                                                                    (val) {
+                                                                  final d =
+                                                                      double.tryParse(
+                                                                              val) ??
+                                                                          0;
+                                                                  setState(() {
+                                                                    _cart[i][
+                                                                            'discount_percent'] =
+                                                                        d.clamp(
+                                                                            0,
+                                                                            100);
+                                                                  });
+                                                                },
+                                                              ),
+                                                              const SizedBox
+                                                                  .shrink(),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ],
                                                 ),
 
                                                 const SizedBox(width: 12),
 
-                                                // Price and Delete
+                                                // Price only (delete moved)
                                                 Column(
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.end,
@@ -1364,32 +1487,6 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             FontWeight.bold,
                                                         fontSize: 12,
                                                       ),
-                                                    ),
-                                                    IconButton(
-                                                      tooltip: 'حذف',
-                                                      icon: const Icon(
-                                                        Icons.delete_outline,
-                                                        color: Colors.red,
-                                                      ),
-                                                      onPressed: () {
-                                                        final qty = (_cart[i]
-                                                                ['quantity']
-                                                            as int);
-                                                        final productId = _cart[
-                                                                i]['product_id']
-                                                            as int;
-                                                        context
-                                                            .read<
-                                                                DatabaseService>()
-                                                            .adjustProductQuantity(
-                                                                productId, qty);
-                                                        setState(() {
-                                                          _cart.removeAt(i);
-                                                          _addedToCartProducts
-                                                              .remove(
-                                                                  productId);
-                                                        });
-                                                      },
                                                     ),
                                                   ],
                                                 ),
@@ -1591,13 +1688,26 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     final totalAmount = _cart
                                                         .fold<double>(0,
                                                             (sum, item) {
+                                                      final basePrice =
+                                                          (item['price'] as num)
+                                                              .toDouble();
+                                                      final discount =
+                                                          ((item['discount_percent'] ??
+                                                                  0) as num)
+                                                              .toDouble()
+                                                              .clamp(0, 100);
+                                                      final effectivePrice =
+                                                          basePrice *
+                                                              (1 -
+                                                                  (discount /
+                                                                      100));
+                                                      final qty =
+                                                          (item['quantity']
+                                                                  as num)
+                                                              .toDouble();
                                                       return sum +
-                                                          ((item['price']
-                                                                      as num)
-                                                                  .toDouble() *
-                                                              (item['quantity']
-                                                                      as num)
-                                                                  .toDouble());
+                                                          (effectivePrice *
+                                                              qty);
                                                     });
 
                                                     if (_downPayment != null &&
@@ -2955,6 +3065,7 @@ class _SalesScreenState extends State<SalesScreen> {
         'quantity': 1,
         'available': currentStock - 1,
         'barcode': p['barcode'],
+        'discount_percent': 0,
       });
       _addedToCartProducts.add(p['id'] as int);
     });
