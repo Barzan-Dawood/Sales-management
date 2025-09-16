@@ -9,6 +9,7 @@ import '../services/db/database_service.dart';
 import '../services/print_service.dart';
 import '../utils/format.dart';
 import '../utils/export.dart';
+import '../utils/dark_mode_utils.dart';
 
 class DebtsScreen extends StatefulWidget {
   const DebtsScreen({super.key});
@@ -117,7 +118,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                 // العنوان
                 Row(
                   children: [
-                    Icon(Icons.person, color: Colors.blue.shade700),
+                    Icon(Icons.person,
+                        color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -125,7 +127,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade700,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -174,14 +176,15 @@ class _DebtsScreenState extends State<DebtsScreen>
                                   'إجمالي المدفوع',
                                   Formatters.currencyIQD(
                                       data['totalPaid'] ?? 0.0),
-                                  valueColor: Colors.green),
+                                  valueColor:
+                                      DarkModeUtils.getSuccessColor(context)),
                               _buildInfoRow(
                                   'المتبقي',
                                   Formatters.currencyIQD(
                                       data['remainingDebt'] ?? 0.0),
                                   valueColor: data['remainingDebt'] > 0
-                                      ? Colors.red
-                                      : Colors.green),
+                                      ? Theme.of(context).colorScheme.error
+                                      : DarkModeUtils.getSuccessColor(context)),
                             ]),
 
                             const SizedBox(height: 16),
@@ -220,8 +223,9 @@ class _DebtsScreenState extends State<DebtsScreen>
                       icon: const Icon(Icons.payment, size: 18),
                       label: const Text('إضافة دفعة'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                        backgroundColor: DarkModeUtils.getSuccessColor(context),
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                     ElevatedButton.icon(
@@ -232,8 +236,9 @@ class _DebtsScreenState extends State<DebtsScreen>
                       icon: const Icon(Icons.print, size: 18),
                       label: const Text('طباعة كشف'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ],
@@ -282,10 +287,10 @@ class _DebtsScreenState extends State<DebtsScreen>
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 8),
@@ -352,12 +357,12 @@ class _DebtsScreenState extends State<DebtsScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'تفاصيل الأقساط',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 8),
@@ -377,16 +382,23 @@ class _DebtsScreenState extends State<DebtsScreen>
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: isPaid
-                      ? Colors.green.shade50
+                      ? DarkModeUtils.getSuccessColor(context).withOpacity(0.08)
                       : isOverdue
-                          ? Colors.red.shade50
-                          : Colors.orange.shade50,
+                          ? Theme.of(context)
+                              .colorScheme
+                              .error
+                              .withOpacity(0.08)
+                          : Colors.orange.withOpacity(0.08),
                   border: Border.all(
                     color: isPaid
-                        ? Colors.green.shade200
+                        ? DarkModeUtils.getSuccessColor(context)
+                            .withOpacity(0.4)
                         : isOverdue
-                            ? Colors.red.shade200
-                            : Colors.orange.shade200,
+                            ? Theme.of(context)
+                                .colorScheme
+                                .error
+                                .withOpacity(0.4)
+                            : Colors.orange.withOpacity(0.35),
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -405,9 +417,9 @@ class _DebtsScreenState extends State<DebtsScreen>
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: isPaid
-                                ? Colors.green
+                                ? DarkModeUtils.getSuccessColor(context)
                                 : isOverdue
-                                    ? Colors.red
+                                    ? Theme.of(context).colorScheme.error
                                     : Colors.orange,
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -729,20 +741,33 @@ class _DebtsScreenState extends State<DebtsScreen>
     return Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.background,
         appBar: AppBar(
-          title: const Text('دفتر الديون'),
-          backgroundColor: Colors.blue.shade700,
-          foregroundColor: Colors.white,
+          title: const Text(
+            'دفتر الديون',
+            style: TextStyle(color: Colors.blue),
+          ),
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).colorScheme.surface
+              : Colors.white,
+          foregroundColor: Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).colorScheme.onSurface
+              : Colors.black,
           elevation: 0,
           actions: [
             IconButton(
-              icon: const Icon(Icons.add),
+              icon: Icon(Icons.add,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Colors.black),
               onPressed: () => _showAddPaymentDialog(context, db),
               tooltip: 'إضافة دفعة',
             ),
             IconButton(
-              icon: const Icon(Icons.picture_as_pdf),
+              icon: Icon(Icons.picture_as_pdf,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Colors.black),
               tooltip: 'تصدير PDF',
               onPressed: () async {
                 await _exportDebtsSummary(db);
@@ -755,18 +780,23 @@ class _DebtsScreenState extends State<DebtsScreen>
             // شريط البحث
             Container(
               padding: const EdgeInsets.all(16),
-              color: Colors.grey.shade100,
+              color: Theme.of(context).colorScheme.surfaceVariant,
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'البحث عن العميل...',
-                  prefixIcon: const Icon(Icons.search),
+                  prefixIcon: Icon(Icons.search,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.7)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: BorderSide(
+                        color: Theme.of(context).dividerColor.withOpacity(0.4)),
                   ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Theme.of(context).colorScheme.surface,
                 ),
                 onChanged: (value) {
                   setState(() {
@@ -821,12 +851,13 @@ class _DebtsScreenState extends State<DebtsScreen>
 
             // تبويبات
             Container(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               child: TabBar(
                 controller: _tabController,
-                labelColor: Colors.blue.shade700,
-                unselectedLabelColor: Colors.grey,
-                indicatorColor: Colors.blue.shade700,
+                labelColor: Theme.of(context).colorScheme.primary,
+                unselectedLabelColor:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                indicatorColor: Theme.of(context).colorScheme.primary,
                 tabs: const [
                   Tab(
                     icon: Icon(Icons.warning, size: 20),
@@ -915,9 +946,18 @@ class _DebtsScreenState extends State<DebtsScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.3),
+        ),
         borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: DarkModeUtils.getShadowColor(context),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -925,7 +965,7 @@ class _DebtsScreenState extends State<DebtsScreen>
             title,
             style: TextStyle(
               fontSize: 12,
-              color: color,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -965,10 +1005,13 @@ class _DebtsScreenState extends State<DebtsScreen>
         }
 
         if (customers.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'لا توجد عملاء',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
             ),
           );
         }
@@ -1008,10 +1051,13 @@ class _DebtsScreenState extends State<DebtsScreen>
         }
 
         if (customers.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'لا توجد عملاء',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
             ),
           );
         }
@@ -1035,7 +1081,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         // شريط الفلترة
         Container(
           padding: const EdgeInsets.all(16),
-          color: Colors.grey.shade50,
+          color: Theme.of(context).colorScheme.surface,
           child: Column(
             children: [
               Row(
@@ -1043,11 +1089,31 @@ class _DebtsScreenState extends State<DebtsScreen>
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       initialValue: _installmentFilter,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'فلترة الأقساط',
-                        border: OutlineInputBorder(),
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color:
+                                Theme.of(context).dividerColor.withOpacity(0.4),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color:
+                                Theme.of(context).dividerColor.withOpacity(0.4),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                       ),
                       items: const [
                         DropdownMenuItem(
@@ -1069,7 +1135,13 @@ class _DebtsScreenState extends State<DebtsScreen>
                   const SizedBox(width: 8),
                   IconButton(
                     onPressed: () => _showDateRangeDialog(),
-                    icon: const Icon(Icons.date_range),
+                    icon: Icon(
+                      Icons.date_range,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.8),
+                    ),
                     tooltip: 'فلترة بالتاريخ',
                   ),
                 ],

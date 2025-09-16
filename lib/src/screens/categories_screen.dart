@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
+import '../utils/dark_mode_utils.dart';
 import 'category_products_screen.dart';
 
 class CategoriesScreen extends StatefulWidget {
@@ -17,24 +18,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   String _query = '';
 
   InputDecoration _pill(BuildContext context, String hint, IconData icon) {
-    return InputDecoration(
+    return DarkModeUtils.createPillInputDecoration(
+      context,
       hintText: hint,
-      prefixIcon: Icon(icon),
-      filled: true,
-      fillColor: Theme.of(context)
-          .colorScheme
-          .surfaceContainerHighest
-          .withOpacity(0.4),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide(color: Theme.of(context).dividerColor),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      prefixIcon: icon,
     );
   }
 
@@ -218,7 +205,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                     height: 200,
                                     decoration: BoxDecoration(
                                       border: Border.all(
-                                          color: Colors.grey.shade300),
+                                          color: DarkModeUtils.getBorderColor(
+                                              context)),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: SingleChildScrollView(
@@ -241,7 +229,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                                             ic.codePoint
                                                         ? Theme.of(context)
                                                             .primaryColor
-                                                        : Colors.grey.shade100,
+                                                        : DarkModeUtils
+                                                                .getSurfaceColor(
+                                                                    context)
+                                                            .withOpacity(0.5),
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                             8),
@@ -290,7 +281,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                     height: 200,
                                     decoration: BoxDecoration(
                                       border: Border.all(
-                                          color: Colors.grey.shade300),
+                                          color: DarkModeUtils.getBorderColor(
+                                              context)),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: SingleChildScrollView(
@@ -484,10 +476,12 @@ class _FancyCategoryCardState extends State<_FancyCategoryCard> {
                                               horizontal: 8, vertical: 3),
                                           decoration: BoxDecoration(
                                             color:
-                                                Colors.white.withOpacity(0.25),
+                                                DarkModeUtils.getBackdropColor(
+                                                    context),
                                             border: Border.all(
-                                                color: Colors.white
-                                                    .withOpacity(0.35)),
+                                                color: DarkModeUtils
+                                                    .getBackdropBorderColor(
+                                                        context)),
                                             borderRadius:
                                                 BorderRadius.circular(20),
                                           ),

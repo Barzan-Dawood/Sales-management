@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/db/database_service.dart';
+import '../utils/dark_mode_utils.dart';
 
 class DatabaseSettingsDialog extends StatefulWidget {
   const DatabaseSettingsDialog({super.key});
@@ -97,14 +98,15 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.blue.shade50,
-              Colors.white,
-            ],
-          ),
+          color: Theme.of(context).colorScheme.surface,
+          border: Border.all(color: DarkModeUtils.getBorderColor(context)),
+          boxShadow: [
+            BoxShadow(
+              color: DarkModeUtils.getShadowColor(context),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -112,11 +114,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             Container(
               padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue.shade600, Colors.blue.shade700],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -127,12 +125,15 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   Container(
                     padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onPrimary
+                          .withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.storage,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: isSmallScreen ? 24 : 28,
                     ),
                   ),
@@ -144,7 +145,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                         Text(
                           'إعدادات قاعدة البيانات',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             fontSize: isSmallScreen ? 16 : 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -153,7 +154,10 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                           Text(
                             'إدارة النسخ الاحتياطية والاستعادة',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimary
+                                  .withOpacity(0.9),
                               fontSize: 14,
                             ),
                           ),
@@ -164,7 +168,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                     onPressed: () => Navigator.of(context).pop(),
                     icon: Icon(
                       Icons.close,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: isSmallScreen ? 20 : 24,
                     ),
                   ),
@@ -175,10 +179,10 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             // Tabs
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: DarkModeUtils.getShadowColor(context),
                     blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
@@ -186,9 +190,10 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
               ),
               child: TabBar(
                 controller: _tabController,
-                labelColor: Colors.blue.shade700,
-                unselectedLabelColor: Colors.grey.shade600,
-                indicatorColor: Colors.blue.shade600,
+                labelColor: Theme.of(context).colorScheme.primary,
+                unselectedLabelColor:
+                    Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                indicatorColor: Theme.of(context).colorScheme.primary,
                 indicatorWeight: 3,
                 isScrollable: isSmallScreen,
                 labelStyle: TextStyle(
@@ -252,7 +257,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             style: TextStyle(
               fontSize: isSmallScreen ? 16 : 18,
               fontWeight: FontWeight.bold,
-              color: Colors.blue,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -283,15 +288,17 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(
+                  color:
+                      Theme.of(context).colorScheme.primary.withOpacity(0.2)),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.info_outline,
-                  color: Colors.blue.shade600,
+                  color: Theme.of(context).colorScheme.primary,
                   size: isSmallScreen ? 18 : 20,
                 ),
                 SizedBox(width: isSmallScreen ? 8 : 12),
@@ -303,7 +310,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                         'ملاحظة حول ملفات النسخ الاحتياطي',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue.shade700,
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: isSmallScreen ? 13 : 14,
                         ),
                       ),
@@ -315,7 +322,10 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                         '• ملف الذاكرة المشتركة (.db-shm)\n'
                         'هذه الملفات ضرورية لضمان سلامة البيانات.',
                         style: TextStyle(
-                          color: Colors.blue.shade600,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.8),
                           fontSize: isSmallScreen ? 11 : 12,
                         ),
                       ),
@@ -332,16 +342,17 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: DarkModeUtils.getBorderColor(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.folder, color: Colors.blue.shade600),
+                    Icon(Icons.folder,
+                        color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 8),
                     const Text(
                       'مسار النسخ الاحتياطي',
@@ -356,7 +367,10 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                 Text(
                   _backupPath.isEmpty ? 'غير محدد' : _backupPath,
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.7),
                     fontSize: 14,
                   ),
                 ),
@@ -366,8 +380,8 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   icon: const Icon(Icons.folder_open, size: 18),
                   label: const Text('اختيار مسار'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade600,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
               ],
@@ -392,7 +406,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             style: TextStyle(
               fontSize: isSmallScreen ? 16 : 18,
               fontWeight: FontWeight.bold,
-              color: Colors.blue,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -412,19 +426,20 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
+              color: Theme.of(context).colorScheme.error.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.shade200),
+              border: Border.all(
+                  color: Theme.of(context).colorScheme.error.withOpacity(0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.warning, color: Colors.red.shade600),
+                Icon(Icons.warning, color: Theme.of(context).colorScheme.error),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'تحذير: الاستعادة ستحل محل البيانات الحالية. تأكد من إنشاء نسخة احتياطية قبل الاستعادة.',
                     style: TextStyle(
-                      color: Colors.red.shade700,
+                      color: Theme.of(context).colorScheme.error,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -452,7 +467,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             style: TextStyle(
               fontSize: isSmallScreen ? 16 : 18,
               fontWeight: FontWeight.bold,
-              color: Colors.blue,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -461,12 +476,12 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: DarkModeUtils.getBorderColor(context)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: DarkModeUtils.getShadowColor(context),
                   blurRadius: 5,
                   offset: const Offset(0, 2),
                 ),
@@ -477,7 +492,8 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
               children: [
                 Row(
                   children: [
-                    Icon(Icons.schedule, color: Colors.blue.shade600),
+                    Icon(Icons.schedule,
+                        color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 8),
                     const Text(
                       'النسخ الاحتياطي التلقائي',
@@ -502,7 +518,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                     });
                     _saveSettings();
                   },
-                  activeThumbColor: Colors.blue.shade600,
+                  activeColor: Theme.of(context).colorScheme.primary,
                 ),
 
                 if (_autoBackupEnabled) ...[
@@ -545,16 +561,17 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: DarkModeUtils.getBorderColor(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.info, color: Colors.blue.shade600),
+                    Icon(Icons.info,
+                        color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 8),
                     const Text(
                       'معلومات قاعدة البيانات',
@@ -632,12 +649,12 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: DarkModeUtils.getBorderColor(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: DarkModeUtils.getShadowColor(context),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -666,14 +683,14 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontSize: isSmallScreen ? 12 : 14,
           ),
         ),
         trailing: Icon(
           Icons.arrow_forward_ios,
           size: isSmallScreen ? 14 : 16,
-          color: Colors.grey.shade400,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
         ),
         onTap: onTap,
         contentPadding: EdgeInsets.symmetric(
@@ -1042,7 +1059,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: color,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -1064,12 +1081,15 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       Icons.backup,
-                      color: Colors.blue.shade600,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 24,
                     ),
                   ),
@@ -1080,7 +1100,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -1101,15 +1121,22 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .tertiary
+                          .withOpacity(0.08),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade200),
+                      border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .tertiary
+                              .withOpacity(0.2)),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.info_outline,
-                          color: Colors.orange.shade600,
+                          color: Theme.of(context).colorScheme.tertiary,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -1117,7 +1144,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                           child: Text(
                             'تأكد من وجود مساحة كافية في القرص الصلب',
                             style: TextStyle(
-                              color: Colors.orange.shade700,
+                              color: Theme.of(context).colorScheme.tertiary,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -1132,15 +1159,18 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey.shade600,
+                    foregroundColor: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.7),
                   ),
                   child: const Text('إلغاء'),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(true),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade600,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -1167,8 +1197,9 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 16),
               Text(
@@ -1200,7 +1231,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             style: TextStyle(
               fontSize: isSmallScreen ? 16 : 18,
               fontWeight: FontWeight.bold,
-              color: Colors.red,
+              color: Theme.of(context).colorScheme.error,
             ),
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -1209,19 +1240,20 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
+              color: Theme.of(context).colorScheme.error.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.shade200),
+              border: Border.all(
+                  color: Theme.of(context).colorScheme.error.withOpacity(0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.warning, color: Colors.red.shade600),
+                Icon(Icons.warning, color: Theme.of(context).colorScheme.error),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'تحذير: عمليات الحذف لا يمكن التراجع عنها. تأكد من إنشاء نسخة احتياطية قبل الحذف.',
                     style: TextStyle(
-                      color: Colors.red.shade700,
+                      color: Theme.of(context).colorScheme.error,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1480,12 +1512,12 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: DarkModeUtils.getBorderColor(context)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: DarkModeUtils.getShadowColor(context),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -1509,20 +1541,20 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: isSmallScreen ? 14 : 16,
-            color: color,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontSize: isSmallScreen ? 12 : 14,
           ),
         ),
         trailing: Icon(
           Icons.arrow_forward_ios,
           size: isSmallScreen ? 14 : 16,
-          color: color.withOpacity(0.7),
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
         ),
         onTap: onTap,
         contentPadding: EdgeInsets.symmetric(
@@ -1803,7 +1835,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: color,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -1824,15 +1856,20 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color:
+                          Theme.of(context).colorScheme.error.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
+                      border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .error
+                              .withOpacity(0.2)),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.warning,
-                          color: Colors.red.shade600,
+                          color: Theme.of(context).colorScheme.error,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -1840,7 +1877,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                           child: Text(
                             'هذه العملية لا يمكن التراجع عنها!',
                             style: TextStyle(
-                              color: Colors.red.shade700,
+                              color: Theme.of(context).colorScheme.error,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -1855,7 +1892,10 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey.shade600,
+                    foregroundColor: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.7),
                   ),
                   child: const Text('إلغاء'),
                 ),
@@ -1863,7 +1903,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   onPressed: () => Navigator.of(context).pop(true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: color,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),

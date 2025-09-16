@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
 import '../services/store_config.dart';
+import '../utils/dark_mode_utils.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -143,7 +144,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: DarkModeUtils.getBackgroundColor(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: FadeTransition(
@@ -181,7 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.blue.shade600,
+            DarkModeUtils.getPrimaryColor(context),
             Colors.purple.shade600,
           ],
           begin: Alignment.topLeft,
@@ -190,7 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: DarkModeUtils.getPrimaryColor(context).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -201,12 +202,12 @@ class _DashboardScreenState extends State<DashboardScreen>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: DarkModeUtils.getCardColor(context).withOpacity(0.2),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.analytics,
-              color: Colors.white,
+              color: DarkModeUtils.getCardColor(context),
               size: 32,
             ),
           ),
@@ -217,8 +218,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               children: [
                 Text(
                   'مرحباً بك في لوحة التحكم ${context.watch<StoreConfig>().shopName}',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: DarkModeUtils.getCardColor(context),
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
@@ -227,7 +228,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 Text(
                   'نظرة شاملة على أداء متجرك',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: DarkModeUtils.getCardColor(context).withOpacity(0.9),
                     fontSize: 16,
                   ),
                 ),
@@ -237,13 +238,13 @@ class _DashboardScreenState extends State<DashboardScreen>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: DarkModeUtils.getCardColor(context).withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               DateTime.now().toString().substring(0, 10),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: DarkModeUtils.getCardColor(context),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -258,12 +259,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'الإحصائيات السريعة',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: DarkModeUtils.getTextColor(context),
           ),
         ),
         const SizedBox(height: 20),
@@ -279,15 +280,15 @@ class _DashboardScreenState extends State<DashboardScreen>
               'مبيعات اليوم',
               Formatters.currencyIQD(_todaySales),
               Icons.trending_up,
-              Colors.green,
-              Colors.green.shade50,
+              DarkModeUtils.getSuccessColor(context),
+              DarkModeUtils.getSuccessColor(context).withOpacity(0.1),
             ),
             _buildStatCard(
               'ربح اليوم',
               Formatters.currencyIQD(_todayProfit),
               Icons.monetization_on,
-              Colors.blue,
-              Colors.blue.shade50,
+              DarkModeUtils.getInfoColor(context),
+              DarkModeUtils.getInfoColor(context).withOpacity(0.1),
             ),
             _buildStatCard(
               'مبيعات الشهر',
@@ -342,8 +343,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               'تنبيهات المخزون',
               '$_lowStockCount',
               Icons.warning,
-              Colors.red,
-              Colors.red.shade50,
+              DarkModeUtils.getErrorColor(context),
+              DarkModeUtils.getErrorColor(context).withOpacity(0.1),
             ),
             _buildStatCard(
               'إجمالي الديون',
@@ -356,8 +357,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               'ديون متأخرة',
               Formatters.currencyIQD(_overdueDebt),
               Icons.warning_amber,
-              Colors.red,
-              Colors.red.shade50,
+              DarkModeUtils.getErrorColor(context),
+              DarkModeUtils.getErrorColor(context).withOpacity(0.1),
             ),
             _buildStatCard(
               'عملاء مدينون',
@@ -451,7 +452,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 title,
                 style: TextStyle(
                   fontSize: 9,
-                  color: Colors.grey.shade600,
+                  color: DarkModeUtils.getSecondaryTextColor(context),
                   fontWeight: FontWeight.w500,
                 ),
                 maxLines: 1,
@@ -484,11 +485,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DarkModeUtils.getCardColor(context),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: DarkModeUtils.getShadowColor(context).withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -499,7 +500,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           Row(
             children: [
-              Icon(Icons.show_chart, color: Colors.blue.shade600, size: 24),
+              Icon(Icons.show_chart,
+                  color: DarkModeUtils.getInfoColor(context), size: 24),
               const SizedBox(width: 12),
               const Text(
                 'مبيعات الأسبوع',
@@ -522,13 +524,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                   verticalInterval: 1,
                   getDrawingHorizontalLine: (value) {
                     return FlLine(
-                      color: Colors.grey.shade200,
+                      color: DarkModeUtils.getBorderColor(context),
                       strokeWidth: 1,
                     );
                   },
                   getDrawingVerticalLine: (value) {
                     return FlLine(
-                      color: Colors.grey.shade200,
+                      color: DarkModeUtils.getBorderColor(context),
                       strokeWidth: 1,
                     );
                   },
@@ -561,7 +563,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                           child: Text(
                             days[value.toInt()],
                             style: TextStyle(
-                              color: Colors.grey.shade600,
+                              color:
+                                  DarkModeUtils.getSecondaryTextColor(context),
                               fontWeight: FontWeight.w500,
                               fontSize: 12,
                             ),
@@ -580,7 +583,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                           child: Text(
                             '${value.toInt()}K',
                             style: TextStyle(
-                              color: Colors.grey.shade600,
+                              color:
+                                  DarkModeUtils.getSecondaryTextColor(context),
                               fontWeight: FontWeight.w500,
                               fontSize: 12,
                             ),
@@ -593,7 +597,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 borderData: FlBorderData(
                   show: true,
-                  border: Border.all(color: Colors.grey.shade300),
+                  border:
+                      Border.all(color: DarkModeUtils.getBorderColor(context)),
                 ),
                 minX: 0,
                 maxX: 6,
@@ -613,7 +618,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     isCurved: true,
                     gradient: LinearGradient(
                       colors: [
-                        Colors.blue.shade400,
+                        DarkModeUtils.getInfoColor(context),
                         Colors.purple.shade400,
                       ],
                     ),
@@ -624,9 +629,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                       getDotPainter: (spot, percent, barData, index) {
                         return FlDotCirclePainter(
                           radius: 4,
-                          color: Colors.white,
+                          color: DarkModeUtils.getCardColor(context),
                           strokeWidth: 2,
-                          strokeColor: Colors.blue.shade600,
+                          strokeColor: DarkModeUtils.getInfoColor(context),
                         );
                       },
                     ),
@@ -655,11 +660,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DarkModeUtils.getCardColor(context),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: DarkModeUtils.getShadowColor(context).withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -695,7 +700,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: DarkModeUtils.getBackgroundColor(context),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
@@ -705,12 +710,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade100,
+                          color: DarkModeUtils.getInfoColor(context)
+                              .withOpacity(0.3),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.inventory_2,
-                          color: Colors.blue.shade600,
+                          color: DarkModeUtils.getInfoColor(context),
                           size: 18,
                         ),
                       ),
@@ -731,7 +737,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                             Text(
                               'الكمية: ${product['quantity']}',
                               style: TextStyle(
-                                color: Colors.grey.shade600,
+                                color: DarkModeUtils.getSecondaryTextColor(
+                                    context),
                                 fontSize: 11,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -745,7 +752,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           Formatters.currencyIQD(
                               (product['price'] as num?) ?? 0),
                           style: TextStyle(
-                            color: Colors.green.shade600,
+                            color: DarkModeUtils.getSuccessColor(context),
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -784,11 +791,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DarkModeUtils.getCardColor(context),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: DarkModeUtils.getShadowColor(context).withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -799,7 +806,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           Row(
             children: [
-              Icon(Icons.receipt_long, color: Colors.green.shade600, size: 20),
+              Icon(Icons.receipt_long,
+                  color: DarkModeUtils.getSuccessColor(context), size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -824,13 +832,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                         Icon(
                           Icons.shopping_cart_outlined,
                           size: 48,
-                          color: Colors.grey.shade400,
+                          color: DarkModeUtils.getSecondaryTextColor(context),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'لا توجد منتجات مباعة حديثاً',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: DarkModeUtils.getSecondaryTextColor(context),
                             fontSize: 16,
                           ),
                         ),
@@ -845,7 +853,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
+                          color: DarkModeUtils.getBackgroundColor(context),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey.shade200),
                         ),
@@ -855,12 +863,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: Colors.green.shade100,
+                                color: DarkModeUtils.getSuccessColor(context)
+                                    .withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
                                 Icons.inventory_2,
-                                color: Colors.green.shade600,
+                                color: DarkModeUtils.getSuccessColor(context),
                                 size: 18,
                               ),
                             ),
@@ -883,7 +892,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                       Text(
                                         'الكمية: ${product['quantity']}',
                                         style: TextStyle(
-                                          color: Colors.grey.shade600,
+                                          color: DarkModeUtils
+                                              .getSecondaryTextColor(context),
                                           fontSize: 10,
                                         ),
                                       ),
@@ -894,7 +904,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 .substring(0, 16) ??
                                             '',
                                         style: TextStyle(
-                                          color: Colors.grey.shade600,
+                                          color: DarkModeUtils
+                                              .getSecondaryTextColor(context),
                                           fontSize: 10,
                                         ),
                                         overflow: TextOverflow.ellipsis,
@@ -910,7 +921,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 Formatters.currencyIQD(
                                     (product['sale_price'] as num?) ?? 0),
                                 style: TextStyle(
-                                  color: Colors.green.shade600,
+                                  color: DarkModeUtils.getSuccessColor(context),
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -933,11 +944,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DarkModeUtils.getCardColor(context),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: DarkModeUtils.getShadowColor(context).withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -973,13 +984,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                         Icon(
                           Icons.check_circle_outline,
                           size: 48,
-                          color: Colors.green.shade400,
+                          color: DarkModeUtils.getSuccessColor(context),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'المخزون آمن',
                           style: TextStyle(
-                            color: Colors.green.shade600,
+                            color: DarkModeUtils.getSuccessColor(context),
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -991,13 +1002,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                     itemCount: _lowStockProducts.length,
                     itemBuilder: (context, index) {
                       final product = _lowStockProducts[index];
+                      final isDark =
+                          Theme.of(context).brightness == Brightness.dark;
+                      final warn = DarkModeUtils.getWarningColor(context);
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
+                          color: warn.withOpacity(isDark ? 0.12 : 0.08),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange.shade200),
+                          border: Border.all(
+                              color: warn.withOpacity(isDark ? 0.45 : 0.25)),
                         ),
                         child: Row(
                           children: [
@@ -1005,12 +1020,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: Colors.orange.shade100,
+                                color: warn.withOpacity(isDark ? 0.25 : 0.18),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
                                 Icons.inventory_2,
-                                color: Colors.orange.shade600,
+                                color: warn,
                                 size: 20,
                               ),
                             ),
@@ -1029,7 +1044,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   Text(
                                     'الكمية: ${product['quantity']} (الحد الأدنى: ${product['min_quantity']})',
                                     style: TextStyle(
-                                      color: Colors.orange.shade700,
+                                      color: warn,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -1040,13 +1055,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.orange.shade100,
+                                color: warn.withOpacity(isDark ? 0.25 : 0.18),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 'منخفض',
                                 style: TextStyle(
-                                  color: Colors.orange.shade700,
+                                  color: warn,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),

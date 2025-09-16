@@ -2,10 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'services/auth/auth_provider.dart';
 import 'services/store_config.dart';
+import 'services/theme_provider.dart';
 import 'utils/strings.dart';
+import 'utils/app_themes.dart';
+import 'utils/dark_mode_utils.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/products/products_screen.dart';
@@ -37,6 +39,17 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final store = context.watch<StoreConfig>();
+    final themeProvider = context.watch<ThemeProvider>();
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final gradients = theme.extension<AppGradients>();
+
+    // Update theme provider with current system brightness
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      themeProvider.updateDarkModeStatus(isDark);
+    });
+
     if (!auth.isAuthenticated) {
       return const LoginScreen();
     }
@@ -63,37 +76,39 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.blue.shade600,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shadowColor: Colors.blue.shade200,
         title: Text(
           store.appTitle,
           style: const TextStyle(
-            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
         leading: _selectedIndex != 0
             ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: const Icon(Icons.arrow_back),
                 onPressed: () => setState(() => _selectedIndex = 0),
                 tooltip: 'العودة للرئيسية',
               )
             : null,
         actions: [
+          // Dark mode toggle button
+          IconButton(
+            tooltip: themeProvider.isDarkMode ? 'الوضع الفاتح' : 'الوضع المظلم',
+            icon: Icon(
+                themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: () => themeProvider.toggleTheme(),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Center(
               child: Text(
                 auth.currentUser?['name']?.toString() ?? '',
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ),
           ),
           IconButton(
             tooltip: AppStrings.logout,
-            icon: const Icon(Icons.logout, color: Colors.white),
+            icon: const Icon(Icons.logout),
             onPressed: () => context.read<AuthProvider>().logout(),
           ),
         ],
@@ -108,14 +123,14 @@ class _AppShellState extends State<AppShell> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.blue.shade50,
-                  Colors.blue.shade100,
-                  Colors.blue.shade200,
+                  gradients?.sidebarStart ?? scheme.primary.withOpacity(0.08),
+                  gradients?.sidebarMiddle ?? scheme.primary.withOpacity(0.12),
+                  gradients?.sidebarEnd ?? scheme.primary.withOpacity(0.16),
                 ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: DarkModeUtils.getShadowColor(context),
                   blurRadius: 10,
                   offset: const Offset(2, 0),
                 ),
@@ -127,56 +142,61 @@ class _AppShellState extends State<AppShell> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.blue.shade600,
-                        Colors.blue.shade700,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: isDark ? scheme.primaryContainer : scheme.primary,
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.withOpacity(0.3),
-                        blurRadius: 8,
+                        color: isDark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.black.withOpacity(0.12),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withOpacity(0.1)
+                            : Colors.white.withOpacity(0.4),
+                        blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Image.asset(
-                          'assets/images/pos.png',
-                          width: 28,
-                          height: 28,
-                          color: Colors.white,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text(
+                            Text(
                               AppStrings.mainMenu,
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                color: isDark
+                                    ? scheme.onPrimaryContainer
+                                    : scheme.onPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    offset: const Offset(0, 1),
+                                    blurRadius: 2,
+                                  ),
+                                ],
                               ),
                             ),
                             Text(
                               AppStrings.selectSection,
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: (isDark
+                                        ? scheme.onPrimaryContainer
+                                        : scheme.onPrimary)
+                                    .withOpacity(0.85),
                                 fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: 0.2,
                               ),
                             ),
                           ],
@@ -289,10 +309,10 @@ class _AppShellState extends State<AppShell> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: scheme.surface.withOpacity(0.06),
                     border: Border(
                       top: BorderSide(
-                        color: Colors.white.withOpacity(0.2),
+                        color: DarkModeUtils.getBorderColor(context),
                         width: 1,
                       ),
                     ),
@@ -301,10 +321,11 @@ class _AppShellState extends State<AppShell> {
                     children: [
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor: Colors.white.withOpacity(0.2),
+                        backgroundColor:
+                            scheme.primaryContainer.withOpacity(0.25),
                         child: Icon(
                           Icons.person,
-                          color: Colors.white,
+                          color: scheme.onPrimaryContainer,
                           size: 24,
                         ),
                       ),
@@ -316,8 +337,8 @@ class _AppShellState extends State<AppShell> {
                             Text(
                               auth.currentUser?['name']?.toString() ??
                                   AppStrings.user,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: DarkModeUtils.getTextColor(context),
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
                               ),
@@ -325,7 +346,8 @@ class _AppShellState extends State<AppShell> {
                             Text(
                               AppStrings.activeUser,
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
+                                color: DarkModeUtils.getSecondaryTextColor(
+                                    context),
                                 fontSize: 12,
                               ),
                             ),
@@ -388,19 +410,24 @@ class _AppShellState extends State<AppShell> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: isSelected
-                  ? Colors.white.withOpacity(0.9)
+                  ? (Theme.of(context).brightness == Brightness.dark
+                      ? DarkModeUtils.getCardColor(context).withOpacity(0.1)
+                      : DarkModeUtils.getCardColor(context).withOpacity(0.9))
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: isSelected
                   ? Border.all(
-                      color: Colors.blue.shade400,
+                      color: Theme.of(context).colorScheme.primary,
                       width: 2,
                     )
                   : null,
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: Colors.blue.withOpacity(0.2),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.2),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -413,15 +440,18 @@ class _AppShellState extends State<AppShell> {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? Colors.blue.shade100
-                        : Colors.white.withOpacity(0.3),
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                        : DarkModeUtils.getCardColor(context).withOpacity(0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     icon,
                     color: isSelected
-                        ? Colors.blue.shade700
-                        : Colors.blue.shade800,
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.7),
                     size: 22,
                   ),
                 ),
@@ -431,8 +461,12 @@ class _AppShellState extends State<AppShell> {
                     label,
                     style: TextStyle(
                       color: isSelected
-                          ? Colors.blue.shade800
-                          : Colors.blue.shade900,
+                          ? (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black)
+                          : (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.blue
+                              : Colors.white.withOpacity(0.9)),
                       fontSize: 16,
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -444,7 +478,7 @@ class _AppShellState extends State<AppShell> {
                     width: 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade600,
+                      color: Theme.of(context).colorScheme.primary,
                       shape: BoxShape.circle,
                     ),
                   ),

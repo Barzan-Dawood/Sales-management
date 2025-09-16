@@ -2,9 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:office_mangment_system/src/screens/enhanced_privacy_policy_screen.dart';
+import 'package:office_mangment_system/src/services/store_config.dart';
 import 'package:provider/provider.dart';
 import '../services/auth/auth_provider.dart';
- 
+import '../utils/dark_mode_utils.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -22,11 +24,13 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: DarkModeUtils.getBackgroundColor(context),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Card(
             elevation: 3,
+            color: DarkModeUtils.getCardColor(context),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Form(
@@ -34,28 +38,29 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/images/pos.png',
-                      width: 200,
-                      height: 100,
-                      fit: BoxFit.contain,
-                    ),
+                    Text(StoreConfig().appTitle,
+                        style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 16),
                     Text('أهلاً بك',
                         style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _usernameController,
-                      decoration:
-                          const InputDecoration(labelText: 'اسم المستخدم'),
+                      decoration: DarkModeUtils.createInputDecoration(
+                        context,
+                        hintText: 'اسم المستخدم',
+                        prefixIcon: Icons.person,
+                      ),
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'مطلوب' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'كلمة المرور',
+                      decoration: DarkModeUtils.createInputDecoration(
+                        context,
+                        hintText: 'كلمة المرور',
+                        prefixIcon: Icons.lock,
                         suffixIcon: IconButton(
                           tooltip: _obscure ? 'إظهار' : 'إخفاء',
                           icon: Icon(_obscure

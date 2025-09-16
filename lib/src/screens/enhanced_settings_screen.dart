@@ -7,8 +7,10 @@ import 'package:office_mangment_system/src/screens/app_usage_guide_screen.dart';
 import 'package:office_mangment_system/src/screens/database_settings_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../utils/dark_mode_utils.dart';
 import '../services/db/database_service.dart';
 import '../services/store_config.dart';
+import '../services/theme_provider.dart';
 
 class EnhancedSettingsScreen extends StatefulWidget {
   const EnhancedSettingsScreen({super.key});
@@ -39,36 +41,26 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: Theme.of(context).colorScheme.background,
         appBar: AppBar(
-          title: const Text(
+          title: Text(
             'الإعدادات',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
+            style: Theme.of(context).appBarTheme.titleTextStyle,
           ),
-          backgroundColor: Colors.blue.shade700,
-          foregroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
           elevation: 0,
           centerTitle: true,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
         ),
         body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.blue.shade700,
-                Colors.blue.shade50,
-              ],
-              stops: const [0.0, 0.1],
-            ),
-          ),
+          color: Theme.of(context).colorScheme.background,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -76,6 +68,11 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               children: [
                 // Header Card
                 _buildHeaderCard(),
+                const SizedBox(height: 20),
+
+                // Appearance Settings Section
+                _buildSectionHeader('إعدادات المظهر'),
+                _buildAppearanceSection(),
                 const SizedBox(height: 20),
 
                 // Store Information Section
@@ -115,15 +112,11 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade600, Colors.blue.shade800],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.2),
+            color: DarkModeUtils.getShadowColor(context),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -134,14 +127,14 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Image.asset(
               'assets/images/pos.png',
               width: 32,
               height: 32,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
           const SizedBox(width: 12),
@@ -149,19 +142,22 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'الإعدادات',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
                 Text(
                   'إدارة النظام والإعدادات',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onPrimary
+                        .withOpacity(0.85),
                   ),
                 ),
               ],
@@ -180,9 +176,73 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Colors.grey.shade700,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
         ),
       ),
+    );
+  }
+
+  Widget _buildAppearanceSection() {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Container(
+          decoration: DarkModeUtils.createCardDecoration(context),
+          child: Column(
+            children: [
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    themeProvider.isDarkMode
+                        ? Icons.light_mode
+                        : Icons.dark_mode,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                title: const Text(
+                  'الوضع المظلم',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  themeProvider.isDarkMode ? 'مفعل' : 'معطل',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.7),
+                  ),
+                ),
+                trailing: Switch(
+                  value: themeProvider.isDarkMode,
+                  onChanged: (value) => themeProvider.toggleTheme(),
+                  activeColor: Theme.of(context).colorScheme.primary,
+                ),
+                onTap: () => themeProvider.toggleTheme(),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              ),
+              _buildDivider(),
+              _buildSettingsTile(
+                icon: Icons.palette,
+                title: 'نمط التطبيق',
+                subtitle: themeProvider.isDarkMode ? 'مظلم' : 'فاتح',
+                trailing: Icons.arrow_forward_ios,
+                onTap: () => _showThemeModeDialog(themeProvider),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -190,17 +250,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
     return Consumer<StoreConfig>(
       builder: (context, store, child) {
         return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+          decoration: DarkModeUtils.createCardDecoration(context),
           child: Column(
             children: [
               // تعليق توضيحي
@@ -209,20 +259,26 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color:
+                      Theme.of(context).colorScheme.primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.2)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info, color: Colors.blue.shade600, size: 16),
+                    Icon(Icons.info,
+                        color: Theme.of(context).colorScheme.primary, size: 16),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'اسم المتجر محمي ولا يمكن تعديله. يمكنك تعديل رقم الهاتف والعنوان فقط.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.blue.shade700,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -273,17 +329,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
   Widget _buildSupportSection() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
           _buildSettingsTile(
@@ -312,17 +358,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
   Widget _buildLegalSection() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
           _buildSettingsTile(
@@ -361,17 +397,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
   Widget _buildAppInfoSection() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
           _buildInfoTile(
@@ -417,20 +443,19 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
     VoidCallback? onTap,
     bool isEditable = true,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isEditable
-              ? (iconColor ?? Colors.blue).withOpacity(0.1)
-              : Colors.grey.withOpacity(0.1),
+              ? (iconColor ?? scheme.primary).withOpacity(0.1)
+              : scheme.onSurface.withOpacity(0.08),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
-          color: isEditable
-              ? (iconColor ?? Colors.blue.shade600)
-              : Colors.grey.shade600,
+          color: isEditable ? (iconColor ?? scheme.primary) : scheme.onSurface,
           size: 24,
         ),
       ),
@@ -445,14 +470,14 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         subtitle,
         style: TextStyle(
           fontSize: 14,
-          color: Colors.grey.shade600,
+          color: scheme.onSurface.withOpacity(0.7),
         ),
       ),
       trailing: trailing != null
           ? Icon(
               trailing,
               size: 16,
-              color: Colors.grey.shade400,
+              color: Theme.of(context).dividerColor.withOpacity(0.6),
             )
           : null,
       onTap: isEditable ? onTap : null,
@@ -466,18 +491,19 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
     required String value,
     bool isEditable = true,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isEditable
-              ? Colors.blue.withOpacity(0.1)
-              : Colors.grey.withOpacity(0.1),
+              ? scheme.primary.withOpacity(0.1)
+              : scheme.onSurface.withOpacity(0.08),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
-          color: isEditable ? Colors.blue.shade600 : Colors.grey.shade600,
+          color: isEditable ? scheme.primary : scheme.onSurface,
           size: 24,
         ),
       ),
@@ -495,7 +521,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
             value,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: scheme.onSurface.withOpacity(0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -504,7 +530,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
             Icon(
               Icons.lock,
               size: 16,
-              color: Colors.grey.shade500,
+              color: scheme.onSurface.withOpacity(0.6),
             ),
           ],
         ],
@@ -518,7 +544,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Divider(
         height: 1,
-        color: Colors.grey.shade200,
+        color: Theme.of(context).dividerColor.withOpacity(0.4),
       ),
     );
   }
@@ -566,7 +592,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               'assets/images/pos.png',
               width: 32,
               height: 32,
-              color: Colors.blue.shade600,
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(width: 12),
             const Text('حقوق الطبع والنشر'),
@@ -771,12 +797,15 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(6),
+                  border:
+                      Border.all(color: DarkModeUtils.getBorderColor(context)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info, color: Colors.blue.shade600, size: 16),
+                    Icon(Icons.info,
+                        color: Theme.of(context).colorScheme.primary, size: 16),
                     const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
@@ -813,7 +842,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: DarkModeUtils.getBorderColor(context)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -846,7 +875,10 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -855,7 +887,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
             Icon(
               Icons.copy,
               size: 16,
-              color: Colors.grey.shade500,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
           ],
         ),
@@ -870,7 +902,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('تم نسخ "$text" إلى الحافظة'),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -880,7 +912,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في النسخ: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -895,7 +927,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         builder: (context) => AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.email, color: Colors.blue.shade600),
+              Icon(Icons.email, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               const Text('فتح البريد الإلكتروني'),
             ],
@@ -915,7 +947,8 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
               // فتح تطبيق البريد
               ListTile(
-                leading: Icon(Icons.email, color: Colors.blue.shade600),
+                leading: Icon(Icons.email,
+                    color: Theme.of(context).colorScheme.primary),
                 title: const Text('فتح تطبيق البريد'),
                 subtitle: const Text('فتح تطبيق البريد الافتراضي'),
                 onTap: () async {
@@ -926,7 +959,8 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
               // نسخ الإيميل
               ListTile(
-                leading: Icon(Icons.copy, color: Colors.green.shade600),
+                leading: Icon(Icons.copy,
+                    color: Theme.of(context).colorScheme.primary),
                 title: const Text('نسخ الإيميل'),
                 subtitle: const Text('نسخ الإيميل إلى الحافظة'),
                 onTap: () async {
@@ -972,10 +1006,10 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تم فتح تطبيق البريد الإلكتروني'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
+            SnackBar(
+              content: const Text('تم فتح تطبيق البريد الإلكتروني'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -995,7 +1029,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.email, color: Colors.blue.shade600),
+            Icon(Icons.email, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
             const Text('البريد الإلكتروني'),
           ],
@@ -1013,15 +1047,17 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
+                border: Border.all(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.2)),
               ),
               child: Text(
                 email,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.blue.shade700,
+                  color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -1029,7 +1065,8 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.info, color: Colors.blue.shade600, size: 16),
+                Icon(Icons.info,
+                    color: Theme.of(context).colorScheme.primary, size: 16),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -1328,17 +1365,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
   Widget _buildDatabaseSettingsSection() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
           _buildSettingsTile(
@@ -1346,7 +1373,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
             title: 'إعدادات قاعدة البيانات',
             subtitle: 'إدارة النسخ الاحتياطية والاستعادة',
             trailing: Icons.arrow_forward_ios,
-            iconColor: Colors.orange,
+            iconColor: Theme.of(context).colorScheme.tertiary,
             onTap: () => _showDatabaseSettingsDialog(),
           ),
         ],
@@ -1358,6 +1385,68 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
     await showDialog(
       context: context,
       builder: (context) => const DatabaseSettingsDialog(),
+    );
+  }
+
+  Future<void> _showThemeModeDialog(ThemeProvider themeProvider) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.palette, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text('اختيار نمط التطبيق'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              title: const Text('نظام التشغيل'),
+              subtitle: const Text('يتبع إعدادات النظام'),
+              value: ThemeMode.system,
+              groupValue: themeProvider.themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  themeProvider.setThemeMode(value);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('فاتح'),
+              subtitle: const Text('الوضع الفاتح دائماً'),
+              value: ThemeMode.light,
+              groupValue: themeProvider.themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  themeProvider.setThemeMode(value);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('مظلم'),
+              subtitle: const Text('الوضع المظلم دائماً'),
+              value: ThemeMode.dark,
+              groupValue: themeProvider.themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  themeProvider.setThemeMode(value);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
     );
   }
 }

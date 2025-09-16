@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
 import '../utils/export.dart';
+import '../utils/dark_mode_utils.dart';
 
 class AccountingScreen extends StatefulWidget {
   const AccountingScreen({super.key});
@@ -112,11 +113,11 @@ class _AccountingScreenState extends State<AccountingScreen> {
                   final items = snap.data!;
                   return Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: DarkModeUtils.getShadowColor(context),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -127,7 +128,8 @@ class _AccountingScreenState extends State<AccountingScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
                             borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
@@ -137,7 +139,9 @@ class _AccountingScreenState extends State<AccountingScreen> {
                             children: [
                               Icon(
                                 Icons.receipt_long_rounded,
-                                color: Colors.blue.shade700,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
                                 size: 24,
                               ),
                               const SizedBox(width: 12),
@@ -146,7 +150,9 @@ class _AccountingScreenState extends State<AccountingScreen> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade700,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
                                 ),
                               ),
                               const Spacer(),
@@ -163,7 +169,10 @@ class _AccountingScreenState extends State<AccountingScreen> {
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.shade100,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
@@ -171,7 +180,9 @@ class _AccountingScreenState extends State<AccountingScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.blue.shade700,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer,
                                   ),
                                 ),
                               ),
@@ -187,14 +198,20 @@ class _AccountingScreenState extends State<AccountingScreen> {
                                       Icon(
                                         Icons.receipt_long_outlined,
                                         size: 64,
-                                        color: Colors.grey.shade400,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.4),
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
                                         'لا توجد مصاريف في هذه الفترة',
                                         style: TextStyle(
                                           fontSize: 16,
-                                          color: Colors.grey.shade600,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.7),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -800,15 +817,15 @@ class _ExpenseItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: Theme.of(context).dividerColor.withOpacity(0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: DarkModeUtils.getShadowColor(context),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
@@ -825,12 +842,12 @@ class _ExpenseItem extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: Theme.of(context).colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.receipt_rounded,
-                    color: Colors.blue.shade600,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
                     size: 20,
                   ),
                 ),
@@ -842,10 +859,10 @@ class _ExpenseItem extends StatelessWidget {
                     // Name
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       textAlign: TextAlign.left,
                       maxLines: 1,

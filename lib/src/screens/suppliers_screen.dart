@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
+import '../utils/dark_mode_utils.dart';
 
 class SuppliersScreen extends StatefulWidget {
   const SuppliersScreen({super.key});
@@ -19,24 +20,53 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   @override
   Widget build(BuildContext context) {
     final db = context.read<DatabaseService>();
+    final scheme = Theme.of(context).colorScheme;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(children: [
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: scheme.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(
+              color: Theme.of(context).dividerColor.withOpacity(0.3),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: DarkModeUtils.getShadowColor(context),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(children: [
             Expanded(
               child: TextField(
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
+                  prefixIcon: Icon(Icons.search,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.7)),
                   hintText: 'بحث بالاسم أو الهاتف',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).dividerColor.withOpacity(0.4),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).dividerColor.withOpacity(0.4),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: scheme.primary, width: 1.5),
                   ),
                   isDense: true,
                   contentPadding:
@@ -58,18 +88,23 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.orange.shade50,
+            color: Colors.orange.withOpacity(isDark ? 0.10 : 0.08),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.orange.shade100),
+            border: Border.all(color: Colors.orange.withOpacity(0.25)),
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline, color: Colors.orange, size: 18),
+              Icon(Icons.info_outline, color: Colors.orange.shade400, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'المستحق: هو المبلغ الواجب دفعه للمورد (الحسابات الدائنة). يظهر بالبرتقالي إن كان عليك مستحقات وبالأخضر إن لم يكن.',
-                  style: TextStyle(fontSize: 12, color: Colors.orange.shade900),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? Colors.orange.shade200
+                        : Colors.orange.shade900,
+                  ),
                 ),
               ),
             ],
@@ -92,19 +127,30 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: scheme.surface,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.grey.shade300,
+                            color:
+                                Theme.of(context).dividerColor.withOpacity(0.3),
                             width: 1,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: DarkModeUtils.getShadowColor(context),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
                         ),
                         child: Column(
                           children: [
                             Icon(
                               Icons.business_outlined,
                               size: 64,
-                              color: Colors.grey.shade400,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.4),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -112,7 +158,10 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade600,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.7),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -122,7 +171,10 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                   : 'لم يتم العثور على موردين مطابقين للبحث',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade500,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -132,8 +184,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                               icon: const Icon(Icons.add),
                               label: const Text('إضافة مورد جديد'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade600,
-                                foregroundColor: Colors.white,
+                                backgroundColor: scheme.primary,
+                                foregroundColor: scheme.onPrimary,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 20,
                                   vertical: 12,
@@ -161,9 +213,11 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: scheme.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor.withOpacity(0.3),
+                      ),
                     ),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
@@ -174,9 +228,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                           children: [
                             CircleAvatar(
                               radius: 18,
-                              backgroundColor: Colors.purple.shade50,
-                              child: const Icon(Icons.business,
-                                  color: Colors.purple, size: 18),
+                              backgroundColor: scheme.primaryContainer,
+                              child: Icon(Icons.business,
+                                  color: scheme.onPrimaryContainer, size: 18),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -185,22 +239,28 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                 children: [
                                   Text(
                                     name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 14,
-                                        fontWeight: FontWeight.w700),
+                                        fontWeight: FontWeight.w700,
+                                        color: scheme.onSurface),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Row(
                                     children: [
-                                      const Icon(Icons.phone,
-                                          size: 14, color: Colors.grey),
+                                      Icon(Icons.phone,
+                                          size: 14,
+                                          color: DarkModeUtils
+                                              .getSecondaryTextColor(context)),
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
                                           phone.isEmpty ? '-' : phone,
-                                          style: const TextStyle(
-                                              fontSize: 12, color: Colors.grey),
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: DarkModeUtils
+                                                  .getSecondaryTextColor(
+                                                      context)),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
@@ -216,7 +276,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                 Text('المستحق',
                                     style: TextStyle(
                                         fontSize: 11,
-                                        color: Colors.grey.shade600,
+                                        color:
+                                            DarkModeUtils.getSecondaryTextColor(
+                                                context),
                                         fontWeight: FontWeight.w500)),
                                 const SizedBox(height: 2),
                                 Text(
@@ -224,8 +286,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     color: payable > 0
-                                        ? Colors.orange.shade700
-                                        : Colors.green.shade600,
+                                        ? Colors.orange.shade600
+                                        : DarkModeUtils.getSuccessColor(
+                                            context),
                                     fontSize: 13,
                                   ),
                                 ),
@@ -235,14 +298,20 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                     IconButton(
                                       tooltip: 'تعديل',
                                       onPressed: () => _openEditor(supplier: s),
-                                      icon: const Icon(Icons.edit_outlined,
-                                          size: 18),
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 18,
+                                        color: Colors.blue,
+                                      ),
                                     ),
                                     IconButton(
                                       tooltip: 'حذف',
                                       onPressed: () => _delete(s['id'] as int),
-                                      icon: const Icon(Icons.delete_outline,
-                                          size: 18),
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        size: 18,
+                                        color: Colors.red,
+                                      ),
                                     ),
                                   ],
                                 )

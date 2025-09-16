@@ -28,22 +28,28 @@ class _TestsScreenState extends State<TestsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('اختبارات النظام'),
-        backgroundColor: Colors.purple.shade700,
-        foregroundColor: Colors.white,
+        title: const Text(
+          'اختبارات النظام',
+          style: TextStyle(color: Colors.blue),
+        ),
+        backgroundColor: isDark ? scheme.surface : Colors.white,
+        foregroundColor: isDark ? scheme.onSurface : Colors.black,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
+          preferredSize: const Size.fromHeight(60),
           child: Container(
-            color: Colors.purple.shade800,
+            color: isDark ? scheme.surface : Colors.white,
             child: TabBar(
               controller: _tabController,
-              indicatorColor: Colors.white,
+              indicatorColor: isDark ? scheme.primary : Colors.black,
               indicatorWeight: 3,
               indicatorSize: TabBarIndicatorSize.label,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
+              labelColor: isDark ? scheme.primary : Colors.black,
+              unselectedLabelColor:
+                  isDark ? scheme.onSurface.withOpacity(0.7) : Colors.grey,
               labelStyle:
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               unselectedLabelStyle:
@@ -76,12 +82,14 @@ class _TestsScreenState extends State<TestsScreen>
         children: [
           // بطاقة معلومات سريعة
           Card(
-            color: Colors.blue.shade50,
+            color: Theme.of(context).colorScheme.primaryContainer,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  Icon(Icons.info, color: Colors.blue.shade700, size: 20),
+                  Icon(Icons.info,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -92,12 +100,19 @@ class _TestsScreenState extends State<TestsScreen>
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: Colors.blue.shade700,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
                           ),
                         ),
-                        const Text(
+                        Text(
                           'تأكد من جودة وسلامة التطبيق من خلال الاختبارات الشاملة',
-                          style: TextStyle(fontSize: 11),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer
+                                  .withOpacity(0.9)),
                         ),
                       ],
                     ),
@@ -198,7 +213,9 @@ class _TestsScreenState extends State<TestsScreen>
               Icon(
                 icon,
                 size: 14,
-                color: _isRunning ? Colors.grey : color,
+                color: _isRunning
+                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                    : color,
               ),
               const SizedBox(height: 2),
               Text(
@@ -206,7 +223,9 @@ class _TestsScreenState extends State<TestsScreen>
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 8,
-                  color: _isRunning ? Colors.grey : color,
+                  color: _isRunning
+                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                      : color,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
@@ -355,14 +374,19 @@ class _TestsScreenState extends State<TestsScreen>
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              Icon(Icons.info_outline, size: 48, color: Colors.grey.shade400),
+              Icon(
+                Icons.info_outline,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              ),
               const SizedBox(height: 8),
               Text(
                 'لا توجد نتائج اختبارات',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade600,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               const SizedBox(height: 4),
@@ -370,7 +394,8 @@ class _TestsScreenState extends State<TestsScreen>
                 'قم بتشغيل الاختبارات أولاً لعرض النتائج',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade500,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -579,7 +604,13 @@ class _TestsScreenState extends State<TestsScreen>
                 ),
                 Text(
                   description,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.7),
+                  ),
                 ),
               ],
             ),

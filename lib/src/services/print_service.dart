@@ -7,6 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../utils/invoice_pdf.dart';
+import '../utils/dark_mode_utils.dart';
 
 class PrintService {
   static const String _defaultPageFormat = '80';
@@ -60,7 +61,7 @@ class PrintService {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في طباعة كشف الحساب: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DarkModeUtils.getErrorColor(context),
           ),
         );
       }
@@ -576,7 +577,7 @@ class PrintService {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Colors.red,
+            backgroundColor: DarkModeUtils.getErrorColor(context),
             duration: const Duration(seconds: 4),
           ),
         );
@@ -598,7 +599,7 @@ class PrintService {
         builder: (context, setState) => AlertDialog(
           title: Row(
             children: [
-              const Icon(Icons.print, color: Colors.blue),
+              Icon(Icons.print, color: DarkModeUtils.getInfoColor(context)),
               const SizedBox(width: 8),
               const Text('خيارات الطباعة'),
             ],
@@ -616,9 +617,10 @@ class PrintService {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.grey[50],
+                    color: DarkModeUtils.getBackgroundColor(context),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(
+                        color: DarkModeUtils.getBorderColor(context)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -637,38 +639,41 @@ class PrintService {
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(
+                                color: DarkModeUtils.getBorderColor(context)),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(
+                                color: DarkModeUtils.getBorderColor(context)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
-                                color: Colors.blue.shade400, width: 2),
+                                color: DarkModeUtils.getInfoColor(context),
+                                width: 2),
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: DarkModeUtils.getCardColor(context),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 16),
                           prefixIcon: Icon(
                             Icons.print,
-                            color: Colors.blue.shade600,
+                            color: DarkModeUtils.getInfoColor(context),
                             size: 20,
                           ),
                           hintText: 'اختر نوع الورق',
                           hintStyle: TextStyle(
-                            color: Colors.grey.shade500,
+                            color: DarkModeUtils.getSecondaryTextColor(context),
                             fontSize: 11,
                           ),
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                          color: DarkModeUtils.getTextColor(context),
                         ),
-                        dropdownColor: Colors.white,
+                        dropdownColor: DarkModeUtils.getCardColor(context),
                         selectedItemBuilder: (BuildContext context) {
                           return InvoicePdf.getAvailablePageFormats()
                               .map<Widget>((String format) {
@@ -677,10 +682,10 @@ class PrintService {
                               alignment: Alignment.centerRight,
                               child: Text(
                                 info['description'] ?? format,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
+                                  color: DarkModeUtils.getTextColor(context),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -703,7 +708,8 @@ class PrintService {
                                     width: 10,
                                     height: 10,
                                     decoration: BoxDecoration(
-                                      color: Colors.blue.shade400,
+                                      color:
+                                          DarkModeUtils.getInfoColor(context),
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -718,10 +724,11 @@ class PrintService {
                                       children: [
                                         Text(
                                           info['description'] ?? format,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
+                                            color: DarkModeUtils.getTextColor(
+                                                context),
                                           ),
                                           overflow: TextOverflow.ellipsis,
                                           maxLines: 2,
@@ -731,7 +738,8 @@ class PrintService {
                                           '${info['width']?.toStringAsFixed(0)} × ${info['height']?.toStringAsFixed(0)} مم',
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Colors.grey.shade600,
+                                            color: DarkModeUtils
+                                                .getSecondaryTextColor(context),
                                             fontWeight: FontWeight.w400,
                                           ),
                                           overflow: TextOverflow.ellipsis,
@@ -743,7 +751,7 @@ class PrintService {
                                   Icon(
                                     Icons.check_circle_outline,
                                     color: selectedFormat == format
-                                        ? Colors.green.shade600
+                                        ? DarkModeUtils.getSuccessColor(context)
                                         : Colors.transparent,
                                     size: 20,
                                   ),
@@ -770,9 +778,10 @@ class PrintService {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[50],
+                    color: DarkModeUtils.getBackgroundColor(context),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(
+                        color: DarkModeUtils.getBorderColor(context)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -817,21 +826,23 @@ class PrintService {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: DarkModeUtils.getInfoColor(context).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue[200]!),
+                    border: Border.all(
+                        color: DarkModeUtils.getInfoColor(context)
+                            .withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
                       Icon(Icons.info_outline,
-                          color: Colors.blue[700], size: 20),
+                          color: DarkModeUtils.getInfoColor(context), size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'سيتم حفظ هذه الإعدادات للاستخدام في المستقبل',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.blue[700],
+                            color: DarkModeUtils.getInfoColor(context),
                           ),
                         ),
                       ),
@@ -980,7 +991,7 @@ class PrintService {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في طباعة التقرير: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DarkModeUtils.getErrorColor(context),
           ),
         );
       }
@@ -1027,7 +1038,7 @@ class PrintService {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في طباعة التقرير: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DarkModeUtils.getErrorColor(context),
           ),
         );
       }
@@ -1077,7 +1088,7 @@ class PrintService {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في طباعة التقرير: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: DarkModeUtils.getErrorColor(context),
           ),
         );
       }

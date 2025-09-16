@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
 import '../utils/export.dart';
+import '../utils/dark_mode_utils.dart';
 import '../services/print_service.dart';
 import '../services/store_config.dart';
 
@@ -36,34 +36,49 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('تقارير الجرد الشاملة'),
+        title: const Text(
+          'تقارير الجرد الشاملة',
+          style: TextStyle(color: Colors.blue),
+        ),
+        backgroundColor: isDark ? scheme.surface : Colors.white,
+        foregroundColor: isDark ? scheme.onSurface : Colors.black,
         actions: [
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
+            icon: const Icon(
+              Icons.picture_as_pdf,
+              color: Colors.pink,
+            ),
             tooltip: 'تصدير PDF',
             onPressed: () => _exportCurrentTab(),
           ),
           IconButton(
-            icon: const Icon(Icons.print),
+            icon: const Icon(
+              Icons.print,
+              color: Colors.blue,
+            ),
             tooltip: 'طباعة التقرير',
             onPressed: () => _printCurrentTab(),
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(
+              Icons.refresh,
+              color: Colors.green,
+            ),
             onPressed: () => setState(() {}),
             tooltip: 'تحديث البيانات',
-          ),
-          IconButton(
-            icon: const Icon(Icons.print),
-            onPressed: _printReport,
-            tooltip: 'طباعة التقرير',
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          labelColor: isDark ? scheme.primary : Colors.black,
+          unselectedLabelColor:
+              isDark ? scheme.onSurface.withOpacity(0.7) : Colors.grey,
+          indicatorColor: isDark ? scheme.primary : Colors.black,
           tabs: const [
             Tab(text: 'ملخص الجرد', icon: Icon(Icons.inventory)),
             Tab(text: 'الأكثر مبيعاً', icon: Icon(Icons.trending_up)),
@@ -99,7 +114,8 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error, size: 64, color: Colors.red),
+                Icon(Icons.error,
+                    size: 64, color: DarkModeUtils.getErrorColor(context)),
                 const SizedBox(height: 16),
                 Text('خطأ في تحميل البيانات: ${snapshot.error}'),
               ],
@@ -122,19 +138,21 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.inventory_2, size: 64, color: Colors.grey.shade400),
+                Icon(Icons.inventory_2,
+                    size: 64,
+                    color: DarkModeUtils.getSecondaryTextColor(context)),
                 const SizedBox(height: 16),
                 Text(
                   'لا توجد منتجات في المخزون',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.grey.shade600,
+                        color: DarkModeUtils.getSecondaryTextColor(context),
                       ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'قم بإضافة منتجات لرؤية تقارير الجرد',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey.shade500,
+                        color: DarkModeUtils.getSecondaryTextColor(context),
                       ),
                   textAlign: TextAlign.center,
                 ),
@@ -284,7 +302,8 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error, size: 64, color: Colors.red),
+                Icon(Icons.error,
+                    size: 64, color: DarkModeUtils.getErrorColor(context)),
                 const SizedBox(height: 16),
                 Text('خطأ في تحميل البيانات: ${snapshot.error}'),
               ],
@@ -340,7 +359,8 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error, size: 64, color: Colors.red),
+                Icon(Icons.error,
+                    size: 64, color: DarkModeUtils.getErrorColor(context)),
                 const SizedBox(height: 16),
                 Text('خطأ في تحميل البيانات: ${snapshot.error}'),
               ],
@@ -396,7 +416,8 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error, size: 64, color: Colors.red),
+                Icon(Icons.error,
+                    size: 64, color: DarkModeUtils.getErrorColor(context)),
                 const SizedBox(height: 16),
                 Text('خطأ في تحميل البيانات: ${snapshot.error}'),
               ],
@@ -511,18 +532,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
       String title, String value, String unit, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
           Icon(icon, color: color, size: 24),
@@ -532,7 +542,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: DarkModeUtils.getSecondaryTextColor(context),
             ),
             textAlign: TextAlign.center,
           ),
@@ -555,18 +565,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
       String title, List<String> items, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

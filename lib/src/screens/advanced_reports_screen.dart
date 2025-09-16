@@ -9,6 +9,7 @@ import '../utils/format.dart';
 import '../utils/export.dart';
 import '../services/print_service.dart';
 import '../services/store_config.dart';
+import '../utils/dark_mode_utils.dart';
 
 class AdvancedReportsScreen extends StatefulWidget {
   const AdvancedReportsScreen({super.key});
@@ -38,28 +39,47 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
   @override
   Widget build(BuildContext context) {
     final db = context.read<DatabaseService>();
+    final scheme = Theme.of(context).colorScheme;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('التقارير المالية المتقدمة'),
+        title: const Text(
+          'التقارير المالية المتقدمة',
+          style: TextStyle(color: Colors.blue),
+        ),
+        backgroundColor: isDark ? scheme.surface : Colors.white,
+        foregroundColor: isDark ? scheme.onSurface : Colors.black,
         actions: [
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
+            icon: const Icon(
+              Icons.picture_as_pdf,
+              color: Colors.pink,
+            ),
             tooltip: 'تصدير PDF',
             onPressed: () => _exportCurrentTab(db),
           ),
           IconButton(
-            icon: const Icon(Icons.print),
+            icon: const Icon(
+              Icons.print,
+              color: Colors.blue,
+            ),
             tooltip: 'طباعة التقرير',
             onPressed: () => _printCurrentTab(db),
           ),
           IconButton(
-            icon: const Icon(Icons.calendar_today),
+            icon: const Icon(
+              Icons.calendar_today,
+              color: Colors.grey,
+            ),
             onPressed: _selectDate,
             tooltip: 'اختيار التاريخ',
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(
+              Icons.refresh,
+              color: Colors.green,
+            ),
             onPressed: () => setState(() {}),
             tooltip: 'تحديث البيانات',
           ),
@@ -67,6 +87,10 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          labelColor: isDark ? scheme.primary : Colors.black,
+          unselectedLabelColor:
+              isDark ? scheme.onSurface.withOpacity(0.7) : Colors.grey,
+          indicatorColor: isDark ? scheme.primary : Colors.black,
           tabs: const [
             Tab(text: 'قائمة الدخل', icon: Icon(Icons.account_balance_wallet)),
             Tab(text: 'الميزانية', icon: Icon(Icons.balance)),
@@ -123,19 +147,30 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.inbox, size: 64, color: Colors.grey.shade400),
+                Icon(
+                  Icons.inbox,
+                  size: 64,
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'لا توجد بيانات مالية للشهر المحدد',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.7),
                       ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'قم بإضافة مبيعات لرؤية التقارير المالية',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey.shade500,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.6),
                       ),
                   textAlign: TextAlign.center,
                 ),
@@ -509,16 +544,13 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade600, Colors.blue.shade800],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          Icon(Icons.assessment, color: Colors.white, size: 32),
+          Icon(Icons.assessment,
+              color: Theme.of(context).colorScheme.onPrimary, size: 32),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -526,16 +558,19 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   _formatDateForDisplay(date),
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onPrimary
+                        .withOpacity(0.85),
                     fontSize: 16,
                   ),
                 ),
@@ -554,12 +589,12 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: isHighlight ? Border.all(color: color, width: 2) : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: DarkModeUtils.getShadowColor(context),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -586,7 +621,7 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -628,11 +663,11 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: DarkModeUtils.getShadowColor(context),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -649,7 +684,7 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
@@ -673,11 +708,11 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: DarkModeUtils.getShadowColor(context),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -693,7 +728,7 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
@@ -718,11 +753,11 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
       height: 300,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: DarkModeUtils.getShadowColor(context),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -832,8 +867,8 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                       const titles = ['الأصول', 'الخصوم', 'حقوق الملكية'];
                       return BarTooltipItem(
                         '${titles[group.x.toInt()]}\n${Formatters.currencyIQD(rod.toY)}',
-                        const TextStyle(
-                          color: Colors.black87,
+                        TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
                         ),
                       );
@@ -983,7 +1018,7 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
       return Container(
         height: 300,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Center(
@@ -996,11 +1031,11 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
       height: 300,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: DarkModeUtils.getShadowColor(context),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),

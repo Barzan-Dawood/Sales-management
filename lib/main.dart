@@ -9,6 +9,8 @@ import 'src/app_shell.dart';
 import 'src/services/db/database_service.dart';
 import 'src/services/auth/auth_provider.dart';
 import 'src/services/store_config.dart';
+import 'src/services/theme_provider.dart';
+import 'src/utils/app_themes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +53,7 @@ Future<void> main() async {
       await databaseService.runAutoBackup();
     } catch (e) {
       assert(() {
-         return true;
+        return true;
       }());
     }
 
@@ -69,7 +71,7 @@ Future<void> main() async {
         final remainingIssues = await databaseService.checkDatabaseIntegrity();
         if (remainingIssues.isEmpty) {
           assert(() {
-             return true;
+            return true;
           }());
         } else {
           assert(() {
@@ -85,7 +87,6 @@ Future<void> main() async {
             }());
           } else {
             assert(() {
-            
               return true;
             }());
             await databaseService.aggressiveCleanup();
@@ -99,7 +100,6 @@ Future<void> main() async {
               }());
             } else {
               assert(() {
-              
                 return true;
               }());
             }
@@ -107,7 +107,6 @@ Future<void> main() async {
         }
       } catch (e) {
         assert(() {
-    
           return true;
         }());
         try {
@@ -117,18 +116,16 @@ Future<void> main() async {
           }());
         } catch (comprehensiveError) {
           assert(() {
-         
             return true;
           }());
           try {
             await databaseService.aggressiveCleanup();
             assert(() {
-         
               return true;
             }());
           } catch (aggressiveError) {
             assert(() {
-               return true;
+              return true;
             }());
           }
         }
@@ -136,7 +133,7 @@ Future<void> main() async {
     }
   } catch (e) {
     assert(() {
-       return true;
+      return true;
     }());
 
     // تحسين رسائل الخطأ
@@ -152,39 +149,35 @@ Future<void> main() async {
     }
 
     assert(() {
-       return true;
+      return true;
     }());
 
     // Try to perform emergency cleanup
     try {
       await databaseService.forceCleanup();
       assert(() {
-         return true;
+        return true;
       }());
     } catch (cleanupError) {
       assert(() {
-        
         return true;
       }());
       try {
         await databaseService.comprehensiveCleanup();
         assert(() {
-          
           return true;
         }());
       } catch (comprehensiveError) {
         assert(() {
-          
           return true;
         }());
         try {
           await databaseService.aggressiveCleanup();
           assert(() {
-             return true;
+            return true;
           }());
         } catch (aggressiveError) {
           assert(() {
-           
             return true;
           }());
         }
@@ -201,6 +194,7 @@ Future<void> main() async {
       Provider<DatabaseService>.value(value: databaseService),
       ChangeNotifierProvider(create: (_) => AuthProvider(databaseService)),
       ChangeNotifierProvider.value(value: storeConfig),
+      ChangeNotifierProvider(create: (_) => ThemeProvider()),
     ],
     child: const MyApp(),
   ));
@@ -211,24 +205,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF6750A4),
-      brightness: Brightness.light,
-    );
-    return MaterialApp(
-      title: context.watch<StoreConfig>().appTitle,
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: colorScheme,
-        useMaterial3: true,
-        snackBarTheme:
-            const SnackBarThemeData(behavior: SnackBarBehavior.floating),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-        ),
-      ),
-      home: const Directionality(
-          textDirection: TextDirection.rtl, child: AppShell()),
+    return Consumer2<StoreConfig, ThemeProvider>(
+      builder: (context, storeConfig, themeProvider, child) {
+        return MaterialApp(
+          title: storeConfig.appTitle,
+          debugShowCheckedModeBanner: false,
+          theme: AppThemes.lightTheme,
+          darkTheme: AppThemes.darkTheme,
+          themeMode: themeProvider.themeMode,
+          home: const Directionality(
+              textDirection: TextDirection.rtl, child: AppShell()),
+        );
+      },
     );
   }
 }

@@ -41,15 +41,18 @@ class _ReportsScreenState extends State<ReportsScreen>
         // Tabs header
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(
+              color: Theme.of(context).dividerColor.withOpacity(0.3),
+            ),
           ),
           child: TabBar(
             controller: _tabController,
-            labelColor: Colors.blue.shade800,
-            unselectedLabelColor: Colors.grey.shade700,
-            indicatorColor: Colors.blue.shade600,
+            labelColor: Theme.of(context).colorScheme.primary,
+            unselectedLabelColor:
+                Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            indicatorColor: Theme.of(context).colorScheme.primary,
             tabs: const [
               Tab(icon: Icon(Icons.summarize), text: 'الملخص'),
               Tab(icon: Icon(Icons.bar_chart), text: 'المبيعات'),
@@ -287,8 +290,9 @@ class _ReportsScreenState extends State<ReportsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const Text('المخزون المنخفض والبطيء',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('المخزون المنخفض والبطيء',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.blue)),
               const Spacer(),
               OutlinedButton.icon(
                 onPressed: () async {
@@ -339,7 +343,9 @@ class _ReportsScreenState extends State<ReportsScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(title,
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
             const SizedBox(height: 8),
             Expanded(
               child: items.isEmpty

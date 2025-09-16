@@ -6,6 +6,7 @@ import '../services/db/database_service.dart';
 import '../services/print_service.dart';
 import '../services/store_config.dart';
 import '../utils/format.dart';
+import '../utils/dark_mode_utils.dart';
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -136,11 +137,10 @@ class _SalesScreenState extends State<SalesScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: DarkModeUtils.getCardColor(context),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                    color: DarkModeUtils.getBorderColor(context),
                   ),
                 ),
                 child: Row(
@@ -152,9 +152,9 @@ class _SalesScreenState extends State<SalesScreen> {
                         color: Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.point_of_sale,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         size: 14,
                       ),
                     ),
@@ -163,7 +163,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       'نظام المبيعات',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: DarkModeUtils.getTextColor(context),
                           ),
                     ),
                     const Spacer(),
@@ -172,22 +172,34 @@ class _SalesScreenState extends State<SalesScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.attach_money,
-                            color: Colors.white,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer
+                                    : Theme.of(context).colorScheme.onPrimary,
                             size: 12,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             Formatters.currencyIQD(total),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer
+                                  : Theme.of(context).colorScheme.onPrimary,
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
                             ),
@@ -372,21 +384,30 @@ class _SalesScreenState extends State<SalesScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withOpacity(0.25),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue.shade200),
+                          border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.info_outline,
-                                size: 16, color: Colors.blue.shade600),
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary),
                             const SizedBox(width: 4),
                             Text(
                               'اختياري',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.blue.shade600,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -562,11 +583,15 @@ class _SalesScreenState extends State<SalesScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withOpacity(
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? 0.3
+                                      : 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -597,12 +622,17 @@ class _SalesScreenState extends State<SalesScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary
+                                          .withOpacity(0.2),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.inventory_2,
-                                      color: Colors.white,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
                                       size: 16,
                                     ),
                                   ),
@@ -612,10 +642,12 @@ class _SalesScreenState extends State<SalesScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
+                                        Text(
                                           'المنتجات المتاحة',
                                           style: TextStyle(
-                                            color: Colors.white,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onPrimary,
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -623,8 +655,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                         Text(
                                           'اختر المنتجات لإضافتها للسلة',
                                           style: TextStyle(
-                                            color:
-                                                Colors.white.withOpacity(0.9),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onPrimary
+                                                .withOpacity(0.9),
                                             fontSize: 12,
                                           ),
                                         ),
@@ -635,7 +669,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary
+                                          .withOpacity(0.2),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: FutureBuilder<
@@ -646,8 +683,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                             snapshot.data?.length ?? 0;
                                         return Text(
                                           '$count منتج',
-                                          style: const TextStyle(
-                                            color: Colors.white,
+                                          style: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onPrimary,
                                             fontWeight: FontWeight.w500,
                                             fontSize: 12,
                                           ),
@@ -737,32 +776,45 @@ class _SalesScreenState extends State<SalesScreen> {
                                           gradient: isOutOfStock
                                               ? LinearGradient(
                                                   colors: [
-                                                    Colors.grey.shade100,
-                                                    Colors.grey.shade50,
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .surfaceVariant
+                                                        .withOpacity(0.35),
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .surface,
                                                   ],
                                                 )
                                               : LinearGradient(
                                                   colors: [
-                                                    Colors.white,
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .surface,
                                                     Theme.of(context)
                                                         .colorScheme
                                                         .surfaceContainerHighest
-                                                        .withOpacity(0.1),
+                                                        .withOpacity(0.08),
                                                   ],
                                                 ),
                                           borderRadius:
                                               BorderRadius.circular(16),
                                           border: Border.all(
                                             color: isOutOfStock
-                                                ? Colors.grey.shade300
+                                                ? Theme.of(context)
+                                                    .dividerColor
+                                                    .withOpacity(0.4)
                                                 : Theme.of(context)
                                                     .dividerColor
                                                     .withOpacity(0.3),
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black
-                                                  .withOpacity(0.03),
+                                              color: Colors.black.withOpacity(
+                                                  Theme.of(context)
+                                                              .brightness ==
+                                                          Brightness.dark
+                                                      ? 0.25
+                                                      : 0.03),
                                               blurRadius: 8,
                                               offset: const Offset(0, 2),
                                             ),
@@ -907,7 +959,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                               ),
                                                             ),
                                                           ),
-                                                          // Code/Barcode Display
+                                                          // Code/Barcode Display (abbreviated + themed)
                                                           if (p['barcode']
                                                                   ?.toString()
                                                                   .isNotEmpty ==
@@ -922,25 +974,44 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                           2),
                                                               decoration:
                                                                   BoxDecoration(
-                                                                color: Colors
-                                                                    .purple
-                                                                    .shade100,
+                                                                color: Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .primary
+                                                                    .withOpacity(
+                                                                        0.12),
+                                                                border:
+                                                                    Border.all(
+                                                                  color: Theme.of(
+                                                                          context)
+                                                                      .colorScheme
+                                                                      .primary
+                                                                      .withOpacity(
+                                                                          0.25),
+                                                                ),
                                                                 borderRadius:
                                                                     BorderRadius
                                                                         .circular(
                                                                             8),
                                                               ),
-                                                              child: Text(
-                                                                'باركود: ${p['barcode']}',
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize: 10,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
-                                                                  color: Colors
-                                                                      .purple
-                                                                      .shade700,
+                                                              child: Tooltip(
+                                                                message:
+                                                                    p['barcode']
+                                                                            ?.toString() ??
+                                                                        '',
+                                                                child: Text(
+                                                                  'باركود: ${_shortBarcode(p['barcode'].toString())}',
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize: 9,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    color: Theme.of(
+                                                                            context)
+                                                                        .colorScheme
+                                                                        .primary,
+                                                                  ),
                                                                 ),
                                                               ),
                                                             ),
@@ -1026,11 +1097,15 @@ class _SalesScreenState extends State<SalesScreen> {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withOpacity(
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? 0.3
+                                      : 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -1062,12 +1137,17 @@ class _SalesScreenState extends State<SalesScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSecondary
+                                          .withOpacity(0.2),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.shopping_cart_checkout,
-                                      color: Colors.white,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSecondary,
                                       size: 16,
                                     ),
                                   ),
@@ -1077,10 +1157,12 @@ class _SalesScreenState extends State<SalesScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
+                                        Text(
                                           'سلة المشتريات',
                                           style: TextStyle(
-                                            color: Colors.white,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSecondary,
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -1088,8 +1170,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                         Text(
                                           '${_cart.length} منتج في السلة',
                                           style: TextStyle(
-                                            color:
-                                                Colors.white.withOpacity(0.9),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSecondary
+                                                .withOpacity(0.9),
                                             fontSize: 12,
                                           ),
                                         ),
@@ -1100,13 +1184,18 @@ class _SalesScreenState extends State<SalesScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSecondary
+                                          .withOpacity(0.2),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       Formatters.currencyIQD(total),
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSecondary,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12,
                                       ),
@@ -1184,11 +1273,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                           decoration: BoxDecoration(
                                             gradient: LinearGradient(
                                               colors: [
-                                                Colors.white,
+                                                Theme.of(context)
+                                                    .colorScheme
+                                                    .surface,
                                                 Theme.of(context)
                                                     .colorScheme
                                                     .surfaceContainerHighest
-                                                    .withOpacity(0.1),
+                                                    .withOpacity(0.08),
                                               ],
                                             ),
                                             borderRadius:
@@ -1200,8 +1291,12 @@ class _SalesScreenState extends State<SalesScreen> {
                                             ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black
-                                                    .withOpacity(0.03),
+                                                color: Colors.black.withOpacity(
+                                                    Theme.of(context)
+                                                                .brightness ==
+                                                            Brightness.dark
+                                                        ? 0.25
+                                                        : 0.03),
                                                 blurRadius: 8,
                                                 offset: const Offset(0, 2),
                                               ),
@@ -1262,19 +1357,27 @@ class _SalesScreenState extends State<SalesScreen> {
                                                               .withOpacity(0.6),
                                                         ),
                                                       ),
-                                                      // Code/Barcode in Cart
+                                                      // Code/Barcode in Cart (abbreviated)
                                                       if (c['barcode']
                                                               ?.toString()
                                                               .isNotEmpty ==
                                                           true)
-                                                        Text(
-                                                          'باركود: ${c['barcode']}',
-                                                          style: TextStyle(
-                                                            fontSize: 9,
-                                                            color: Colors.purple
-                                                                .shade600,
-                                                            fontWeight:
-                                                                FontWeight.w500,
+                                                        Tooltip(
+                                                          message: c['barcode']
+                                                                  ?.toString() ??
+                                                              '',
+                                                          child: Text(
+                                                            'باركود: ${_shortBarcode(c['barcode'].toString())}',
+                                                            style: TextStyle(
+                                                              fontSize: 9,
+                                                              color: Theme.of(
+                                                                      context)
+                                                                  .colorScheme
+                                                                  .primary,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
                                                           ),
                                                         ),
                                                     ],
@@ -1289,9 +1392,11 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     // Delete near minus (swapped position)
                                                     IconButton(
                                                       tooltip: 'حذف',
-                                                      icon: const Icon(
+                                                      icon: Icon(
                                                         Icons.delete_outline,
-                                                        color: Colors.red,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .error,
                                                       ),
                                                       onPressed: () {
                                                         final qty = (_cart[i]
@@ -1322,9 +1427,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                                       style:
                                                           IconButton.styleFrom(
                                                         backgroundColor:
-                                                            Colors.red.shade50,
-                                                        foregroundColor:
-                                                            Colors.red.shade600,
+                                                            Theme.of(context)
+                                                                .colorScheme
+                                                                .errorContainer,
+                                                        foregroundColor: Theme
+                                                                .of(context)
+                                                            .colorScheme
+                                                            .onErrorContainer,
                                                       ),
                                                     ),
                                                     SizedBox(
@@ -1376,10 +1485,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                                           _incrementQty(i),
                                                       style:
                                                           IconButton.styleFrom(
-                                                        backgroundColor: Colors
-                                                            .green.shade50,
-                                                        foregroundColor: Colors
-                                                            .green.shade600,
+                                                        backgroundColor: Theme
+                                                                .of(context)
+                                                            .colorScheme
+                                                            .tertiaryContainer,
+                                                        foregroundColor: Theme
+                                                                .of(context)
+                                                            .colorScheme
+                                                            .onTertiaryContainer,
                                                       ),
                                                     ),
                                                     const SizedBox(width: 8),
@@ -1428,11 +1541,12 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                       '',
                                                                   suffixText:
                                                                       '%',
-                                                                  suffixStyle: const TextStyle(
+                                                                  suffixStyle: TextStyle(
                                                                       fontSize:
                                                                           10,
-                                                                      color: Colors
-                                                                          .grey),
+                                                                      color: Theme.of(
+                                                                              context)
+                                                                          .hintColor),
                                                                 ),
                                                                 textAlign:
                                                                     TextAlign
@@ -1582,20 +1696,33 @@ class _SalesScreenState extends State<SalesScreen> {
                                         child: OutlinedButton.icon(
                                           onPressed: _cart.isEmpty
                                               ? null
-                                              : () {
+                                              : () async {
                                                   // Return all items to stock before clearing cart
                                                   for (final item in _cart) {
                                                     final qty =
-                                                        item['quantity'] as int;
+                                                        (item['quantity']
+                                                                as int?) ??
+                                                            0;
                                                     final productId =
                                                         item['product_id']
-                                                            as int;
-                                                    context
-                                                        .read<DatabaseService>()
-                                                        .adjustProductQuantity(
-                                                            productId, qty);
+                                                            as int?;
+                                                    if (productId != null &&
+                                                        qty > 0) {
+                                                      await context
+                                                          .read<
+                                                              DatabaseService>()
+                                                          .adjustProductQuantity(
+                                                              productId, qty);
+                                                    }
                                                   }
-                                                  // Don't clear cart or customer fields here - they will be cleared when dialog is closed
+
+                                                  // Immediately clear cart and related UI state
+                                                  setState(() {
+                                                    _cart.clear();
+                                                    _addedToCartProducts
+                                                        .clear();
+                                                  });
+
                                                   ScaffoldMessenger.of(context)
                                                       .showSnackBar(
                                                     const SnackBar(
@@ -1851,6 +1978,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                                           );
 
                                                           return Dialog(
+                                                            backgroundColor:
+                                                                DarkModeUtils
+                                                                    .getCardColor(
+                                                                        context),
                                                             shape:
                                                                 RoundedRectangleBorder(
                                                               borderRadius:
@@ -1878,25 +2009,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                             20),
                                                                     decoration:
                                                                         BoxDecoration(
-                                                                      gradient:
-                                                                          LinearGradient(
-                                                                        colors: _lastType ==
-                                                                                'credit'
-                                                                            ? [
-                                                                                Colors.orange.shade600,
-                                                                                Colors.orange.shade700
-                                                                              ]
-                                                                            : _lastType ==
-                                                                                    'installment'
-                                                                                ? [
-                                                                                    Colors.blue.shade600,
-                                                                                    Colors.blue.shade700
-                                                                                  ]
-                                                                                : [
-                                                                                    Colors.green.shade600,
-                                                                                    Colors.green.shade700
-                                                                                  ],
-                                                                      ),
+                                                                      color: Theme.of(context).brightness ==
+                                                                              Brightness.dark
+                                                                          ? DarkModeUtils.getCardColor(context)
+                                                                          : (_lastType == 'credit'
+                                                                              ? DarkModeUtils.getWarningColor(context)
+                                                                              : _lastType == 'installment'
+                                                                                  ? DarkModeUtils.getInfoColor(context)
+                                                                                  : DarkModeUtils.getSuccessColor(context)),
                                                                       borderRadius:
                                                                           const BorderRadius
                                                                               .only(
@@ -1911,8 +2031,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                         Icon(
                                                                           Icons
                                                                               .check_circle,
-                                                                          color:
-                                                                              Colors.white,
+                                                                          color: Theme.of(context).brightness == Brightness.dark
+                                                                              ? (_lastType == 'credit'
+                                                                                  ? DarkModeUtils.getWarningColor(context)
+                                                                                  : _lastType == 'installment'
+                                                                                      ? DarkModeUtils.getInfoColor(context)
+                                                                                      : DarkModeUtils.getSuccessColor(context))
+                                                                              : Colors.white,
                                                                           size:
                                                                               32,
                                                                         ),
@@ -1925,10 +2050,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                             crossAxisAlignment:
                                                                                 CrossAxisAlignment.start,
                                                                             children: [
-                                                                              const Text(
+                                                                              Text(
                                                                                 'تم إنجاز البيع بنجاح',
                                                                                 style: TextStyle(
-                                                                                  color: Colors.white,
+                                                                                  color: Theme.of(context).brightness == Brightness.dark ? DarkModeUtils.getTextColor(context) : Colors.white,
                                                                                   fontSize: 20,
                                                                                   fontWeight: FontWeight.bold,
                                                                                 ),
@@ -1940,7 +2065,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                         ? 'بيع بالتقسيط'
                                                                                         : 'بيع نقدي',
                                                                                 style: TextStyle(
-                                                                                  color: Colors.white.withOpacity(0.9),
+                                                                                  color: Theme.of(context).brightness == Brightness.dark ? DarkModeUtils.getSecondaryTextColor(context) : Colors.white.withOpacity(0.9),
                                                                                   fontSize: 14,
                                                                                 ),
                                                                               ),
@@ -1954,8 +2079,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                               vertical: 6),
                                                                           decoration:
                                                                               BoxDecoration(
-                                                                            color:
-                                                                                Colors.white.withOpacity(0.2),
+                                                                            color: Theme.of(context).brightness == Brightness.dark
+                                                                                ? (_lastType == 'credit'
+                                                                                    ? DarkModeUtils.getWarningColor(context).withOpacity(0.15)
+                                                                                    : _lastType == 'installment'
+                                                                                        ? DarkModeUtils.getInfoColor(context).withOpacity(0.15)
+                                                                                        : DarkModeUtils.getSuccessColor(context).withOpacity(0.15))
+                                                                                : Colors.white.withOpacity(0.2),
                                                                             borderRadius:
                                                                                 BorderRadius.circular(12),
                                                                           ),
@@ -1963,8 +2093,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                               Text(
                                                                             Formatters.currencyIQD(totalAmount),
                                                                             style:
-                                                                                const TextStyle(
-                                                                              color: Colors.white,
+                                                                                TextStyle(
+                                                                              color: Theme.of(context).brightness == Brightness.dark ? DarkModeUtils.getTextColor(context) : Colors.white,
                                                                               fontWeight: FontWeight.bold,
                                                                               fontSize: 16,
                                                                             ),
@@ -1996,17 +2126,17 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                   fontWeight: FontWeight.bold,
                                                                                   fontSize: 16,
                                                                                   color: _lastType == 'credit'
-                                                                                      ? Colors.orange.shade700
+                                                                                      ? DarkModeUtils.getWarningColor(context)
                                                                                       : _lastType == 'installment'
-                                                                                          ? Colors.blue.shade700
-                                                                                          : Colors.green.shade700,
+                                                                                          ? DarkModeUtils.getInfoColor(context)
+                                                                                          : DarkModeUtils.getSuccessColor(context),
                                                                                 ),
                                                                               ),
                                                                               if (_lastType == 'credit' && _lastDueDate != null)
                                                                                 Container(
                                                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                                                   decoration: BoxDecoration(
-                                                                                    color: Colors.orange.shade100,
+                                                                                    color: DarkModeUtils.getWarningColor(context).withOpacity(0.15),
                                                                                     borderRadius: BorderRadius.circular(8),
                                                                                   ),
                                                                                   child: Text(
@@ -2033,14 +2163,15 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                   margin: const EdgeInsets.only(bottom: 8),
                                                                                   padding: const EdgeInsets.all(12),
                                                                                   decoration: BoxDecoration(
-                                                                                    color: Colors.grey.shade50,
+                                                                                    color: DarkModeUtils.getBackgroundColor(context),
                                                                                     borderRadius: BorderRadius.circular(8),
                                                                                     border: Border.all(
-                                                                                      color: _lastType == 'credit'
-                                                                                          ? Colors.orange.shade200
-                                                                                          : _lastType == 'installment'
-                                                                                              ? Colors.blue.shade200
-                                                                                              : Colors.green.shade200,
+                                                                                      color: (_lastType == 'credit'
+                                                                                              ? DarkModeUtils.getWarningColor(context)
+                                                                                              : _lastType == 'installment'
+                                                                                                  ? DarkModeUtils.getInfoColor(context)
+                                                                                                  : DarkModeUtils.getSuccessColor(context))
+                                                                                          .withOpacity(0.35),
                                                                                     ),
                                                                                   ),
                                                                                   child: Row(
@@ -2182,9 +2313,9 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                             20),
                                                                     decoration:
                                                                         BoxDecoration(
-                                                                      color: Colors
-                                                                          .grey
-                                                                          .shade50,
+                                                                      color: DarkModeUtils
+                                                                          .getSurfaceColor(
+                                                                              context),
                                                                       borderRadius:
                                                                           const BorderRadius
                                                                               .only(
@@ -2230,8 +2361,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                   ),
                                                                                 ),
                                                                                 style: ElevatedButton.styleFrom(
-                                                                                  backgroundColor: Colors.blue.shade600,
-                                                                                  foregroundColor: Colors.white,
+                                                                                  backgroundColor: DarkModeUtils.getInfoColor(context),
+                                                                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                                                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                                                                   shape: RoundedRectangleBorder(
                                                                                     borderRadius: BorderRadius.circular(12),
@@ -2275,11 +2406,11 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                 label: const Text('طباعة'),
                                                                                 style: ElevatedButton.styleFrom(
                                                                                   backgroundColor: _lastType == 'credit'
-                                                                                      ? Colors.orange.shade600
+                                                                                      ? DarkModeUtils.getWarningColor(context)
                                                                                       : _lastType == 'installment'
-                                                                                          ? Colors.blue.shade600
-                                                                                          : Colors.green.shade600,
-                                                                                  foregroundColor: Colors.white,
+                                                                                          ? DarkModeUtils.getInfoColor(context)
+                                                                                          : DarkModeUtils.getSuccessColor(context),
+                                                                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                                                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                                                                   shape: RoundedRectangleBorder(
                                                                                     borderRadius: BorderRadius.circular(12),
@@ -2488,21 +2619,20 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                   // Return products to stock - only from last invoice if it exists
                                                                                   // If there's a last invoice, return those products
                                                                                   // If no last invoice, return products from current cart
-                                                                                
 
                                                                                   if (_lastInvoiceItems.isNotEmpty) {
                                                                                     // Return products from last invoice to stock
-                                                                                     for (final item in _lastInvoiceItems) {
+                                                                                    for (final item in _lastInvoiceItems) {
                                                                                       final productId = item['product_id'] as int;
                                                                                       final quantity = item['quantity'] as int;
-                                                                                       await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
+                                                                                      await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
                                                                                     }
                                                                                   } else if (_cart.isNotEmpty) {
                                                                                     // Return products from current cart to stock (if no last invoice)
-                                                                                     for (final item in _cart) {
+                                                                                    for (final item in _cart) {
                                                                                       final productId = item['product_id'] as int;
                                                                                       final quantity = item['quantity'] as int;
-                                                                                       await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
+                                                                                      await context.read<DatabaseService>().adjustProductQuantity(productId, quantity);
                                                                                     }
                                                                                   }
 
@@ -2597,9 +2727,24 @@ class _SalesScreenState extends State<SalesScreen> {
                                           style: FilledButton.styleFrom(
                                             padding: const EdgeInsets.symmetric(
                                                 vertical: 12),
-                                            backgroundColor: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
+                                            backgroundColor:
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? Theme.of(context)
+                                                        .colorScheme
+                                                        .primaryContainer
+                                                    : Theme.of(context)
+                                                        .colorScheme
+                                                        .primary,
+                                            foregroundColor:
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? Theme.of(context)
+                                                        .colorScheme
+                                                        .onPrimaryContainer
+                                                    : Theme.of(context)
+                                                        .colorScheme
+                                                        .onPrimary,
                                           ),
                                         ),
                                       ),
@@ -3031,6 +3176,14 @@ class _SalesScreenState extends State<SalesScreen> {
         ));
   }
 
+  String _shortBarcode(String input,
+      {int head = 6, int tail = 4, int min = 14}) {
+    if (input.isEmpty) return input;
+    if (input.length <= min) return input;
+    if (head + tail + 1 >= input.length) return input;
+    return '${input.substring(0, head)}…${input.substring(input.length - tail)}';
+  }
+
   void _addToCart(Map<String, Object?> p) {
     // Check if product is already in cart
     final existing = _cart.indexWhere((e) => e['product_id'] == p['id']);
@@ -3052,7 +3205,7 @@ class _SalesScreenState extends State<SalesScreen> {
     // Reserve one immediately
     context.read<DatabaseService>().adjustProductQuantity(p['id'] as int, -1);
     setState(() {
-      _cart.add({
+      _cart.insert(0, {
         'product_id': p['id'],
         'name': p['name'],
         'price': p['price'],
@@ -3116,8 +3269,6 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> _printInvoice(BuildContext context) async {
-    
-
     final store = context.read<StoreConfig>();
     final shopName = store.shopName;
     final phone = store.phone;
@@ -3151,15 +3302,14 @@ class _SalesScreenState extends State<SalesScreen> {
     );
 
     if (success && context.mounted) {
-       ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم طباعة الفاتورة بنجاح مع الإعدادات المختارة'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
         ),
       );
-    } else {
-     }
+    } else {}
   }
 
   Widget _buildInfoChip(String label, String value, IconData icon) {
@@ -3252,43 +3402,38 @@ class _SalesScreenState extends State<SalesScreen> {
     );
   }
 
-  // Helper methods for dynamic colors based on payment type
+  // Helper methods for dynamic colors based on payment type (dark/light aware)
   Color _getCustomerInfoBackgroundColor() {
+    final scheme = Theme.of(context).colorScheme;
     switch (_type) {
       case 'cash':
-        return Colors.green.shade50;
+        return scheme.tertiaryContainer.withOpacity(0.25);
       case 'installment':
-        return Colors.blue.shade50;
+        return scheme.secondaryContainer.withOpacity(0.25);
       case 'credit':
-        return Colors.orange.shade50;
+        return scheme.primaryContainer.withOpacity(0.25);
       default:
-        return Colors.white;
+        return scheme.surface;
     }
   }
 
   Color _getCustomerInfoBorderColor() {
+    final scheme = Theme.of(context).colorScheme;
     switch (_type) {
       case 'cash':
-        return Colors.green.shade200;
+        return scheme.tertiary.withOpacity(0.35);
       case 'installment':
-        return Colors.blue.shade200;
+        return scheme.secondary.withOpacity(0.35);
       case 'credit':
-        return Colors.orange.shade200;
+        return scheme.primary.withOpacity(0.35);
       default:
-        return Colors.grey.shade200;
+        return Theme.of(context).dividerColor.withOpacity(0.4);
     }
   }
 
   Color _getCustomerInfoShadowColor() {
-    switch (_type) {
-      case 'cash':
-        return Colors.green.withOpacity(0.05);
-      case 'installment':
-        return Colors.blue.withOpacity(0.05);
-      case 'credit':
-        return Colors.orange.withOpacity(0.05);
-      default:
-        return Colors.grey.withOpacity(0.05);
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Subtle shadow in light mode; slightly stronger in dark mode
+    return Colors.black.withOpacity(isDark ? 0.2 : 0.06);
   }
 }

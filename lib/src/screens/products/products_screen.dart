@@ -1,6 +1,8 @@
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import '../../utils/dark_mode_utils.dart';
+import '../../utils/app_themes.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:barcode_widget/barcode_widget.dart';
@@ -39,23 +41,35 @@ class _ProductsScreenState extends State<ProductsScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              // Fancy gradient header with search
+              // Header with adaptive colors
               Container(
                 margin: const EdgeInsets.fromLTRB(100, 2, 100, 10),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.blue.shade400,
-                      Colors.purple.shade400,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: () {
+                    final gradients =
+                        Theme.of(context).extension<AppGradients>();
+                    if (gradients != null) {
+                      return LinearGradient(
+                        colors: [
+                          gradients.sidebarStart,
+                          gradients.sidebarMiddle,
+                          gradients.sidebarEnd,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      );
+                    }
+                    return LinearGradient(
+                      colors: DarkModeUtils.getPrimaryGradientColors(context),
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    );
+                  }(),
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.purple.withOpacity(0.2),
+                      color: DarkModeUtils.getShadowColor(context),
                       blurRadius: 14,
                       offset: const Offset(0, 6),
                     ),
@@ -72,23 +86,33 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withOpacity(0.2)
+                                    : Colors.white.withOpacity(0.3),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.inventory_2_rounded,
                             color: Colors.white,
                             size: 24,
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Text(
+                        Text(
                           'إدارة المنتجات',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.2,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.35),
+                                blurRadius: 2,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -98,168 +122,162 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       children: [
                         Expanded(
                           flex: 1,
-                          child: Container(
-                            height: 45,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(25),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              textAlign: TextAlign.right,
-                              textDirection: TextDirection.rtl,
-                              decoration: InputDecoration(
-                                hintText: 'بحث بالاسم أو الباركود',
-                                hintStyle: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
-                                suffixIcon: Container(
-                                  margin: const EdgeInsets.all(8),
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.search_rounded,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                ),
-                                prefixIcon: _query.isNotEmpty
-                                    ? IconButton(
-                                        icon: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.white.withOpacity(0.2),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: const Icon(
-                                            Icons.close_rounded,
-                                            color: Colors.white,
-                                            size: 16,
-                                          ),
-                                        ),
-                                        onPressed: () {
-                                          _searchController.clear();
-                                          setState(() => _query = '');
-                                        },
-                                      )
-                                    : null,
-                                filled: false,
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                              style: const TextStyle(
-                                color: Colors.white,
+                          child: TextField(
+                            controller: _searchController,
+                            textAlign: TextAlign.right,
+                            textDirection: TextDirection.rtl,
+                            decoration: InputDecoration(
+                              hintText: 'بحث بالاسم أو الباركود',
+                              hintStyle: const TextStyle(
+                                color: Colors.white70,
                                 fontSize: 14,
                               ),
-                              onChanged: (v) => setState(() => _query = v),
+                              filled: true,
+                              fillColor: Colors.white.withOpacity(0.2),
+                              suffixIcon: Container(
+                                margin: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.search_rounded,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                              prefixIcon: _query.isNotEmpty
+                                  ? IconButton(
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.2),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.close_rounded,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _query = '');
+                                      },
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                             ),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                            onChanged: (v) => setState(() => _query = v),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 12),
                         Expanded(
                           flex: 1,
-                          child: Container(
-                            height: 45,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(25),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                          child: FutureBuilder<List<Map<String, Object?>>>(
+                            future: db.getCategories(),
+                            builder: (context, catSnap) {
+                              if (!catSnap.hasData) {
+                                return const SizedBox.shrink();
+                              }
+                              final cats = catSnap.data!;
+                              return DropdownButtonFormField<int>(
+                                initialValue: _selectedCategoryId,
+                                isDense: true,
+                                iconEnabledColor:
+                                    Theme.of(context).colorScheme.onPrimary,
+                                dropdownColor: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Theme.of(context).colorScheme.surface
+                                    : Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Theme.of(context).colorScheme.onSurface
+                                      : Colors.black,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
                                 ),
-                              ],
-                            ),
-                            child: FutureBuilder<List<Map<String, Object?>>>(
-                              future: db.getCategories(),
-                              builder: (context, catSnap) {
-                                if (!catSnap.hasData) {
-                                  return const SizedBox.shrink();
-                                }
-                                final cats = catSnap.data!;
-                                return DropdownButtonFormField<int>(
-                                  initialValue: _selectedCategoryId,
-                                  isDense: true,
-                                  iconEnabledColor: Colors.white,
-                                  dropdownColor: Colors.white,
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
+                                decoration: InputDecoration(
+                                  hintText: 'القسم',
+                                  hintStyle: const TextStyle(
+                                    color: Colors.white70,
                                     fontSize: 14,
                                   ),
-                                  decoration: InputDecoration(
-                                    hintText: 'القسم',
-                                    hintStyle: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
+                                  filled: true,
+                                  fillColor: Colors.white.withOpacity(0.2),
+                                  prefixIcon: Container(
+                                    margin: const EdgeInsets.all(8),
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                    prefixIcon: Container(
-                                      margin: const EdgeInsets.all(8),
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(
-                                        Icons.category_rounded,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
-                                    filled: false,
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
+                                    child: const Icon(
+                                      Icons.category_rounded,
+                                      color: Colors.white,
+                                      size: 18,
                                     ),
                                   ),
-                                  items: [
-                                    const DropdownMenuItem<int>(
-                                      value: null,
-                                      child: Text('كل الأقسام'),
-                                    ),
-                                    ...cats.map((c) => DropdownMenuItem<int>(
-                                          value: c['id'] as int,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 12,
-                                            ),
-                                            child: Text(
-                                                c['name']?.toString() ?? ''),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                items: [
+                                  const DropdownMenuItem<int>(
+                                    value: null,
+                                    child: Text('كل الأقسام'),
+                                  ),
+                                  ...cats.map((c) => DropdownMenuItem<int>(
+                                        value: c['id'] as int,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
                                           ),
-                                        )),
-                                  ],
-                                  onChanged: (val) =>
-                                      setState(() => _selectedCategoryId = val),
-                                );
-                              },
-                            ),
+                                          child:
+                                              Text(c['name']?.toString() ?? ''),
+                                        ),
+                                      )),
+                                ],
+                                onChanged: (val) =>
+                                    setState(() => _selectedCategoryId = val),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -290,20 +308,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(40),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
-                                    width: 2,
-                                  ),
-                                ),
+                                decoration:
+                                    DarkModeUtils.createCardDecoration(context),
                                 child: Column(
                                   children: [
                                     Icon(
                                       Icons.inventory_2_outlined,
                                       size: 80,
-                                      color: Colors.grey.shade400,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.6),
                                     ),
                                     const SizedBox(height: 20),
                                     Text(
@@ -311,7 +326,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                       style: TextStyle(
                                         fontSize: 24,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade600,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
                                       ),
                                     ),
                                     const SizedBox(height: 10),
@@ -319,7 +336,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                       'لم يتم العثور على أي منتجات في النظام',
                                       style: TextStyle(
                                         fontSize: 16,
-                                        color: Colors.grey.shade500,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
                                       ),
                                       textAlign: TextAlign.center,
                                     ),
@@ -330,8 +350,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                       icon: const Icon(Icons.add),
                                       label: const Text('إضافة منتج جديد'),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue.shade600,
-                                        foregroundColor: Colors.white,
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        foregroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 24,
                                           vertical: 12,
@@ -353,15 +377,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             child: Container(
                               margin: const EdgeInsets.fromLTRB(90, 0, 90, 20),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: DarkModeUtils.getSurfaceColor(context),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: Colors.grey.shade300,
+                                  color: DarkModeUtils.getBorderColor(context),
                                   width: 1,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
+                                    color:
+                                        DarkModeUtils.getShadowColor(context),
                                     blurRadius: 10,
                                     offset: const Offset(0, 5),
                                   ),
@@ -373,7 +398,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   // Fixed Header - رؤوس الأعمدة الثابتة
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.blue.shade100,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(
+                                            Theme.of(context).brightness ==
+                                                    Brightness.dark
+                                                ? 0.12
+                                                : 0.15,
+                                          ),
                                       borderRadius: const BorderRadius.only(
                                         topLeft: Radius.circular(16),
                                         topRight: Radius.circular(16),
@@ -394,14 +427,24 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                         },
                                         border: TableBorder.symmetric(
                                           inside: BorderSide(
-                                            color: Colors.grey.shade300,
+                                            color: DarkModeUtils.getBorderColor(
+                                                context),
                                             width: 1,
                                           ),
                                         ),
                                         children: [
                                           TableRow(
                                             decoration: BoxDecoration(
-                                              color: Colors.blue.shade100,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary
+                                                  .withOpacity(
+                                                    Theme.of(context)
+                                                                .brightness ==
+                                                            Brightness.dark
+                                                        ? 0.12
+                                                        : 0.15,
+                                                  ),
                                             ),
                                             children: [
                                               // المعرف
@@ -413,8 +456,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                   child: Text(
                                                     'المعرف',
                                                     style: TextStyle(
-                                                      color:
-                                                          Colors.blue.shade800,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 16,
@@ -432,8 +476,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                   child: Text(
                                                     'الاسم',
                                                     style: TextStyle(
-                                                      color:
-                                                          Colors.blue.shade800,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 16,
@@ -451,8 +496,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                   child: Text(
                                                     'الباركود',
                                                     style: TextStyle(
-                                                      color:
-                                                          Colors.blue.shade800,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 16,
@@ -470,8 +516,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                   child: Text(
                                                     'الكمية',
                                                     style: TextStyle(
-                                                      color:
-                                                          Colors.blue.shade800,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 16,
@@ -489,8 +536,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                   child: Text(
                                                     'التكلفة',
                                                     style: TextStyle(
-                                                      color:
-                                                          Colors.blue.shade800,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 16,
@@ -508,8 +556,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                   child: Text(
                                                     'السعر',
                                                     style: TextStyle(
-                                                      color:
-                                                          Colors.blue.shade800,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 16,
@@ -527,8 +576,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                   child: Text(
                                                     'الإجراءات',
                                                     style: TextStyle(
-                                                      color:
-                                                          Colors.blue.shade800,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primary,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 16,
@@ -564,7 +614,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                           },
                                           border: TableBorder.symmetric(
                                             inside: BorderSide(
-                                              color: Colors.grey.shade300,
+                                              color:
+                                                  DarkModeUtils.getBorderColor(
+                                                      context),
                                               width: 1,
                                             ),
                                           ),
@@ -576,8 +628,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                               TableRow(
                                                 decoration: BoxDecoration(
                                                   color: i % 2 == 0
-                                                      ? Colors.white
-                                                      : Colors.grey.shade50,
+                                                      ? DarkModeUtils
+                                                          .getSurfaceColor(
+                                                              context)
+                                                      : Theme.of(context)
+                                                          .colorScheme
+                                                          .surface
+                                                          .withOpacity(
+                                                            Theme.of(context)
+                                                                        .brightness ==
+                                                                    Brightness
+                                                                        .dark
+                                                                ? 0.9
+                                                                : 0.98,
+                                                          ),
                                                 ),
                                                 children: [
                                                   // المعرف
@@ -592,8 +656,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                         style: TextStyle(
                                                           fontWeight:
                                                               FontWeight.w600,
-                                                          color: Colors
-                                                              .grey.shade700,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .onSurface,
                                                           fontSize: 16,
                                                         ),
                                                       ),
@@ -610,11 +676,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                         products[i]['name']
                                                                 ?.toString() ??
                                                             'بدون اسم',
-                                                        style: const TextStyle(
+                                                        style: TextStyle(
                                                           fontWeight:
                                                               FontWeight.w500,
                                                           fontSize: 15,
-                                                          color: Colors.black87,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .onSurface,
                                                         ),
                                                         textAlign:
                                                             TextAlign.center,
@@ -631,25 +700,103 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                         const EdgeInsets.all(
                                                             16),
                                                     child: Center(
-                                                      child: Text(
-                                                        products[i]['barcode']
-                                                                ?.toString() ??
-                                                            '—',
-                                                        style: TextStyle(
-                                                          fontFamily:
-                                                              'monospace',
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          fontSize: 14,
-                                                          color: Colors
-                                                              .blue.shade700,
-                                                          letterSpacing: 0.5,
-                                                        ),
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
+                                                      child: Builder(
+                                                        builder: (context) {
+                                                          final String
+                                                              fullBarcode =
+                                                              products[i]['barcode']
+                                                                      ?.toString() ??
+                                                                  '—';
+                                                          final String
+                                                              shortBarcode =
+                                                              _abbreviateMiddle(
+                                                                  fullBarcode,
+                                                                  head: 6,
+                                                                  tail: 4,
+                                                                  minLength:
+                                                                      14);
+                                                          return Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                              Flexible(
+                                                                child: Tooltip(
+                                                                  message:
+                                                                      fullBarcode,
+                                                                  child: Text(
+                                                                    shortBarcode,
+                                                                    style:
+                                                                        TextStyle(
+                                                                      fontFamily:
+                                                                          'monospace',
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                      fontSize:
+                                                                          14,
+                                                                      color: Theme.of(
+                                                                              context)
+                                                                          .colorScheme
+                                                                          .primary,
+                                                                      letterSpacing:
+                                                                          0.5,
+                                                                    ),
+                                                                    maxLines: 1,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                  width: 6),
+                                                              InkWell(
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            6),
+                                                                onTap:
+                                                                    () async {
+                                                                  if (fullBarcode !=
+                                                                      '—') {
+                                                                    await Clipboard.setData(
+                                                                        ClipboardData(
+                                                                            text:
+                                                                                fullBarcode));
+                                                                    if (!mounted)
+                                                                      return;
+                                                                    ScaffoldMessenger.of(
+                                                                            context)
+                                                                        .showSnackBar(
+                                                                      const SnackBar(
+                                                                        content:
+                                                                            Text('تم نسخ الباركود'),
+                                                                        behavior:
+                                                                            SnackBarBehavior.floating,
+                                                                        duration:
+                                                                            Duration(seconds: 2),
+                                                                      ),
+                                                                    );
+                                                                  }
+                                                                },
+                                                                child: Icon(
+                                                                  Icons.copy,
+                                                                  size: 16,
+                                                                  color: Theme.of(
+                                                                          context)
+                                                                      .colorScheme
+                                                                      .onSurface
+                                                                      .withOpacity(
+                                                                          0.8),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          );
+                                                        },
                                                       ),
                                                     ),
                                                   ),
@@ -668,8 +815,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                         style: TextStyle(
                                                           fontWeight:
                                                               FontWeight.w600,
-                                                          color: Colors
-                                                              .green.shade700,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .tertiary,
                                                           fontSize: 16,
                                                         ),
                                                       ),
@@ -691,8 +840,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                         style: TextStyle(
                                                           fontWeight:
                                                               FontWeight.w600,
-                                                          color: Colors
-                                                              .purple.shade700,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .secondary,
                                                           fontSize: 15,
                                                         ),
                                                         textAlign:
@@ -716,8 +867,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                         style: TextStyle(
                                                           fontWeight:
                                                               FontWeight.w600,
-                                                          color: Colors
-                                                              .orange.shade700,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .primary,
                                                           fontSize: 15,
                                                         ),
                                                         textAlign:
@@ -864,6 +1017,24 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ),
       ),
     );
+  }
+
+  String _abbreviateMiddle(
+    String input, {
+    int head = 6,
+    int tail = 4,
+    int minLength = 14,
+  }) {
+    if (input.isEmpty || input == '—') return input;
+    if (head < 0) head = 0;
+    if (tail < 0) tail = 0;
+    final int totalKeep = head + tail;
+    if (input.length <= minLength || input.length <= totalKeep + 1) {
+      return input;
+    }
+    final String start = input.substring(0, head);
+    final String end = input.substring(input.length - tail);
+    return '$start…$end';
   }
 
   Future<void> _deleteProduct(BuildContext context, int id) async {

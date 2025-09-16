@@ -6,6 +6,7 @@ import '../services/db/database_service.dart';
 import '../services/print_service.dart';
 import '../services/store_config.dart';
 import '../utils/format.dart';
+import '../utils/dark_mode_utils.dart';
 import 'package:intl/intl.dart';
 
 class SalesHistoryScreen extends StatefulWidget {
@@ -53,7 +54,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في تحميل المبيعات: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: DarkModeUtils.getErrorColor(context),
         ),
       );
     } finally {
@@ -180,7 +181,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: pickFrom,
-                              icon: const Icon(Icons.calendar_today, size: 16),
+                              icon: Icon(Icons.calendar_today,
+                                  size: 16,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context)),
                               label: Text('من: ${formatDate(tempFrom)}'),
                             ),
                           ),
@@ -188,7 +192,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: pickTo,
-                              icon: const Icon(Icons.calendar_today, size: 16),
+                              icon: Icon(Icons.calendar_today,
+                                  size: 16,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context)),
                               label: Text('إلى: ${formatDate(tempTo)}'),
                             ),
                           ),
@@ -228,7 +235,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                               Navigator.pop(context);
                               _loadSales();
                             },
-                            icon: const Icon(Icons.check),
+                            icon: Icon(Icons.check,
+                                color: DarkModeUtils.getSuccessColor(context)),
                             label: const Text('تطبيق'),
                           )
                         ],
@@ -286,36 +294,80 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isSelectionMode
-            ? 'تم تحديد ${_selectedSales.length} من ${_sales.length}'
-            : 'تاريخ المبيعات'),
+        title: Text(
+          _isSelectionMode
+              ? 'تم تحديد ${_selectedSales.length} من ${_sales.length}'
+              : 'تاريخ المبيعات',
+          style: TextStyle(
+            color: _isSelectionMode
+                ? Colors.white
+                : DarkModeUtils.getTextColor(context),
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
         backgroundColor: _isSelectionMode
-            ? Colors.red.shade600
-            : Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+            ? DarkModeUtils.getErrorColor(context)
+            : DarkModeUtils.getCardColor(context),
+        foregroundColor: DarkModeUtils.getTextColor(context),
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: _isSelectionMode
+                ? LinearGradient(
+                    colors: [
+                      DarkModeUtils.getErrorColor(context),
+                      DarkModeUtils.getErrorColor(context).withOpacity(0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : LinearGradient(
+                    colors: [
+                      DarkModeUtils.getCardColor(context),
+                      DarkModeUtils.getCardColor(context).withOpacity(0.9),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+            boxShadow: [
+              BoxShadow(
+                color: DarkModeUtils.getShadowColor(context),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+        ),
         actions: _isSelectionMode
             ? [
                 // أزرار وضع التحديد
                 if (_selectedSales.length < _sales.length)
                   IconButton(
-                    icon: const Icon(Icons.select_all),
+                    icon: Icon(Icons.select_all,
+                        color: _isSelectionMode
+                            ? Colors.white
+                            : DarkModeUtils.getTextColor(context)),
                     onPressed: _selectAll,
                     tooltip: 'تحديد الكل',
                   ),
                 if (_selectedSales.isNotEmpty)
                   IconButton(
-                    icon: const Icon(Icons.clear),
+                    icon: Icon(Icons.clear,
+                        color: _isSelectionMode
+                            ? Colors.white
+                            : DarkModeUtils.getTextColor(context)),
                     onPressed: _deselectAll,
                     tooltip: 'إلغاء التحديد',
                   ),
                 if (_selectedSales.isNotEmpty)
                   IconButton(
-                    icon: const Icon(Icons.delete),
+                    icon: Icon(Icons.delete, color: Colors.white),
                     onPressed: _confirmBulkDelete,
                     tooltip: 'حذف المحدد',
                   ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close, color: Colors.white),
                   onPressed: _toggleSelectionMode,
                   tooltip: 'إلغاء وضع التحديد',
                 ),
@@ -323,26 +375,30 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
             : [
                 // أزرار الوضع العادي
                 IconButton(
-                  icon: Icon(_sortDescending
-                      ? Icons.arrow_downward
-                      : Icons.arrow_upward),
+                  icon: Icon(
+                      _sortDescending
+                          ? Icons.arrow_downward
+                          : Icons.arrow_upward,
+                      color: DarkModeUtils.getTextColor(context)),
                   onPressed: _toggleSortOrder,
                   tooltip: _sortDescending ? 'ترتيب تصاعدي' : 'ترتيب تنازلي',
                 ),
                 IconButton(
-                  icon: const Icon(Icons.checklist),
+                  icon: Icon(Icons.checklist,
+                      color: DarkModeUtils.getTextColor(context)),
                   onPressed: _toggleSelectionMode,
                   tooltip: 'وضع التحديد',
                 ),
                 IconButton(
-                  icon: const Icon(Icons.refresh),
+                  icon: Icon(Icons.refresh,
+                      color: DarkModeUtils.getTextColor(context)),
                   onPressed: _loadSales,
                   tooltip: 'تحديث',
                 ),
               ],
       ),
       body: Container(
-        color: Colors.grey.shade50,
+        color: DarkModeUtils.getBackgroundColor(context),
         child: Column(
           children: [
             // Filters Section - محسن
@@ -350,9 +406,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
               margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: DarkModeUtils.getCardColor(context),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                border:
+                    Border.all(color: DarkModeUtils.getBorderColor(context)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(8),
@@ -365,7 +422,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         decoration: InputDecoration(
                           hintText:
                               'البحث في المبيعات والعملاء وأرقام الفواتير...',
-                          prefixIcon: const Icon(Icons.search, size: 20),
+                          prefixIcon: Icon(Icons.search,
+                              size: 20,
+                              color:
+                                  DarkModeUtils.getSecondaryTextColor(context)),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -408,16 +468,19 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 10),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(
+                                color: DarkModeUtils.getBorderColor(context)),
                             borderRadius: BorderRadius.circular(10),
-                            color: Colors.white,
+                            color: DarkModeUtils.getCardColor(context),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.date_range,
-                                  size: 16, color: Colors.black54),
+                              Icon(Icons.date_range,
+                                  size: 16,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context)),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
@@ -439,8 +502,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                                     });
                                     _loadSales();
                                   },
-                                  child: const Icon(Icons.close,
-                                      size: 14, color: Colors.black45),
+                                  child: Icon(Icons.close,
+                                      size: 14,
+                                      color:
+                                          DarkModeUtils.getSecondaryTextColor(
+                                              context)),
                                 ),
                               ]
                             ],
@@ -464,7 +530,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                               Icon(
                                 Icons.receipt_long,
                                 size: 64,
-                                color: Colors.grey.shade400,
+                                color: DarkModeUtils.getSecondaryTextColor(
+                                    context),
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -473,7 +540,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                                     .textTheme
                                     .titleLarge
                                     ?.copyWith(
-                                      color: Colors.grey.shade600,
+                                      color:
+                                          DarkModeUtils.getSecondaryTextColor(
+                                              context),
                                     ),
                               ),
                               const SizedBox(height: 8),
@@ -483,7 +552,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                                     .textTheme
                                     .bodyMedium
                                     ?.copyWith(
-                                      color: Colors.grey.shade500,
+                                      color:
+                                          DarkModeUtils.getSecondaryTextColor(
+                                              context),
                                     ),
                                 textAlign: TextAlign.center,
                               ),
@@ -508,8 +579,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   Widget _typeChip(String label, String value) {
     final bool selected =
         _selectedType == value || (_selectedType.isEmpty && value.isEmpty);
-    final Color color =
-        selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade400;
+    final Color color = selected
+        ? Theme.of(context).colorScheme.primary
+        : DarkModeUtils.getSecondaryTextColor(context);
     return ChoiceChip(
       label: Text(label, style: const TextStyle(fontSize: 12)),
       selected: selected,
@@ -517,7 +589,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       labelStyle: TextStyle(
         color: selected
             ? Theme.of(context).colorScheme.primary
-            : Colors.grey.shade700,
+            : DarkModeUtils.getSecondaryTextColor(context),
         fontWeight: FontWeight.w600,
       ),
       side: BorderSide(color: color.withOpacity(0.4)),
@@ -538,36 +610,39 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     final isSelected = _selectedSales.contains(saleId);
 
     Color typeColor;
-    // Removed unused icon variable to match simplified card design
-    // Icon kept in switch for readability before, but no longer used
-    // Keeping declaration removed to satisfy linter
+    IconData typeIcon;
     String typeText;
 
     switch (type) {
       case 'cash':
-        typeColor = Colors.green;
+        typeColor = Colors.blue;
+        typeIcon = Icons.payments_outlined;
         typeText = 'نقدي';
         break;
       case 'credit':
         typeColor = Colors.red;
+        typeIcon = Icons.schedule;
         typeText = 'أجل';
         break;
       case 'installment':
-        typeColor = Colors.purple;
+        typeColor = Colors.green;
+        typeIcon = Icons.view_timeline_outlined;
         typeText = 'أقساط';
         break;
       default:
-        typeColor = Colors.grey;
+        typeColor = DarkModeUtils.getSecondaryTextColor(context);
+        typeIcon = Icons.receipt_long;
         typeText = 'غير محدد';
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DarkModeUtils.getCardColor(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: isSelected ? typeColor : Colors.grey.shade200,
+            color:
+                isSelected ? typeColor : DarkModeUtils.getBorderColor(context),
             width: isSelected ? 1.2 : 0.8),
       ),
       child: Material(
@@ -577,7 +652,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           borderRadius: BorderRadius.circular(12),
           child: Row(
             children: [
-              // Accent bar
+              // Accent bar on the left
               Container(
                 width: 4,
                 height: 82,
@@ -621,13 +696,20 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                               color: typeColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(
-                              typeText,
-                              style: TextStyle(
-                                color: typeColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(typeIcon, size: 12, color: typeColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  typeText,
+                                  style: TextStyle(
+                                    color: typeColor,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -635,21 +717,22 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.schedule,
-                              size: 16, color: Colors.grey.shade600),
+                          Icon(Icons.schedule, size: 16, color: typeColor),
                           const SizedBox(width: 4),
                           Text(
                             DateFormat('MM/dd HH:mm').format(createdAt),
                             style: TextStyle(
-                                fontSize: 11, color: Colors.grey.shade700),
+                                fontSize: 11,
+                                color: DarkModeUtils.getSecondaryTextColor(
+                                    context)),
                           ),
                           const Spacer(),
                           Text(
                             Formatters.currencyIQD(total),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.green),
+                                color: DarkModeUtils.getSuccessColor(context)),
                           ),
                         ],
                       ),
@@ -657,14 +740,13 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                       Row(
                         children: [
                           Icon(Icons.person_outline,
-                              size: 16, color: Colors.blue.shade600),
+                              size: 16, color: typeColor),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               customerName ?? 'عميل عام',
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.blue.shade700),
+                              style: TextStyle(fontSize: 11, color: typeColor),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -672,27 +754,41 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                             'ربح: ${Formatters.currencyIQD(profit)}',
                             style: TextStyle(
                                 fontSize: 10,
-                                color: profit > 0 ? Colors.blue : Colors.red,
+                                color: profit > 0
+                                    ? DarkModeUtils.getInfoColor(context)
+                                    : DarkModeUtils.getErrorColor(context),
                                 fontWeight: FontWeight.w600),
                           ),
                           if (!_isSelectionMode) ...[
                             const SizedBox(width: 8),
                             InkWell(
                               onTap: () => _showSaleDetails(saleId),
-                              child: const Icon(Icons.visibility_outlined,
-                                  size: 20, color: Colors.indigo),
+                              child: Icon(
+                                Icons.visibility_outlined,
+                                size: 20,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
                             ),
                             const SizedBox(width: 6),
                             InkWell(
                               onTap: () => _printInvoice(saleId),
-                              child: const Icon(Icons.print_outlined,
-                                  size: 20, color: Colors.blue),
+                              child: const Icon(
+                                Icons.print_outlined,
+                                size: 20,
+                                color: Colors.blue,
+                              ),
                             ),
                             const SizedBox(width: 6),
                             InkWell(
                               onTap: () => _confirmDeleteSale(saleId),
-                              child: const Icon(Icons.delete_outline,
-                                  size: 20, color: Colors.red),
+                              child: const Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: Colors.red,
+                              ),
                             ),
                           ],
                         ],
@@ -701,6 +797,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   ),
                 ),
               ),
+              // Right side spacer to balance layout
+              const SizedBox(width: 0),
             ],
           ),
         ),
@@ -726,6 +824,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           ),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
+            decoration: BoxDecoration(
+              color: DarkModeUtils.getCardColor(context),
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Column(
               children: [
                 // Header
@@ -740,9 +842,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.receipt_long,
-                        color: Colors.white,
+                        color: DarkModeUtils.getCardColor(context),
                         size: 24,
                       ),
                       const SizedBox(width: 12),
@@ -752,8 +854,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           children: [
                             Text(
                               'تفاصيل الفاتورة #$saleId',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: DarkModeUtils.getCardColor(context),
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -762,8 +864,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 saleDetails['customer_name'] as String,
-                                style: const TextStyle(
-                                  color: Colors.white70,
+                                style: TextStyle(
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context),
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -774,9 +877,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close,
-                          color: Colors.white,
+                          color: DarkModeUtils.getCardColor(context),
                         ),
                       ),
                     ],
@@ -816,13 +919,15 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                               'المبلغ المقدم',
                               Formatters.currencyIQD(
                                   saleDetails['down_payment'] as num),
-                              valueColor: Colors.green),
+                              valueColor:
+                                  DarkModeUtils.getSuccessColor(context)),
                           _buildDetailRow(
                               'الباقي',
                               Formatters.currencyIQD(
                                   (saleDetails['total'] as num) -
                                       (saleDetails['down_payment'] as num)),
-                              valueColor: Colors.orange),
+                              valueColor:
+                                  DarkModeUtils.getWarningColor(context)),
                         ],
                         _buildDetailRow(
                             'الربح',
@@ -865,7 +970,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في تحميل تفاصيل الفاتورة: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: DarkModeUtils.getErrorColor(context),
         ),
       );
     }
@@ -925,7 +1030,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: DarkModeUtils.getErrorColor(context),
             ),
             child: const Text('حذف'),
           ),
@@ -949,16 +1054,16 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('تم حذف الفاتورة #$saleId بنجاح'),
-            backgroundColor: Colors.green,
+            backgroundColor: DarkModeUtils.getSuccessColor(context),
           ),
         );
         // Refresh the sales list
         _loadSales();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('فشل في حذف الفاتورة'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('فشل في حذف الفاتورة'),
+            backgroundColor: DarkModeUtils.getErrorColor(context),
           ),
         );
       }
@@ -967,7 +1072,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في حذف الفاتورة: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: DarkModeUtils.getErrorColor(context),
         ),
       );
     }
@@ -981,9 +1086,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
       if (saleDetails == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('لم يتم العثور على تفاصيل الفاتورة'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('لم يتم العثور على تفاصيل الفاتورة'),
+            backgroundColor: DarkModeUtils.getErrorColor(context),
           ),
         );
         return;
@@ -1065,15 +1170,15 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('تم طباعة الفاتورة #$saleId بنجاح مع جميع التفاصيل'),
-            backgroundColor: Colors.green,
+            backgroundColor: DarkModeUtils.getSuccessColor(context),
             duration: const Duration(seconds: 3),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('فشل في طباعة الفاتورة'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('فشل في طباعة الفاتورة'),
+            backgroundColor: DarkModeUtils.getErrorColor(context),
           ),
         );
       }
@@ -1082,7 +1187,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في طباعة الفاتورة: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: DarkModeUtils.getErrorColor(context),
         ),
       );
     }
@@ -1105,7 +1210,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: DarkModeUtils.getErrorColor(context),
             ),
             child: const Text('حذف'),
           ),
@@ -1173,7 +1278,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: failCount == 0 ? Colors.green : Colors.orange,
+          backgroundColor: failCount == 0
+              ? DarkModeUtils.getSuccessColor(context)
+              : DarkModeUtils.getWarningColor(context),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -1193,7 +1300,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في الحذف الجماعي: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: DarkModeUtils.getErrorColor(context),
         ),
       );
     }

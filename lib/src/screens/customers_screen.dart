@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
+import '../utils/dark_mode_utils.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -26,9 +27,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: DarkModeUtils.getCardColor(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: DarkModeUtils.getBorderColor(context)),
             ),
             child: Row(children: [
               Expanded(
@@ -60,18 +61,22 @@ class _CustomersScreenState extends State<CustomersScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: DarkModeUtils.getInfoColor(context).withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.blue.shade100),
+              border: Border.all(
+                  color: DarkModeUtils.getInfoColor(context).withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                Icon(Icons.info_outline,
+                    color: DarkModeUtils.getInfoColor(context), size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'الدين: هو المبلغ المستحق استلامه من العميل. تظهر القيمة باللون الأحمر إن كان عليه دين وبالأخضر إذا لا يوجد دين.',
-                    style: TextStyle(fontSize: 12, color: Colors.blue.shade900),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: DarkModeUtils.getInfoColor(context)),
                   ),
                 ),
               ],
@@ -94,10 +99,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: DarkModeUtils.getBackgroundColor(context),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: Colors.grey.shade300,
+                              color: DarkModeUtils.getBorderColor(context),
                               width: 1,
                             ),
                           ),
@@ -106,7 +111,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                               Icon(
                                 Icons.person_outline,
                                 size: 64,
-                                color: Colors.grey.shade400,
+                                color: DarkModeUtils.getSecondaryTextColor(
+                                    context),
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -114,7 +120,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.grey.shade600,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -124,7 +131,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                     : 'لم يتم العثور على عملاء مطابقين للبحث',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Colors.grey.shade500,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context),
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -134,8 +142,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 icon: const Icon(Icons.add),
                                 label: const Text('إضافة عميل جديد'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade600,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor:
+                                      DarkModeUtils.getInfoColor(context),
+                                  foregroundColor:
+                                      DarkModeUtils.getCardColor(context),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 20,
                                     vertical: 12,
@@ -162,9 +172,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: DarkModeUtils.getCardColor(context),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
+                        border: Border.all(
+                            color: DarkModeUtils.getBorderColor(context)),
                       ),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
@@ -176,9 +187,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
                               // Avatar circle
                               CircleAvatar(
                                 radius: 18,
-                                backgroundColor: Colors.blue.shade50,
-                                child: const Icon(Icons.person,
-                                    color: Colors.blue, size: 18),
+                                backgroundColor:
+                                    DarkModeUtils.getInfoColor(context)
+                                        .withOpacity(0.1),
+                                child: Icon(Icons.person,
+                                    color: DarkModeUtils.getInfoColor(context),
+                                    size: 18),
                               ),
                               const SizedBox(width: 10),
                               // Name & phone
@@ -197,15 +211,20 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                     const SizedBox(height: 2),
                                     Row(
                                       children: [
-                                        const Icon(Icons.phone,
-                                            size: 14, color: Colors.grey),
+                                        Icon(Icons.phone,
+                                            size: 14,
+                                            color: DarkModeUtils
+                                                .getSecondaryTextColor(
+                                                    context)),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Text(
                                             phone.isEmpty ? '-' : phone,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 fontSize: 12,
-                                                color: Colors.grey),
+                                                color: DarkModeUtils
+                                                    .getSecondaryTextColor(
+                                                        context)),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
@@ -222,7 +241,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   Text('الدين',
                                       style: TextStyle(
                                           fontSize: 11,
-                                          color: Colors.grey.shade600,
+                                          color: DarkModeUtils
+                                              .getSecondaryTextColor(context),
                                           fontWeight: FontWeight.w500)),
                                   const SizedBox(height: 2),
                                   Text(
@@ -230,8 +250,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.w700,
                                       color: debt > 0
-                                          ? Colors.red.shade600
-                                          : Colors.green.shade600,
+                                          ? DarkModeUtils.getErrorColor(context)
+                                          : DarkModeUtils.getSuccessColor(
+                                              context),
                                       fontSize: 13,
                                     ),
                                   ),
@@ -242,15 +263,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                         tooltip: 'تعديل',
                                         onPressed: () =>
                                             _openEditor(customer: c),
-                                        icon: const Icon(Icons.edit_outlined,
-                                            size: 18),
+                                        icon: const Icon(
+                                          Icons.edit_outlined,
+                                          size: 18,
+                                          color: Colors.blue,
+                                        ),
                                       ),
                                       IconButton(
                                         tooltip: 'حذف',
                                         onPressed: () =>
                                             _delete(c['id'] as int),
-                                        icon: const Icon(Icons.delete_outline,
-                                            size: 18),
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                          size: 18,
+                                          color: Colors.red,
+                                        ),
                                       ),
                                     ],
                                   )
