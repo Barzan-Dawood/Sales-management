@@ -48,15 +48,15 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
         foregroundColor: isDark ? scheme.onSurface : Colors.black,
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.picture_as_pdf,
-              color: Colors.pink,
+              color: Colors.deepOrange,
             ),
             tooltip: 'تصدير PDF',
             onPressed: () => _exportCurrentTab(),
           ),
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.print,
               color: Colors.blue,
             ),
@@ -64,7 +64,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
             onPressed: () => _printCurrentTab(),
           ),
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.refresh,
               color: Colors.green,
             ),
@@ -323,14 +323,19 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
               _buildReportHeader('المنتجات الأكثر مبيعاً (آخر 30 يوم)'),
               const SizedBox(height: 20),
               if (topSellingProducts.isEmpty)
-                const Center(
+                Center(
                   child: Column(
                     children: [
-                      Icon(Icons.shopping_cart, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
+                      Icon(Icons.shopping_cart,
+                          size: 64,
+                          color: DarkModeUtils.getSecondaryTextColor(context)),
+                      const SizedBox(height: 16),
                       Text(
                         'لا توجد بيانات مبيعات في آخر 30 يوم',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: DarkModeUtils.getSecondaryTextColor(context),
+                        ),
                       ),
                     ],
                   ),
@@ -380,14 +385,19 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
               _buildReportHeader('المنتجات بطيئة الحركة (آخر 90 يوم)'),
               const SizedBox(height: 20),
               if (slowMovingProducts.isEmpty)
-                const Center(
+                Center(
                   child: Column(
                     children: [
-                      Icon(Icons.trending_down, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
+                      Icon(Icons.trending_down,
+                          size: 64,
+                          color: DarkModeUtils.getSecondaryTextColor(context)),
+                      const SizedBox(height: 16),
                       Text(
                         'جميع المنتجات تتحرك بشكل جيد',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: DarkModeUtils.getSecondaryTextColor(context),
+                        ),
                       ),
                     ],
                   ),
@@ -490,16 +500,13 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.green.shade600, Colors.green.shade800],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          const Icon(Icons.inventory, color: Colors.white, size: 32),
+          Icon(Icons.inventory,
+              color: Theme.of(context).colorScheme.onPrimary, size: 32),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -507,16 +514,19 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   _formatDateForDisplay(DateTime.now()),
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onPrimary
+                        .withOpacity(0.85),
                     fontSize: 16,
                   ),
                 ),
@@ -606,18 +616,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
 
   Widget _buildTopSellingTable(List<dynamic> products) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
@@ -645,18 +644,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
 
   Widget _buildSlowMovingTable(List<dynamic> products) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
@@ -690,18 +678,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
     return Container(
       height: 300,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
           const Text(
@@ -756,18 +733,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
     return Container(
       height: 300,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
           const Text(
@@ -847,26 +813,16 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.lightbulb, color: Colors.amber, size: 24),
-              SizedBox(width: 8),
-              Text(
+              Icon(Icons.lightbulb,
+                  color: DarkModeUtils.getWarningColor(context), size: 24),
+              const SizedBox(width: 8),
+              const Text(
                 'التوصيات',
                 style: TextStyle(
                   fontSize: 18,
@@ -880,8 +836,9 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle,
-                        size: 16, color: Colors.green),
+                    Icon(Icons.check_circle,
+                        size: 16,
+                        color: DarkModeUtils.getSuccessColor(context)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -893,15 +850,6 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                 ),
               )),
         ],
-      ),
-    );
-  }
-
-  void _printReport() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('ميزة الطباعة قيد التطوير'),
-        backgroundColor: Colors.blue,
       ),
     );
   }
