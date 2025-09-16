@@ -184,7 +184,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                     child: _buildPerformanceCard(
                       'القيمة الإجمالية',
                       Formatters.currencyIQD(totalValue),
-                      'د.ع',
+                      '',
                       Colors.orange,
                       Icons.account_balance_wallet,
                     ),
@@ -194,7 +194,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                     child: _buildPerformanceCard(
                       'التكلفة الإجمالية',
                       Formatters.currencyIQD(totalCost),
-                      'د.ع',
+                      '',
                       Colors.red,
                       Icons.money_off,
                     ),
@@ -899,7 +899,6 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
   }
 
   void _printReport() {
-    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('ميزة الطباعة قيد التطوير'),

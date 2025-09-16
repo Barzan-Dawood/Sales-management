@@ -549,11 +549,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         typeText = 'نقدي';
         break;
       case 'credit':
-        typeColor = Colors.orange;
+        typeColor = Colors.red;
         typeText = 'أجل';
         break;
       case 'installment':
-        typeColor = Colors.blue;
+        typeColor = Colors.purple;
         typeText = 'أقساط';
         break;
       default:
@@ -679,8 +679,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                             const SizedBox(width: 8),
                             InkWell(
                               onTap: () => _showSaleDetails(saleId),
-                              child: Icon(Icons.visibility_outlined,
-                                  size: 20, color: typeColor),
+                              child: const Icon(Icons.visibility_outlined,
+                                  size: 20, color: Colors.indigo),
                             ),
                             const SizedBox(width: 6),
                             InkWell(
@@ -808,6 +808,22 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                             'الإجمالي',
                             Formatters.currencyIQD(
                                 saleDetails['total'] as num)),
+                        // إضافة المبلغ المقدم والمتبقي للمبيعات بالأقساط
+                        if (saleDetails['type'] == 'installment' &&
+                            saleDetails['down_payment'] != null &&
+                            (saleDetails['down_payment'] as num) > 0) ...[
+                          _buildDetailRow(
+                              'المبلغ المقدم',
+                              Formatters.currencyIQD(
+                                  saleDetails['down_payment'] as num),
+                              valueColor: Colors.green),
+                          _buildDetailRow(
+                              'الباقي',
+                              Formatters.currencyIQD(
+                                  (saleDetails['total'] as num) -
+                                      (saleDetails['down_payment'] as num)),
+                              valueColor: Colors.orange),
+                        ],
                         _buildDetailRow(
                             'الربح',
                             Formatters.currencyIQD(
@@ -855,7 +871,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     }
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -869,7 +885,12 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
             ),
           ),
           Expanded(
-            child: Text(value),
+            child: Text(
+              value,
+              style: valueColor != null
+                  ? TextStyle(color: valueColor, fontWeight: FontWeight.w600)
+                  : null,
+            ),
           ),
         ],
       ),

@@ -323,6 +323,20 @@ class _DebtsScreenState extends State<DebtsScreen>
     );
   }
 
+  // دالة لترجمة نوع البيع
+  String _translateSaleType(String? saleType) {
+    switch (saleType?.toLowerCase()) {
+      case 'installment':
+        return 'قسط';
+      case 'cash':
+        return 'نقدي';
+      case 'credit':
+        return 'آجل';
+      default:
+        return saleType ?? 'غير محدد';
+    }
+  }
+
   // دالة لبناء قسم الأقساط
   Widget _buildInstallmentsSection(List<Map<String, dynamic>> installments) {
     // تشخيص مؤقت
@@ -432,7 +446,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                               const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                         Text(
-                          'نوع البيع: ${installment['sale_type'] ?? 'غير محدد'}',
+                          'نوع البيع: ${_translateSaleType(installment['sale_type'])}',
                           style:
                               const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
@@ -1699,8 +1713,32 @@ class _DebtsScreenState extends State<DebtsScreen>
             ),
           ],
         ),
+        onTap: () =>
+            _showCustomerDetailsFromInstallment(context, installment, db),
       ),
     );
+  }
+
+  void _showCustomerDetailsFromInstallment(
+    BuildContext context,
+    Map<String, dynamic> installment,
+    DatabaseService db,
+  ) async {
+    // جلب معلومات العميل من القسط
+    final customerId = installment['customer_id'];
+    if (customerId == null) return;
+
+    // جلب بيانات العميل
+    final customers = await db.getCustomers();
+    final customer = customers.firstWhere(
+      (c) => c['id'] == customerId,
+      orElse: () => <String, dynamic>{},
+    );
+
+    if (customer.isEmpty) return;
+
+    // عرض تفاصيل العميل
+    _showCustomerDetailedPreview(context, customer, db);
   }
 
   Widget _buildCustomerDebtCard(
@@ -1795,6 +1833,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                   _showAddInstallmentDialog(context, db, customer: customer);
                 } else if (value == 'print_statement') {
                   _printCustomerStatement(context, customer, db);
+                } else if (value == 'view_installments') {
+                  _showCustomerInstallments(context, customer, db);
                 } else if (value == 'delete') {
                   _showDeleteCustomerDialog(context, customer, db);
                 }
@@ -1853,6 +1893,17 @@ class _DebtsScreenState extends State<DebtsScreen>
                   ),
                 ),
                 const PopupMenuItem(
+                  value: 'view_installments',
+                  child: Row(
+                    children: [
+                      Icon(Icons.schedule, size: 16, color: Colors.indigo),
+                      SizedBox(width: 8),
+                      Text('عرض الأقساط',
+                          style: TextStyle(color: Colors.indigo)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
@@ -1867,6 +1918,77 @@ class _DebtsScreenState extends State<DebtsScreen>
             onTap: () => _showCustomerDetailedPreview(context, customer, db),
           );
         },
+      ),
+    );
+  }
+
+  void _showCustomerInstallments(
+    BuildContext context,
+    Map<String, dynamic> customer,
+    DatabaseService db,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: Dialog(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.7,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'أقساط العميل - ${customer['name']}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                Expanded(
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _getCustomerInstallments(customer['id'], db),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final installments = snapshot.data!;
+
+                      if (installments.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'لا توجد أقساط لهذا العميل',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: installments.length,
+                        itemBuilder: (context, index) {
+                          final installment = installments[index];
+                          return _buildInstallmentCard(
+                              context, installment, db);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2370,7 +2492,10 @@ class _DebtsScreenState extends State<DebtsScreen>
                     );
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('إضافة دين بالأقساط'),
               ),
             ],
