@@ -1,6 +1,8 @@
 // ignore_for_file: deprecated_member_use, curly_braces_in_flow_control_structures, use_build_context_synchronously, unused_local_variable
 
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
 import '../services/store_config.dart';
 import 'package:flutter/material.dart';
 import '../services/db/database_service.dart';
@@ -83,12 +85,635 @@ class _DebtsScreenState extends State<DebtsScreen>
     }
   }
 
+  // دالة لجلب تفاصيل الأقساط للعميل
+  Future<List<Map<String, dynamic>>> _getCustomerInstallments(
+      int customerId, DatabaseService db) async {
+    try {
+      final installments = await db.getInstallments(customerId: customerId);
+      return installments.cast<Map<String, dynamic>>();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // دالة لعرض المعاينة المفصلة للعميل
+  void _showCustomerDetailedPreview(
+    BuildContext context,
+    Map<String, dynamic> customer,
+    DatabaseService db,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: Dialog(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.8,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // العنوان
+                Row(
+                  children: [
+                    Icon(Icons.person, color: Colors.blue.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'معاينة مفصلة - ${customer['name'] ?? 'غير محدد'}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const Divider(),
+
+                // المحتوى
+                Expanded(
+                  child: FutureBuilder<Map<String, dynamic>>(
+                    future: _getDetailedCustomerData(customer['id'], db),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final data = snapshot.data!;
+                      return SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // معلومات العميل
+                            _buildInfoSection('معلومات العميل', [
+                              _buildInfoRow(
+                                  'الاسم', customer['name'] ?? 'غير محدد'),
+                              _buildInfoRow(
+                                  'الهاتف', customer['phone'] ?? 'غير محدد'),
+                              _buildInfoRow(
+                                  'العنوان', customer['address'] ?? 'غير محدد'),
+                            ]),
+
+                            const SizedBox(height: 16),
+
+                            // ملخص الحساب
+                            _buildInfoSection('ملخص الحساب', [
+                              _buildInfoRow(
+                                  'إجمالي الدين الأصلي',
+                                  Formatters.currencyIQD(
+                                      data['totalDebt'] ?? 0.0),
+                                  valueColor: Colors.red),
+                              _buildInfoRow(
+                                  'إجمالي المدفوع',
+                                  Formatters.currencyIQD(
+                                      data['totalPaid'] ?? 0.0),
+                                  valueColor: Colors.green),
+                              _buildInfoRow(
+                                  'المتبقي',
+                                  Formatters.currencyIQD(
+                                      data['remainingDebt'] ?? 0.0),
+                                  valueColor: data['remainingDebt'] > 0
+                                      ? Colors.red
+                                      : Colors.green),
+                            ]),
+
+                            const SizedBox(height: 16),
+
+                            // تفاصيل الأقساط
+                            if (data['installments'] != null &&
+                                (data['installments'] as List).isNotEmpty) ...[
+                              _buildInstallmentsSection(data['installments']
+                                  as List<Map<String, dynamic>>),
+                              const SizedBox(height: 16),
+                            ],
+
+                            // سجل المدفوعات
+                            if (data['payments'] != null &&
+                                (data['payments'] as List).isNotEmpty) ...[
+                              _buildPaymentsSection(data['payments']
+                                  as List<Map<String, dynamic>>),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // أزرار الإجراءات
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showAddPaymentDialog(context, db, customer: customer);
+                      },
+                      icon: const Icon(Icons.payment, size: 18),
+                      label: const Text('إضافة دفعة'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showPrintOptionsDialog(context, customer, db);
+                      },
+                      icon: const Icon(Icons.print, size: 18),
+                      label: const Text('طباعة كشف'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // دالة لجلب البيانات المفصلة للعميل
+  Future<Map<String, dynamic>> _getDetailedCustomerData(
+      int customerId, DatabaseService db) async {
+    try {
+      final debtData = await _getCustomerDebtData(customerId, db);
+      final payments = await db.getCustomerPayments(customerId: customerId);
+      final installments = await _getCustomerInstallments(customerId, db);
+
+      return {
+        'totalDebt': debtData['totalDebt'],
+        'totalPaid': debtData['totalPaid'],
+        'remainingDebt': debtData['remainingDebt'],
+        'payments': payments,
+        'installments': installments,
+      };
+    } catch (e) {
+      return {
+        'totalDebt': 0.0,
+        'totalPaid': 0.0,
+        'remainingDebt': 0.0,
+        'payments': <Map<String, dynamic>>[],
+        'installments': <Map<String, dynamic>>[],
+      };
+    }
+  }
+
+  // دالة لبناء قسم المعلومات
+  Widget _buildInfoSection(String title, List<Widget> children) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  // دالة لبناء صف معلومات
+  Widget _buildInfoRow(String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: valueColor ?? Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // دالة لبناء قسم الأقساط
+  Widget _buildInstallmentsSection(List<Map<String, dynamic>> installments) {
+    // تشخيص مؤقت
+    print(
+        'Building installments section with ${installments.length} installments');
+    if (installments.isNotEmpty) {
+      print('First installment data: ${installments.first}');
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'تفاصيل الأقساط',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...installments.asMap().entries.map((entry) {
+              final index = entry.key;
+              final installment = entry.value;
+
+              final isPaid = (installment['paid'] as int?) == 1;
+              final dueDate =
+                  DateTime.tryParse(installment['due_date']?.toString() ?? '');
+              final isOverdue = dueDate != null &&
+                  dueDate.isBefore(DateTime.now()) &&
+                  !isPaid;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isPaid
+                      ? Colors.green.shade50
+                      : isOverdue
+                          ? Colors.red.shade50
+                          : Colors.orange.shade50,
+                  border: Border.all(
+                    color: isPaid
+                        ? Colors.green.shade200
+                        : isOverdue
+                            ? Colors.red.shade200
+                            : Colors.orange.shade200,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'القسط ${index + 1}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isPaid
+                                ? Colors.green
+                                : isOverdue
+                                    ? Colors.red
+                                    : Colors.orange,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            isPaid
+                                ? 'مدفوع'
+                                : isOverdue
+                                    ? 'متأخر'
+                                    : 'مستحق',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                            'المبلغ: ${Formatters.currencyIQD((installment['amount'] as num?)?.toDouble() ?? 0.0)}'),
+                        Text(
+                            'تاريخ الاستحقاق: ${dueDate != null ? DateFormat('yyyy/MM/dd').format(dueDate) : 'غير محدد'}'),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'معرف القسط: ${installment['id'] ?? 'غير محدد'}',
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        Text(
+                          'نوع البيع: ${installment['sale_type'] ?? 'غير محدد'}',
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    if (isPaid && installment['payment_date'] != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'تاريخ الدفع: ${DateFormat('yyyy/MM/dd').format(DateTime.parse(installment['payment_date']))}',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // دالة لعرض خيارات الطباعة
+  void _showPrintOptionsDialog(
+    BuildContext context,
+    Map<String, dynamic> customer,
+    DatabaseService db,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: Dialog(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // العنوان
+                Row(
+                  children: [
+                    Icon(Icons.print, color: Colors.blue.shade700),
+                    const SizedBox(width: 8),
+                    Text(
+                      'اختيار نوع الطابعة',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                const SizedBox(height: 16),
+
+                // خيارات الطابعة
+                const Text(
+                  'اختر نوع الطابعة:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // طابعة حرارية 58mm
+                _buildPrinterOption(
+                  context,
+                  '58',
+                  'طابعة حرارية 58mm',
+                  'فواتير صغيرة ومضغوطة - مناسبة للفواتير البسيطة',
+                  Icons.receipt,
+                  Colors.orange,
+                  () => _printWithFormat(context, customer, db, '58'),
+                ),
+
+                const SizedBox(height: 12),
+
+                // طابعة حرارية 80mm
+                _buildPrinterOption(
+                  context,
+                  '80',
+                  'طابعة حرارية 80mm',
+                  'فواتير متوسطة الحجم - الأكثر استخداماً',
+                  Icons.receipt_long,
+                  Colors.blue,
+                  () => _printWithFormat(context, customer, db, '80'),
+                ),
+
+                const SizedBox(height: 12),
+
+                // ورقة A4
+                _buildPrinterOption(
+                  context,
+                  'A4',
+                  'ورقة A4',
+                  'تقارير مفصلة وواضحة - مناسبة للطباعة المكتبية',
+                  Icons.description,
+                  Colors.green,
+                  () => _printWithFormat(context, customer, db, 'A4'),
+                ),
+
+                const SizedBox(height: 12),
+
+                // ورقة A5
+                _buildPrinterOption(
+                  context,
+                  'A5',
+                  'ورقة A5',
+                  'تقارير متوسطة الحجم - توازن بين الوضوح والاقتصاد',
+                  Icons.description_outlined,
+                  Colors.purple,
+                  () => _printWithFormat(context, customer, db, 'A5'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // دالة لبناء خيار الطابعة
+  Widget _buildPrinterOption(
+    BuildContext context,
+    String format,
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: color.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(12),
+          color: color.withOpacity(0.05),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: color,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // دالة للطباعة بنوع معين
+  void _printWithFormat(
+    BuildContext context,
+    Map<String, dynamic> customer,
+    DatabaseService db,
+    String format,
+  ) {
+    Navigator.of(context).pop(); // إغلاق نافذة اختيار الطابعة
+    _printCustomerStatement(context, customer, db, pageFormat: format);
+  }
+
+  // دالة لبناء قسم المدفوعات
+  Widget _buildPaymentsSection(List<Map<String, dynamic>> payments) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'سجل المدفوعات',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...payments.map((payment) {
+              final paymentDate =
+                  DateTime.tryParse(payment['payment_date'] ?? '');
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  border: Border.all(color: Colors.green.shade200),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          Formatters.currencyIQD(
+                              (payment['amount'] as num).toDouble()),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                        if (payment['description'] != null &&
+                            payment['description'].toString().isNotEmpty)
+                          Text(
+                            payment['description'].toString(),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                      ],
+                    ),
+                    Text(
+                      paymentDate != null
+                          ? DateFormat('yyyy/MM/dd').format(paymentDate)
+                          : 'غير محدد',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final db = context.read<DatabaseService>();
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: ui.TextDirection.rtl,
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -892,7 +1517,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: AlertDialog(
           title: const Text('فلترة بالتاريخ'),
           content: Column(
@@ -910,6 +1535,11 @@ class _DebtsScreenState extends State<DebtsScreen>
                     initialDate: _fromDate ?? DateTime.now(),
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now(),
+                    useRootNavigator: true,
+                    builder: (ctx, child) => Directionality(
+                      textDirection: ui.TextDirection.rtl,
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                   );
                   if (date != null) {
                     setState(() {
@@ -930,6 +1560,11 @@ class _DebtsScreenState extends State<DebtsScreen>
                     initialDate: _toDate ?? DateTime.now(),
                     firstDate: _fromDate ?? DateTime(2020),
                     lastDate: DateTime.now(),
+                    useRootNavigator: true,
+                    builder: (ctx, child) => Directionality(
+                      textDirection: ui.TextDirection.rtl,
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                   );
                   if (date != null) {
                     setState(() {
@@ -1229,7 +1864,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 ),
               ],
             ),
-            onTap: () => _showCustomerPayments(context, customer, db),
+            onTap: () => _showCustomerDetailedPreview(context, customer, db),
           );
         },
       ),
@@ -1244,7 +1879,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
         context: context,
         builder: (context) => Directionality(
-              textDirection: TextDirection.rtl,
+              textDirection: ui.TextDirection.rtl,
               child: Dialog(
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.9,
@@ -1303,9 +1938,19 @@ class _DebtsScreenState extends State<DebtsScreen>
                                         color: Colors.green,
                                       ),
                                     ),
-                                    subtitle: Text(
-                                      'التاريخ: ${payment['payment_date']}',
-                                    ),
+                                    subtitle: Builder(builder: (context) {
+                                      final raw =
+                                          (payment['payment_date'] ?? '')
+                                              .toString();
+                                      DateTime? dt;
+                                      try {
+                                        dt = DateTime.parse(raw);
+                                      } catch (_) {}
+                                      final formatted = dt != null
+                                          ? DateFormat('yyyy/MM/dd').format(dt)
+                                          : raw.toString().split('T').first;
+                                      return Text('التاريخ: $formatted');
+                                    }),
                                     trailing: IconButton(
                                       icon: const Icon(Icons.delete,
                                           color: Colors.red),
@@ -1360,7 +2005,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
       context: context,
       builder: (context) => Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: ui.TextDirection.rtl,
           child: StatefulBuilder(
             builder: (context, setState) => AlertDialog(
               title: const Text('إضافة دفعة'),
@@ -1427,6 +2072,11 @@ class _DebtsScreenState extends State<DebtsScreen>
                           initialDate: DateTime.now(),
                           firstDate: DateTime(2020),
                           lastDate: DateTime.now(),
+                          useRootNavigator: true,
+                          builder: (ctx, child) => Directionality(
+                            textDirection: ui.TextDirection.rtl,
+                            child: child ?? const SizedBox.shrink(),
+                          ),
                         );
                         if (date != null) {
                           dateController.text = date.toString().split(' ')[0];
@@ -1483,7 +2133,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: AlertDialog(
           title: const Text('تأكيد الحذف'),
           content: const Text('هل أنت متأكد من حذف هذه الدفعة؟'),
@@ -1535,7 +2185,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: StatefulBuilder(
           builder: (context, setState) => AlertDialog(
             title: const Text('إضافة دين بالأقساط'),
@@ -1632,6 +2282,11 @@ class _DebtsScreenState extends State<DebtsScreen>
                         initialDate: DateTime.now(),
                         firstDate: DateTime(2020),
                         lastDate: DateTime.now(),
+                        useRootNavigator: true,
+                        builder: (ctx, child) => Directionality(
+                          textDirection: ui.TextDirection.rtl,
+                          child: child ?? const SizedBox.shrink(),
+                        ),
                       );
                       if (date != null) {
                         dateController.text = date.toString().split(' ')[0];
@@ -1740,7 +2395,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: StatefulBuilder(
           builder: (context, setState) => AlertDialog(
             title: const Text('إضافة دين جديد'),
@@ -1817,6 +2472,11 @@ class _DebtsScreenState extends State<DebtsScreen>
                         initialDate: DateTime.now(),
                         firstDate: DateTime(2020),
                         lastDate: DateTime.now(),
+                        useRootNavigator: true,
+                        builder: (ctx, child) => Directionality(
+                          textDirection: ui.TextDirection.rtl,
+                          child: child ?? const SizedBox.shrink(),
+                        ),
                       );
                       if (date != null) {
                         dateController.text = date.toString().split(' ')[0];
@@ -1901,7 +2561,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: AlertDialog(
           title: const Text('دفع القسط'),
           content: SizedBox(
@@ -1991,7 +2651,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: AlertDialog(
           title: const Text('تأكيد حذف العميل'),
           content: Column(
@@ -2025,22 +2685,19 @@ class _DebtsScreenState extends State<DebtsScreen>
             ElevatedButton(
               onPressed: () async {
                 try {
-              
-
                   // التحقق من وجود العميل قبل المحاولة
                   final customers = await db.getCustomers();
                   final customerExists =
                       customers.any((c) => c['id'] == customer['id']);
- 
+
                   // حذف العميل (سيحذف جميع البيانات المرتبطة تلقائياً)
                   final deletedRows = await db.deleteCustomer(customer['id']);
 
- 
                   // التحقق من وجود العميل بعد المحاولة
                   final customersAfter = await db.getCustomers();
                   final customerExistsAfter =
                       customersAfter.any((c) => c['id'] == customer['id']);
- 
+
                   if (deletedRows > 0) {
                     Navigator.pop(context);
                     // إعادة تحميل البيانات
@@ -2064,7 +2721,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                     );
                   }
                 } catch (e) {
-                   Navigator.pop(context);
+                  Navigator.pop(context);
 
                   // تحسين رسائل الخطأ
                   String errorMessage = 'خطأ في حذف العميل';
@@ -2115,7 +2772,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: AlertDialog(
           title: const Text('تعديل القسط'),
           content: SizedBox(
@@ -2147,6 +2804,11 @@ class _DebtsScreenState extends State<DebtsScreen>
                       initialDate: DateTime.parse(installment['due_date']),
                       firstDate: DateTime(2020),
                       lastDate: DateTime(2030),
+                      useRootNavigator: true,
+                      builder: (ctx, child) => Directionality(
+                        textDirection: ui.TextDirection.rtl,
+                        child: child ?? const SizedBox.shrink(),
+                      ),
                     );
                     if (date != null) {
                       dueDateController.text = date.toString().split(' ')[0];
@@ -2214,7 +2876,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: AlertDialog(
           title: const Text('حذف القسط'),
           content: Text(
@@ -2260,8 +2922,9 @@ class _DebtsScreenState extends State<DebtsScreen>
   void _printCustomerStatement(
     BuildContext context,
     Map<String, dynamic> customer,
-    DatabaseService db,
-  ) async {
+    DatabaseService db, {
+    String? pageFormat,
+  }) async {
     try {
       // إظهار مؤشر التحميل
       showDialog(
@@ -2296,6 +2959,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         customer: customer,
         payments: payments,
         debtData: debtData,
+        pageFormat: pageFormat,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
