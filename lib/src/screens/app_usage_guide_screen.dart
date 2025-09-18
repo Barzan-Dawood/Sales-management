@@ -12,14 +12,16 @@ class AppUsageGuideScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     Widget content = Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.purple.shade700,
-            Colors.purple.shade50,
+            scheme.primary,
+            scheme.surface,
           ],
           stops: const [0.0, 0.1],
         ),
@@ -30,7 +32,7 @@ class AppUsageGuideScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Card
-            _buildHeaderCard(),
+            _buildHeaderCard(context),
             const SizedBox(height: 20),
 
             // مقدمة
@@ -57,21 +59,29 @@ class AppUsageGuideScreen extends StatelessWidget {
               title: 'البدء السريع',
               content: '''
 **الخطوة 1: إعداد المتجر**
-• اذهب إلى الإعدادات
-• أدخل اسم المتجر ورقم الهاتف والعنوان
+• افتح "الإعدادات" > "معلومات المتجر"
+• أدخل اسم المتجر (غير قابل للتعديل لاحقاً) ورقم الهاتف والعنوان
 • احفظ المعلومات
 
 **الخطوة 2: إضافة المنتجات**
 • اذهب إلى "المنتجات"
 • اضغط "إضافة منتج جديد"
-• أدخل اسم المنتج والسعر والكمية
+• أدخل الاسم، السعر البيع، السعر الشراء (إن وجد)، الكمية، والوصف
 • احفظ المنتج
 
-**الخطوة 3: تسجيل أول عملية بيع**
+**الخطوة 3: إضافة العملاء (اختياري)**
+• اذهب إلى "العملاء" > "إضافة عميل"
+• أدخل الاسم ورقم الهاتف والعنوان
+• احفظ
+
+**الخطوة 4: أول عملية بيع**
 • اذهب إلى "المبيعات"
-• اختر المنتجات المطلوبة
-• أدخل الكميات
-• احفظ العملية
+• اختر المنتجات والكميات
+• اختر نوع البيع: نقد/دين/تقسيط
+  - نقد: إتمام فوري
+  - دين: يُسجل المتبقي على العميل
+  - تقسيط: اختر الدفعة الأولى، وسيُحسب المتبقي تلقائياً
+• احفظ العملية واطبع الفاتورة (اختياري)
 ''',
             ),
             const SizedBox(height: 20),
@@ -84,20 +94,18 @@ class AppUsageGuideScreen extends StatelessWidget {
 **إضافة منتج جديد:**
 1. اذهب إلى "المنتجات"
 2. اضغط "إضافة منتج جديد"
-3. أدخل التفاصيل: الاسم، السعر، الكمية، الوصف
-4. اختر الفئة المناسبة
-5. اضغط "حفظ"
+3. أدخل: الاسم، السعر البيع، السعر الشراء (اختياري)، الكمية، الوصف، والفئة
+4. احفظ
 
 **تعديل منتج موجود:**
-1. اذهب إلى "المنتجات"
-2. اضغط على المنتج المطلوب
-3. عدّل المعلومات
-4. اضغط "حفظ التغييرات"
+1. من "المنتجات" اختر المنتج
+2. عدّل المعلومات المطلوبة
+3. احفظ التغييرات
 
 **إدارة المخزون:**
 • راقب الكميات المتوفرة
-• أضف كميات جديدة عند الحاجة
-• احذف المنتجات غير المستخدمة
+• أضف كميات عند التوريد
+• يحدث الرصيد تلقائياً بعد كل بيع/شراء
 ''',
             ),
             const SizedBox(height: 20),
@@ -136,20 +144,12 @@ class AppUsageGuideScreen extends StatelessWidget {
 **عملية شراء جديدة:**
 1. اذهب إلى "المشتريات"
 2. اضغط "شراء جديد"
-3. اختر المورد
-4. أضف المنتجات والكميات
-5. أدخل أسعار الشراء
-6. اضغط "تأكيد الشراء"
-
-**إدارة الموردين:**
-• أضف معلومات الموردين
-• احفظ بيانات الاتصال
-• راقب تاريخ المشتريات
+3. اختر المورد (أو أضفه أولاً من قسم الموردين)
+4. أضف المنتجات والكميات وأسعار الشراء
+5. احفظ العملية
 
 **تحديث المخزون:**
-• يتم تحديث المخزون تلقائياً
-• راجع الكميات الجديدة
-• تأكد من صحة البيانات
+• يتم تحديث المخزون تلقائياً بعد الشراء
 ''',
             ),
             const SizedBox(height: 20),
@@ -159,23 +159,14 @@ class AppUsageGuideScreen extends StatelessWidget {
               icon: Icons.people,
               title: 'إدارة العملاء والموردين',
               content: '''
-**إضافة عميل جديد:**
-1. اذهب إلى "العملاء"
-2. اضغط "إضافة عميل"
-3. أدخل الاسم ورقم الهاتف
-4. أضف العنوان (اختياري)
-5. احفظ البيانات
+**العملاء:**
+• إضافة عميل: الاسم، الهاتف، العنوان
+• ربط عملية الدين/التقسيط بالعميل
+• متابعة السداد من صفحة العميل
 
-**إضافة مورد جديد:**
-1. اذهب إلى "الموردين"
-2. اضغط "إضافة مورد"
-3. أدخل معلومات المورد
-4. احفظ البيانات
-
-**إدارة الديون:**
-• راقب ديون العملاء
-• سجل المدفوعات
-• أضف ديون جديدة عند الحاجة
+**الموردون:**
+• إضافة مورد: الاسم، الهاتف، العنوان
+• ربط المشتريات بالمورد
 ''',
             ),
             const SizedBox(height: 20),
@@ -186,22 +177,14 @@ class AppUsageGuideScreen extends StatelessWidget {
               title: 'التقارير والإحصائيات',
               content: '''
 **التقارير المتاحة:**
-• تقرير المبيعات اليومية
-• تقرير المبيعات الشهرية
-• تقرير المخزون
-• تقرير العملاء
-• تقرير الموردين
+• تقرير المبيعات اليومية/الشهرية حسب نوع البيع
+• تقرير المخزون والكميات الناقصة
+• تقارير العملاء والموردين
 
-**كيفية عرض التقارير:**
+**العرض والتصدير:**
 1. اذهب إلى "التقارير"
-2. اختر نوع التقرير
-3. حدد الفترة الزمنية
-4. اضغط "عرض التقرير"
-
-**تصدير التقارير:**
-• يمكن طباعة التقارير
-• أو حفظها كملفات
-• مشاركتها مع المحاسب
+2. اختر نوع التقرير والفترة
+3. اعرض/اطبع/احفظ التقرير
 ''',
             ),
             const SizedBox(height: 20),
@@ -212,23 +195,17 @@ class AppUsageGuideScreen extends StatelessWidget {
               title: 'النسخ الاحتياطية',
               content: '''
 **إنشاء نسخة احتياطية:**
-1. اذهب إلى "الإعدادات"
-2. اختر "إدارة البيانات"
-3. اضغط "إنشاء نسخة احتياطية"
-4. اختر مكان الحفظ
-5. انتظر حتى اكتمال العملية
+1. اذهب إلى "الإعدادات" > "إدارة البيانات"
+2. اختر "إنشاء نسخة احتياطية" وحدد مكان الحفظ
 
 **استعادة البيانات:**
-1. اذهب إلى "الإعدادات"
-2. اختر "إدارة البيانات"
-3. اضغط "استعادة البيانات"
-4. اختر الملف المطلوب
-5. تأكيد الاستعادة
+1. من نفس المكان اختر "استعادة البيانات"
+2. اختر ملف النسخة الاحتياطية
+3. أكد العملية
 
-**نصائح مهمة:**
-• أنشئ نسخ احتياطية منتظمة
-• احفظ النسخ في مكان آمن
-• اختبر النسخ بين الحين والآخر
+**نصائح:**
+• أنشئ نسخاً منتظمة وخارج الجهاز إن أمكن
+• اختبر الاستعادة كل فترة
 ''',
             ),
             const SizedBox(height: 20),
@@ -238,29 +215,17 @@ class AppUsageGuideScreen extends StatelessWidget {
               icon: Icons.lightbulb,
               title: 'نصائح مفيدة',
               content: '''
-**للاستخدام الأمثل:**
-• استخدم التطبيق يومياً لتسجيل العمليات
-• راجع التقارير بانتظام
-• احتفظ بنسخ احتياطية حديثة
-• نظم المنتجات في فئات واضحة
-
-**لحل المشاكل:**
-• تأكد من اتصال الإنترنت للنسخ الاحتياطية
-• راجع الإعدادات إذا واجهت مشاكل
-• استخدم "إعادة تعيين" بحذر
-• تواصل مع الدعم الفني عند الحاجة
-
-**للمحافظة على الأمان:**
-• لا تشارك بيانات الدخول
-• احتفظ بنسخ احتياطية آمنة
-• راجع البيانات بانتظام
-• استخدم كلمات مرور قوية
+• سجّل العمليات أولاً بأول لتفادي الأخطاء
+• راجع التقارير دورياً لاتخاذ قرارات أفضل
+• استخدم البحث والفلاتر لتسريع العمل
+• حافظ على تحديث بيانات العملاء والموردين
+• فعّل الوضع الليلي حسب تفضيلك من الإعدادات
 ''',
             ),
             const SizedBox(height: 20),
 
             // معلومات الاتصال
-            _buildContactCard(),
+            _buildContactCard(context),
             const SizedBox(height: 20),
 
             // أزرار العمل
@@ -275,7 +240,7 @@ class AppUsageGuideScreen extends StatelessWidget {
       return Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: scheme.background,
           appBar: AppBar(
             title: const Text(
               'دليل الاستخدام',
@@ -284,12 +249,12 @@ class AppUsageGuideScreen extends StatelessWidget {
                 fontSize: 20,
               ),
             ),
-            backgroundColor: Colors.purple.shade700,
-            foregroundColor: Colors.white,
+            backgroundColor: scheme.primary,
+            foregroundColor: scheme.onPrimary,
             elevation: 0,
             centerTitle: true,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              icon: Icon(Icons.arrow_back_ios, color: scheme.onPrimary),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -304,20 +269,21 @@ class AppUsageGuideScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildHeaderCard() {
+  Widget _buildHeaderCard(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.purple.shade600, Colors.purple.shade800],
+          colors: [scheme.primary, scheme.primaryContainer],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.purple.withOpacity(0.2),
+            color: scheme.primary.withOpacity(0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -328,14 +294,14 @@ class AppUsageGuideScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: scheme.onPrimary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Image.asset(
               'assets/images/pos.png',
               width: 32,
               height: 32,
-              color: Colors.white,
+              color: scheme.onPrimary,
             ),
           ),
           const SizedBox(width: 12),
@@ -343,12 +309,12 @@ class AppUsageGuideScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'دليل استخدام التطبيق',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: scheme.onPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -356,7 +322,7 @@ class AppUsageGuideScreen extends StatelessWidget {
                   'تعلم كيفية استخدام نظام إدارة المكتب',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                    color: scheme.onPrimary.withOpacity(0.8),
                   ),
                 ),
               ],
@@ -372,88 +338,97 @@ class AppUsageGuideScreen extends StatelessWidget {
     required String title,
     required String content,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: Colors.purple.shade100,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  color: Colors.purple.shade600,
-                  size: 20,
-                ),
+    return Builder(
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 0.5
+                        : 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.purple.shade700,
+            ],
+            border: Border.all(
+              color: scheme.primary.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: scheme.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: scheme.primary,
+                      size: 20,
+                    ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                content,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: scheme.onSurface,
                 ),
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.right,
+                softWrap: true,
+                overflow: TextOverflow.visible,
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            content,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.6,
-              color: Colors.black87,
-            ),
-            textDirection: TextDirection.rtl,
-            textAlign: TextAlign.right,
-            softWrap: true,
-            overflow: TextOverflow.visible,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildContactCard() {
+  Widget _buildContactCard(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: scheme.secondaryContainer.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.1),
+            color: scheme.secondary.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: Colors.blue.shade200,
+          color: scheme.secondary.withOpacity(0.4),
           width: 1,
         ),
       ),
@@ -465,12 +440,12 @@ class AppUsageGuideScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade100,
+                  color: scheme.secondaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.contact_support,
-                  color: Colors.blue.shade600,
+                  color: scheme.secondary,
                   size: 20,
                 ),
               ),
@@ -480,7 +455,7 @@ class AppUsageGuideScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue.shade700,
+                  color: scheme.secondary,
                 ),
               ),
             ],
@@ -491,7 +466,7 @@ class AppUsageGuideScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 15,
               height: 1.6,
-              color: Colors.blue.shade700,
+              color: scheme.secondary,
             ),
             textDirection: TextDirection.rtl,
             textAlign: TextAlign.right,
@@ -502,6 +477,7 @@ class AppUsageGuideScreen extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Expanded(
@@ -512,8 +488,8 @@ class AppUsageGuideScreen extends StatelessWidget {
             icon: const Icon(Icons.check),
             label: const Text('فهمت، شكراً'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple.shade600,
-              foregroundColor: Colors.white,
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -530,8 +506,8 @@ class AppUsageGuideScreen extends StatelessWidget {
             icon: const Icon(Icons.close),
             label: const Text('إغلاق'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.purple.shade600,
-              side: BorderSide(color: Colors.purple.shade600),
+              foregroundColor: scheme.primary,
+              side: BorderSide(color: scheme.primary),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

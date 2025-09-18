@@ -186,6 +186,29 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           decoration: DarkModeUtils.createCardDecoration(context),
           child: Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 16, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'غيّر مظهر التطبيق بين الوضع الفاتح والمظلم أو اتبع إعدادات نظام التشغيل.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.75),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
@@ -232,7 +255,11 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               _buildSettingsTile(
                 icon: Icons.palette,
                 title: 'نمط التطبيق',
-                subtitle: themeProvider.isDarkMode ? 'مظلم' : 'فاتح',
+                subtitle: themeProvider.themeMode == ThemeMode.system
+                    ? 'يتبع إعدادات النظام'
+                    : (themeProvider.isDarkMode
+                        ? 'مظلم دائماً'
+                        : 'فاتح دائماً'),
                 trailing: Icons.arrow_forward_ios,
                 onTap: () => _showThemeModeDialog(themeProvider),
               ),
@@ -272,7 +299,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'اسم المتجر محمي ولا يمكن تعديله. يمكنك تعديل رقم الهاتف والعنوان فقط.',
+                        'تُستخدم معلومات المتجر في الفواتير والتقارير. اسم المتجر محمي ولا يمكن تعديله، ويمكنك تعديل رقم الهاتف والعنوان فقط.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.primary,
@@ -286,7 +313,9 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               _buildSettingsTile(
                 icon: Icons.store,
                 title: 'اسم المتجر',
-                subtitle: store.shopName,
+                subtitle: store.shopName.isEmpty
+                    ? 'لم يتم التعيين بعد'
+                    : store.shopName,
                 isEditable: false,
               ),
               _buildDivider(),
@@ -294,7 +323,9 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               _buildSettingsTile(
                 icon: Icons.phone,
                 title: 'رقم الهاتف',
-                subtitle: store.phone.isEmpty ? 'غير محدد' : store.phone,
+                subtitle: store.phone.isEmpty
+                    ? 'أدخل رقم هاتف للتواصل ويظهر على الفواتير'
+                    : store.phone,
                 onTap: () =>
                     _showEditDialog('رقم الهاتف', store.phone, (value) {
                   // Update phone - you may need to implement this in StoreConfig
@@ -308,7 +339,9 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               _buildSettingsTile(
                 icon: Icons.location_on,
                 title: 'عنوان المتجر',
-                subtitle: store.address.isEmpty ? 'غير محدد' : store.address,
+                subtitle: store.address.isEmpty
+                    ? 'أدخل العنوان الكامل لظهوره على الفواتير'
+                    : store.address,
                 onTap: () =>
                     _showEditDialog('عنوان المتجر', store.address, (value) {
                   // Update address - you may need to implement this in StoreConfig
@@ -329,10 +362,33 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
       decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline,
+                    size: 16, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'تجد هنا شرحاً مفصلاً للاستخدام وخيارات التواصل مع الدعم الفني في حال واجهت مشكلة.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.75),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           _buildSettingsTile(
             icon: Icons.book,
             title: 'دليل الاستخدام',
-            subtitle: 'تعلم كيفية استخدام التطبيق خطوة بخطوة',
+            subtitle: 'شرح خطوة بخطوة لكل الميزات مع أمثلة ونصائح',
             trailing: Icons.arrow_forward_ios,
             onTap: () {
               _showUsageGuideDialog();
@@ -342,7 +398,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           _buildSettingsTile(
             icon: Icons.support_agent,
             title: 'الدعم الفني',
-            subtitle: 'تواصل مع فريق الدعم',
+            subtitle: 'أرقام واتساب وبريد إلكتروني وطرق تواصل مباشرة',
             trailing: Icons.arrow_forward_ios,
             onTap: () {
               _showSupportDialog();
@@ -361,7 +417,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           _buildSettingsTile(
             icon: Icons.privacy_tip,
             title: 'سياسة الخصوصية',
-            subtitle: 'كيف نحمي ونستخدم بياناتك',
+            subtitle: 'تفاصيل جمع البيانات وحمايتها وحقوقك في التحكم بها',
             trailing: Icons.arrow_forward_ios,
             onTap: () {
               _showPrivacyPolicyDialog();
@@ -371,7 +427,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           _buildSettingsTile(
             icon: Icons.description,
             title: 'شروط الاستخدام',
-            subtitle: 'الشروط والأحكام للاستخدام',
+            subtitle: 'قواعد استخدام النظام ومسؤوليات الأطراف',
             trailing: Icons.arrow_forward_ios,
             onTap: () {
               _showTermsConditionsDialog();
@@ -381,7 +437,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           _buildSettingsTile(
             icon: Icons.copyright,
             title: 'حقوق الطبع والنشر',
-            subtitle: 'جميع الحقوق محفوظة © 2024',
+            subtitle: 'معلومات الملكية الفكرية والاستخدام المسموح',
             trailing: Icons.arrow_forward_ios,
             onTap: () {
               _showCopyrightDialog();
@@ -406,13 +462,13 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           _buildInfoTile(
             icon: Icons.calendar_today,
             title: 'تاريخ الإصدار',
-            value: '2024',
+            value: '2025',
           ),
           _buildDivider(),
           _buildInfoTile(
             icon: Icons.developer_mode,
             title: 'المطور',
-            value: 'فريق التطوير العراقي',
+            value: 'برزان داود الهبابي',
           ),
           _buildDivider(),
           _buildInfoTile(
@@ -582,46 +638,50 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
   void _showCopyrightDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/images/pos.png',
-              width: 32,
-              height: 32,
-              color: Theme.of(context).colorScheme.primary,
+      builder: (context) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Row(
+              children: [
+                Image.asset(
+                  'assets/images/pos.png',
+                  width: 32,
+                  height: 32,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 12),
+                const Text('حقوق الطبع والنشر'),
+              ],
             ),
-            const SizedBox(width: 12),
-            const Text('حقوق الطبع والنشر'),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '© 2024 نظام إدارة المكتب',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '© 2025 نظام إدارة المكتب',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.right,
+                ),
+                SizedBox(height: 8),
+                Text('جميع الحقوق محفوظة.', textAlign: TextAlign.right),
+                SizedBox(height: 8),
+                Text('هذا التطبيق مملوك ومطور بواسطة فريق التطوير العراقي.',
+                    textAlign: TextAlign.right),
+                SizedBox(height: 8),
+                Text(
+                    'لا يجوز نسخ أو توزيع أو تعديل أي جزء من هذا التطبيق بدون إذن كتابي صريح.'),
+                SizedBox(height: 8),
+                Text(
+                    'العلامات التجارية والعلامات التجارية المسجلة هي ملكية أصحابها.'),
+              ],
             ),
-            SizedBox(height: 8),
-            Text('جميع الحقوق محفوظة.'),
-            SizedBox(height: 8),
-            Text('هذا التطبيق مملوك ومطور بواسطة فريق التطوير العراقي.'),
-            SizedBox(height: 8),
-            Text(
-                'لا يجوز نسخ أو توزيع أو تعديل أي جزء من هذا التطبيق بدون إذن كتابي صريح.'),
-            SizedBox(height: 8),
-            Text(
-                'العلامات التجارية والعلامات التجارية المسجلة هي ملكية أصحابها.'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('إغلاق'),
-          ),
-        ],
-      ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('إغلاق'),
+              ),
+            ],
+          )),
     );
   }
 
@@ -637,14 +697,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           height: MediaQuery.of(context).size.height * 0.8,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.purple.shade50,
-                Colors.white,
-              ],
-            ),
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: Column(
             children: [
@@ -652,7 +705,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.purple.shade600,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -663,29 +716,33 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onPrimary
+                            .withOpacity(0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.book,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         size: 20,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'دليل الاستخدام',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close,
-                          color: Colors.white, size: 20),
+                      icon: Icon(Icons.close,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          size: 20),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -708,7 +765,8 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.support_agent, color: Colors.blue.shade600),
+            Icon(Icons.support_agent,
+                color: Theme.of(context).colorScheme.secondary),
             const SizedBox(width: 8),
             const Text('الدعم الفني'),
           ],
@@ -723,9 +781,16 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .secondaryContainer
+                      .withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withOpacity(0.4)),
                 ),
                 child: Row(
                   children: [
@@ -733,7 +798,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                       'assets/images/pos.png',
                       width: 24,
                       height: 24,
-                      color: Colors.blue.shade600,
+                      color: Theme.of(context).colorScheme.secondary,
                     ),
                     const SizedBox(width: 8),
                     const Expanded(
@@ -765,7 +830,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 icon: Icons.phone,
                 title: 'واتساب',
                 subtitle: '07866744144',
-                color: Colors.green,
+                color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => _openWhatsAppClient('07866744144'),
               ),
               const SizedBox(height: 8),
@@ -775,7 +840,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 icon: Icons.email,
                 title: 'البريد الإلكتروني',
                 subtitle: 'barzan.dawood.dev@gmail.com',
-                color: Colors.blue,
+                color: Theme.of(context).colorScheme.primary,
                 onTap: () => _openEmailClient('barzan.dawood.dev@gmail.com'),
               ),
               const SizedBox(height: 8),
@@ -784,9 +849,9 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               _buildContactItem(
                 icon: Icons.location_on,
                 title: 'العنوان',
-                subtitle: 'نينوى - سنجار',
-                color: Colors.orange,
-                onTap: () => _copyToClipboard('نينوى - سنجار'),
+                subtitle: 'نينوى - شنكال',
+                color: Theme.of(context).colorScheme.secondary,
+                onTap: () => _copyToClipboard('نينوى - شنكال'),
               ),
               const SizedBox(height: 16),
 
@@ -980,7 +1045,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في فتح البريد الإلكتروني: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -1150,7 +1215,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في فتح الواتساب: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -1169,14 +1234,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           height: MediaQuery.of(context).size.height * 0.8,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.blue.shade50,
-                Colors.white,
-              ],
-            ),
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: Column(
             children: [
@@ -1184,7 +1242,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade600,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -1195,29 +1253,33 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onPrimary
+                            .withOpacity(0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.privacy_tip,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         size: 20,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'سياسة الخصوصية',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close,
-                          color: Colors.white, size: 20),
+                      icon: Icon(Icons.close,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          size: 20),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -1246,14 +1308,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           height: MediaQuery.of(context).size.height * 0.8,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.blue.shade50,
-                Colors.white,
-              ],
-            ),
+            color: Theme.of(context).colorScheme.surface,
           ),
           child: Column(
             children: [
@@ -1261,7 +1316,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade600,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -1272,29 +1327,33 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onPrimary
+                            .withOpacity(0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.description,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         size: 20,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'شروط الاستخدام',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close,
-                          color: Colors.white, size: 20),
+                      icon: Icon(Icons.close,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          size: 20),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -1328,7 +1387,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('تم فتح الواتساب'),
-              backgroundColor: Colors.green,
+              backgroundColor: null,
               duration: Duration(seconds: 2),
             ),
           );
@@ -1340,7 +1399,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('تم نسخ رقم الواتساب إلى الحافظة'),
-              backgroundColor: Colors.orange,
+              backgroundColor: null,
               duration: Duration(seconds: 3),
             ),
           );
@@ -1353,7 +1412,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم نسخ رقم الواتساب إلى الحافظة'),
-            backgroundColor: Colors.green,
+            backgroundColor: null,
           ),
         );
       }

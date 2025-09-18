@@ -12,14 +12,16 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     Widget content = Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.blue.shade700,
-            Colors.blue.shade50,
+            scheme.primary,
+            scheme.surface,
           ],
           stops: const [0.0, 0.1],
         ),
@@ -30,7 +32,7 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Card
-            _buildHeaderCard(),
+            _buildHeaderCard(context),
             const SizedBox(height: 20),
 
             // مقدمة
@@ -86,7 +88,7 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // معلومات إضافية
-            _buildInfoCard(),
+            _buildInfoCard(context),
             const SizedBox(height: 20),
 
             // أزرار العمل
@@ -101,7 +103,7 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
       return Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: scheme.background,
           appBar: AppBar(
             title: const Text(
               'سياسة الخصوصية',
@@ -110,12 +112,12 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
                 fontSize: 20,
               ),
             ),
-            backgroundColor: Colors.blue.shade700,
-            foregroundColor: Colors.white,
+            backgroundColor: scheme.primary,
+            foregroundColor: scheme.onPrimary,
             elevation: 0,
             centerTitle: true,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              icon: Icon(Icons.arrow_back_ios, color: scheme.onPrimary),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -130,20 +132,21 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildHeaderCard() {
+  Widget _buildHeaderCard(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade600, Colors.blue.shade800],
+          colors: [scheme.primary, scheme.primaryContainer],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.2),
+            color: scheme.primary.withOpacity(0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -154,14 +157,14 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: scheme.onPrimary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Image.asset(
               'assets/images/pos.png',
               width: 32,
               height: 32,
-              color: Colors.white,
+              color: scheme.onPrimary,
             ),
           ),
           const SizedBox(width: 12),
@@ -169,12 +172,12 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'سياسة الخصوصية',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: scheme.onPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -182,7 +185,7 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
                   'نظام إدارة المكتب',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                    color: scheme.onPrimary.withOpacity(0.8),
                   ),
                 ),
               ],
@@ -198,86 +201,91 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
     required String title,
     required String content,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: Colors.blue.shade100,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  color: Colors.blue.shade600,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue.shade700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            content,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.6,
-              color: Colors.black87,
+    return Builder(builder: (context) {
+      final scheme = Theme.of(context).colorScheme;
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.5 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-            textDirection: TextDirection.rtl,
-            textAlign: TextAlign.right,
-            softWrap: true,
-            overflow: TextOverflow.visible,
+          ],
+          border: Border.all(
+            color: scheme.primary.withOpacity(0.2),
+            width: 1,
           ),
-        ],
-      ),
-    );
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: scheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: scheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              content,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: scheme.onSurface,
+              ),
+              textDirection: TextDirection.rtl,
+              textAlign: TextAlign.right,
+              softWrap: true,
+              overflow: TextOverflow.visible,
+            ),
+          ],
+        ),
+      );
+    });
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildInfoCard(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.green.shade50,
+        color: scheme.secondaryContainer.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.1),
+            color: scheme.secondary.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: Colors.green.shade200,
+          color: scheme.secondary.withOpacity(0.4),
           width: 1,
         ),
       ),
@@ -289,12 +297,12 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade100,
+                  color: scheme.secondaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.info,
-                  color: Colors.green.shade600,
+                  color: scheme.secondary,
                   size: 20,
                 ),
               ),
@@ -304,7 +312,7 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green.shade700,
+                  color: scheme.secondary,
                 ),
               ),
             ],
@@ -315,7 +323,7 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 15,
               height: 1.6,
-              color: Colors.blue.shade700,
+              color: scheme.secondary,
             ),
             textDirection: TextDirection.rtl,
             textAlign: TextAlign.right,
@@ -326,6 +334,7 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Expanded(
@@ -341,8 +350,8 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
             icon: const Icon(Icons.description),
             label: const Text('شروط الاستخدام'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade600,
-              foregroundColor: Colors.white,
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -359,8 +368,8 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
             icon: const Icon(Icons.close),
             label: const Text('إغلاق'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.green.shade600,
-              side: BorderSide(color: Colors.green.shade600),
+              foregroundColor: scheme.primary,
+              side: BorderSide(color: scheme.primary),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -384,14 +393,15 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     Widget content = Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.green.shade700,
-            Colors.green.shade50,
+            scheme.primary,
+            scheme.surface,
           ],
           stops: const [0.0, 0.1],
         ),
@@ -402,7 +412,7 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Card
-            _buildHeaderCard(),
+            _buildHeaderCard(context),
             const SizedBox(height: 20),
 
             // مقدمة
@@ -509,7 +519,7 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
       return Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: scheme.background,
           appBar: AppBar(
             title: const Text(
               'شروط الاستخدام',
@@ -518,12 +528,12 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
                 fontSize: 20,
               ),
             ),
-            backgroundColor: Colors.green.shade700,
-            foregroundColor: Colors.white,
+            backgroundColor: scheme.primary,
+            foregroundColor: scheme.onPrimary,
             elevation: 0,
             centerTitle: true,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              icon: Icon(Icons.arrow_back_ios, color: scheme.onPrimary),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -538,20 +548,21 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildHeaderCard() {
+  Widget _buildHeaderCard(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.green.shade600, Colors.green.shade800],
+          colors: [scheme.primary, scheme.primaryContainer],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.2),
+            color: scheme.primary.withOpacity(0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -562,14 +573,14 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: scheme.onPrimary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Image.asset(
               'assets/images/pos.png',
               width: 32,
               height: 32,
-              color: Colors.white,
+              color: scheme.onPrimary,
             ),
           ),
           const SizedBox(width: 12),
@@ -577,12 +588,12 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'شروط الاستخدام',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: scheme.onPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -590,7 +601,7 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
                   'نظام إدارة المكتب',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                    color: scheme.onPrimary.withOpacity(0.8),
                   ),
                 ),
               ],
@@ -606,71 +617,76 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
     required String title,
     required String content,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: Colors.green.shade100,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  color: Colors.green.shade600,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            content,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.6,
-              color: Colors.black87,
+    return Builder(builder: (context) {
+      final scheme = Theme.of(context).colorScheme;
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.5 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-            textDirection: TextDirection.rtl,
-            textAlign: TextAlign.right,
-            softWrap: true,
-            overflow: TextOverflow.visible,
+          ],
+          border: Border.all(
+            color: scheme.primary.withOpacity(0.2),
+            width: 1,
           ),
-        ],
-      ),
-    );
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: scheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: scheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              content,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.6,
+                color: scheme.onSurface,
+              ),
+              textDirection: TextDirection.rtl,
+              textAlign: TextAlign.right,
+              softWrap: true,
+              overflow: TextOverflow.visible,
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildActionButtons(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Expanded(
@@ -686,8 +702,8 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
             icon: const Icon(Icons.privacy_tip),
             label: const Text('سياسة الخصوصية'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-              foregroundColor: Colors.white,
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -704,8 +720,8 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
             icon: const Icon(Icons.close),
             label: const Text('إغلاق'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.green.shade600,
-              side: BorderSide(color: Colors.green.shade600),
+              foregroundColor: scheme.primary,
+              side: BorderSide(color: scheme.primary),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
