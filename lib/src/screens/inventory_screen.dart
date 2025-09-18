@@ -99,8 +99,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             textAlign: TextAlign.right),
                         trailing: _StatusChip(
                             label: 'منخفض',
-                            color: Colors.red.shade100,
-                            textColor: Colors.red.shade800),
+                            color: Theme.of(context).colorScheme.errorContainer,
+                            textColor:
+                                Theme.of(context).colorScheme.onErrorContainer),
                       );
                     },
                   );
@@ -142,8 +143,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             textAlign: TextAlign.right),
                         trailing: _StatusChip(
                             label: 'بطيء',
-                            color: Colors.orange.shade100,
-                            textColor: Colors.orange.shade800),
+                            color:
+                                Theme.of(context).colorScheme.tertiaryContainer,
+                            textColor: Theme.of(context)
+                                .colorScheme
+                                .onTertiaryContainer),
                       );
                     },
                   );
@@ -184,8 +188,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             const Text('الكمية: 0', textAlign: TextAlign.right),
                         trailing: _StatusChip(
                             label: 'نفاد',
-                            color: Colors.grey.shade200,
-                            textColor: Colors.grey.shade800),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            textColor:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
                       );
                     },
                   );

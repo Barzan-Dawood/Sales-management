@@ -47,17 +47,17 @@ class AppThemes {
         AppGradients.light(),
       ],
       appBarTheme: AppBarTheme(
-        backgroundColor: _lightPrimaryColor,
-        foregroundColor: _lightOnPrimaryColor,
-        elevation: 4,
-        shadowColor: _lightPrimaryColor.withOpacity(0.3),
+        backgroundColor: _lightSurfaceColor,
+        foregroundColor: _lightOnSurfaceColor,
+        elevation: 1,
+        shadowColor: Colors.black.withOpacity(0.05),
         titleTextStyle: const TextStyle(
-          color: _lightOnPrimaryColor,
+          color: _lightOnSurfaceColor,
           fontWeight: FontWeight.bold,
           fontSize: 20,
         ),
         iconTheme: const IconThemeData(
-          color: _lightOnPrimaryColor,
+          color: _lightOnSurfaceColor,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(

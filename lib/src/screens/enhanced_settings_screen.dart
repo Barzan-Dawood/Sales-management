@@ -43,10 +43,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
       child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.background,
         appBar: AppBar(
-          title: Text(
-            'الإعدادات',
-            style: Theme.of(context).appBarTheme.titleTextStyle,
-          ),
+          title: const Text('الإعدادات'),
           backgroundColor: Theme.of(context).colorScheme.surface,
           foregroundColor: Theme.of(context).colorScheme.onSurface,
           elevation: 0,
