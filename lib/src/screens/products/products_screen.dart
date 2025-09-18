@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import '../../utils/dark_mode_utils.dart';
 import '../../utils/app_themes.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 import '../../services/db/database_service.dart';
 import '../../utils/format.dart';
+import '../../utils/export.dart';
+import 'package:intl/intl.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key, this.initialCategoryId});
@@ -23,6 +26,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   int? _selectedCategoryId;
   final ScrollController _tableHController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd_HH-mm');
 
   @override
   void dispose() {
@@ -36,7 +40,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final db = context.read<DatabaseService>();
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: ui.TextDirection.rtl,
       child: Scaffold(
         body: SafeArea(
           child: Column(
@@ -79,43 +83,88 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Title with icon
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white.withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(12),
+                    // Title centered, small export button at the top-right corner
+                    SizedBox(
+                      height: 56,
+                      child: Stack(
+                        children: [
+                          // Centered title with icon
+                          Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white.withOpacity(0.2)
+                                        : Colors.white.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.inventory_2_rounded,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'إدارة المنتجات',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(0.35),
+                                        blurRadius: 2,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: Icon(
-                            Icons.inventory_2_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'إدارة المنتجات',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.35),
-                                blurRadius: 2,
-                                offset: Offset(0, 1),
+                          // Clear, labeled export button in the top-left corner
+                          Positioned(
+                            left: 0,
+                            top: 0,
+                            child: Container(
+                              color: Colors.transparent,
+                              child: Tooltip(
+                                message: 'تصدير Excel (CSV)',
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        Colors.white.withOpacity(0.25),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    textStyle: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    await _exportProductsCsv(context);
+                                  },
+                                  icon: const Icon(Icons.grid_on_rounded,
+                                      size: 16),
+                                  label: const Text('تصدير Excel'),
+                                ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -125,7 +174,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           child: TextField(
                             controller: _searchController,
                             textAlign: TextAlign.right,
-                            textDirection: TextDirection.rtl,
+                            textDirection: ui.TextDirection.rtl,
                             decoration: InputDecoration(
                               hintText: 'بحث بالاسم أو الباركود',
                               hintStyle: const TextStyle(
@@ -981,6 +1030,41 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
+  Future<void> _exportProductsCsv(BuildContext context) async {
+    final db = context.read<DatabaseService>();
+    final products = await db.getAllProducts(
+      query: _query,
+      categoryId: _selectedCategoryId ?? widget.initialCategoryId,
+    );
+
+    final headers = ['#', 'الاسم', 'الباركود', 'الكمية', 'الكلفة', 'السعر'];
+    final rows = <List<String>>[
+      headers,
+      ...List<List<String>>.generate(products.length, (i) {
+        final p = products[i];
+        return [
+          '${i + 1}',
+          p['name']?.toString() ?? '',
+          p['barcode']?.toString() ?? '',
+          (p['quantity'] as num?)?.toString() ?? '0',
+          ((p['cost'] as num?) ?? 0).toString(),
+          ((p['price'] as num?) ?? 0).toString(),
+        ];
+      })
+    ];
+
+    final filename = 'products_${_dateFormat.format(DateTime.now())}.csv';
+    final savedPath = await CsvExporter.exportRows(filename, rows);
+    if (savedPath != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم حفظ الملف: $savedPath'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Widget _iconGradButton({
     required String tooltip,
     required List<Color> colors,
@@ -1116,7 +1200,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: AlertDialog(
           title: Text(
             isEdit ? 'تعديل منتج' : 'إضافة منتج',
@@ -1163,7 +1247,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           TextFormField(
                             controller: nameCtrl,
                             textAlign: TextAlign.right,
-                            textDirection: TextDirection.rtl,
+                            textDirection: ui.TextDirection.rtl,
                             decoration: const InputDecoration(
                               labelText: 'اسم المنتج',
                               hintText: 'مطلوب',
@@ -1182,7 +1266,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 child: TextFormField(
                                   controller: barcodeCtrl,
                                   textAlign: TextAlign.right,
-                                  textDirection: TextDirection.rtl,
+                                  textDirection: ui.TextDirection.rtl,
                                   decoration: const InputDecoration(
                                     labelText: 'الباركود',
                                     hintText: 'اختياري',
@@ -1248,7 +1332,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 child: TextFormField(
                                   controller: priceCtrl,
                                   textAlign: TextAlign.right,
-                                  textDirection: TextDirection.rtl,
+                                  textDirection: ui.TextDirection.rtl,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                           decimal: true),
@@ -1280,7 +1364,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 child: TextFormField(
                                   controller: costCtrl,
                                   textAlign: TextAlign.right,
-                                  textDirection: TextDirection.rtl,
+                                  textDirection: ui.TextDirection.rtl,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                           decimal: true),
@@ -1316,7 +1400,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 child: TextFormField(
                                   controller: qtyCtrl,
                                   textAlign: TextAlign.right,
-                                  textDirection: TextDirection.rtl,
+                                  textDirection: ui.TextDirection.rtl,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                           signed: false),

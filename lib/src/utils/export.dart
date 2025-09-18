@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert' as convert;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -15,8 +16,10 @@ class CsvExporter {
       allowedExtensions: ['csv'],
     );
     if (path == null) return null;
-    final csv = rows.map((r) => r.map(_escape).join(',')).join('\n');
-    await File(path).writeAsString(csv);
+    // استخدم ترميز UTF-8 مع BOM + فواصل أسطر Windows لضمان عرض العربية في Excel
+    final csv = rows.map((r) => r.map(_escape).join(',')).join('\r\n');
+    final bytes = <int>[0xEF, 0xBB, 0xBF] + convert.utf8.encode(csv);
+    await File(path).writeAsBytes(bytes, flush: true);
     return path;
   }
 
@@ -108,6 +111,83 @@ class PdfExporter {
     final file = File(savePath);
     await file.writeAsBytes(bytes, flush: true);
     return savePath;
+  }
+
+  // إنشاء مستند PDF وإرجاع البايتات مباشرة للطباعة أو المشاركة
+  static Future<List<int>> buildDataTableBytes({
+    required String title,
+    required List<String> headers,
+    required List<List<String>> rows,
+  }) async {
+    final fontData = await rootBundle
+        .load('assets/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf');
+    final ttf = pw.Font.ttf(fontData);
+
+    final doc = pw.Document();
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (context) => [
+          pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  title,
+                  style: pw.TextStyle(
+                    font: ttf,
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Table(
+                  border: pw.TableBorder.all(width: 0.5, color: PdfColors.grey),
+                  defaultVerticalAlignment:
+                      pw.TableCellVerticalAlignment.middle,
+                  children: [
+                    pw.TableRow(
+                      decoration:
+                          const pw.BoxDecoration(color: PdfColors.grey300),
+                      children: headers.reversed
+                          .map((h) => pw.Padding(
+                                padding: const pw.EdgeInsets.symmetric(
+                                    vertical: 6, horizontal: 8),
+                                child: pw.Text(h,
+                                    style: pw.TextStyle(
+                                        font: ttf,
+                                        fontWeight: pw.FontWeight.bold,
+                                        fontSize: 10)),
+                              ))
+                          .toList(),
+                    ),
+                    ...rows.map(
+                      (r) => pw.TableRow(
+                        children: r.reversed
+                            .map(
+                              (c) => pw.Padding(
+                                padding: const pw.EdgeInsets.symmetric(
+                                    vertical: 6, horizontal: 8),
+                                child: pw.Text(c,
+                                    style:
+                                        pw.TextStyle(font: ttf, fontSize: 10)),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return doc.save();
   }
 
   // تصدير قائمة مفاتيح/قيم (يعكس ترتيب العمودين تلقائياً للعرض RTL)
