@@ -11,6 +11,7 @@ import '../utils/dark_mode_utils.dart';
 import '../services/db/database_service.dart';
 import '../services/store_config.dart';
 import '../services/theme_provider.dart';
+import '../config/store_info.dart';
 
 class EnhancedSettingsScreen extends StatefulWidget {
   const EnhancedSettingsScreen({super.key});
@@ -317,11 +318,11 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 isEditable: false,
               ),
               _buildDivider(),
-              // رمز المتجر - ثابت
+              // وصف المتجر - ثابت
               _buildSettingsTile(
                 icon: Icons.business,
-                title: 'رمز المتجر',
-                subtitle: store.shopCode,
+                title: 'وصف المتجر',
+                subtitle: store.shopDescription,
                 isEditable: false,
               ),
               _buildDivider(),
@@ -439,41 +440,45 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
   }
 
   Widget _buildAppInfoSection() {
-    return Container(
-      decoration: DarkModeUtils.createCardDecoration(context),
-      child: Column(
-        children: [
-          _buildInfoTile(
-            icon: Icons.info_outline,
-            title: 'إصدار التطبيق',
-            value: '1.0.0',
+    return Consumer<StoreConfig>(
+      builder: (context, store, child) {
+        return Container(
+          decoration: DarkModeUtils.createCardDecoration(context),
+          child: Column(
+            children: [
+              _buildInfoTile(
+                icon: Icons.info_outline,
+                title: 'إصدار التطبيق',
+                value: store.displayVersion,
+              ),
+              _buildDivider(),
+              _buildInfoTile(
+                icon: Icons.calendar_today,
+                title: 'تاريخ الإصدار',
+                value: store.releaseYear,
+              ),
+              _buildDivider(),
+              _buildInfoTile(
+                icon: Icons.developer_mode,
+                title: 'المطور',
+                value: store.developer,
+              ),
+              _buildDivider(),
+              _buildInfoTile(
+                icon: Icons.language,
+                title: 'اللغة',
+                value: store.language,
+              ),
+              _buildDivider(),
+              _buildInfoTile(
+                icon: Icons.location_on,
+                title: 'البلد',
+                value: store.country,
+              ),
+            ],
           ),
-          _buildDivider(),
-          _buildInfoTile(
-            icon: Icons.calendar_today,
-            title: 'تاريخ الإصدار',
-            value: '2025',
-          ),
-          _buildDivider(),
-          _buildInfoTile(
-            icon: Icons.developer_mode,
-            title: 'المطور',
-            value: 'برزان داود الهبابي',
-          ),
-          _buildDivider(),
-          _buildInfoTile(
-            icon: Icons.language,
-            title: 'اللغة',
-            value: 'العربية',
-          ),
-          _buildDivider(),
-          _buildInfoTile(
-            icon: Icons.location_on,
-            title: 'البلد',
-            value: 'جمهورية العراق',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -617,15 +622,14 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '© 2025 نظام إدارة المكتب',
+                  StoreInfo.copyright,
                   style: TextStyle(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.right,
                 ),
                 SizedBox(height: 8),
-                Text('جميع الحقوق محفوظة.', textAlign: TextAlign.right),
+                Text(StoreInfo.rightsReserved, textAlign: TextAlign.right),
                 SizedBox(height: 8),
-                Text('هذا التطبيق مملوك ومطور بواسطة فريق التطوير العراقي.',
-                    textAlign: TextAlign.right),
+                Text(StoreInfo.ownership, textAlign: TextAlign.right),
                 SizedBox(height: 8),
                 Text(
                     'لا يجوز نسخ أو توزيع أو تعديل أي جزء من هذا التطبيق بدون إذن كتابي صريح.'),
@@ -721,131 +725,134 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
   void _showSupportDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.support_agent,
-                color: Theme.of(context).colorScheme.secondary),
-            const SizedBox(width: 8),
-            const Text('الدعم الفني'),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (context) => Consumer<StoreConfig>(
+        builder: (context, store, child) => AlertDialog(
+          title: Row(
             children: [
-              // معلومات التطبيق
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .secondaryContainer
-                      .withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .secondary
-                          .withOpacity(0.4)),
-                ),
-                child: Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/office.png',
-                      width: 24,
-                      height: 24,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'نظام إدارة المكتب',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // معلومات التواصل
-              const Text(
-                'طرق التواصل:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // رقم الواتساب
-              _buildContactItem(
-                icon: Icons.phone,
-                title: 'واتساب',
-                subtitle: '07866744144',
-                color: Theme.of(context).colorScheme.tertiary,
-                onTap: () => _openWhatsAppClient('07866744144'),
-              ),
-              const SizedBox(height: 8),
-
-              // البريد الإلكتروني
-              _buildContactItem(
-                icon: Icons.email,
-                title: 'البريد الإلكتروني',
-                subtitle: 'barzan.dawood.dev@gmail.com',
-                color: Theme.of(context).colorScheme.primary,
-                onTap: () => _openEmailClient('barzan.dawood.dev@gmail.com'),
-              ),
-              const SizedBox(height: 8),
-
-              // العنوان
-              _buildContactItem(
-                icon: Icons.location_on,
-                title: 'العنوان',
-                subtitle: 'نينوى - شنكال',
-                color: Theme.of(context).colorScheme.secondary,
-                onTap: () => _copyToClipboard('نينوى - شنكال'),
-              ),
-              const SizedBox(height: 16),
-
-              // معلومات إضافية
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(6),
-                  border:
-                      Border.all(color: DarkModeUtils.getBorderColor(context)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info,
-                        color: Theme.of(context).colorScheme.primary, size: 16),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'اضغط على أي عنصر لنسخه إلى الحافظة',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              Icon(Icons.support_agent,
+                  color: Theme.of(context).colorScheme.secondary),
+              const SizedBox(width: 8),
+              const Text('الدعم الفني'),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إغلاق'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // معلومات التطبيق
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .secondaryContainer
+                        .withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .secondary
+                            .withOpacity(0.4)),
+                  ),
+                  child: Row(
+                    children: [
+                      Image.asset(
+                        'assets/images/office.png',
+                        width: 24,
+                        height: 24,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'نظام إدارة المكتب',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // معلومات التواصل
+                const Text(
+                  'طرق التواصل:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // رقم الواتساب
+                _buildContactItem(
+                  icon: Icons.phone,
+                  title: 'واتساب',
+                  subtitle: store.whatsapp,
+                  color: Theme.of(context).colorScheme.tertiary,
+                  onTap: () => _openWhatsAppClient(store.whatsapp),
+                ),
+                const SizedBox(height: 8),
+
+                // البريد الإلكتروني
+                _buildContactItem(
+                  icon: Icons.email,
+                  title: 'البريد الإلكتروني',
+                  subtitle: store.email,
+                  color: Theme.of(context).colorScheme.primary,
+                  onTap: () => _openEmailClient(store.email),
+                ),
+                const SizedBox(height: 8),
+
+                // العنوان
+                _buildContactItem(
+                  icon: Icons.location_on,
+                  title: 'العنوان',
+                  subtitle: store.city,
+                  color: Theme.of(context).colorScheme.secondary,
+                  onTap: () => _copyToClipboard(store.city),
+                ),
+                const SizedBox(height: 16),
+
+                // معلومات إضافية
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                        color: DarkModeUtils.getBorderColor(context)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 16),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'اضغط على أي عنصر لنسخه إلى الحافظة',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إغلاق'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1018,7 +1025,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         scheme: 'mailto',
         path: email,
         query:
-            'subject=استفسار حول نظام إدارة المكتب&body=مرحباً،\n\nأرغب في التواصل معكم بخصوص نظام إدارة المكتب.\n\nشكراً لكم',
+            'subject=${StoreInfo.defaultEmailSubject}&body=${StoreInfo.defaultEmailBody}',
       );
 
       // محاولة فتح تطبيق البريد
@@ -1336,7 +1343,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
       // إنشاء رابط الواتساب
       final Uri whatsappUri = Uri.parse(
-          'https://wa.me/$cleanNumber?text=مرحباً، أرغب في التواصل معكم بخصوص نظام إدارة المكتب');
+          'https://wa.me/$cleanNumber?text=${StoreInfo.defaultWhatsAppMessage}');
 
       // محاولة فتح الواتساب
       if (await canLaunchUrl(whatsappUri)) {

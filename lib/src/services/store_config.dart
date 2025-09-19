@@ -1,22 +1,24 @@
 import 'package:flutter/foundation.dart';
+import '../config/store_info.dart';
 
 class StoreConfig extends ChangeNotifier {
-  // معلومات ثابتة للمحل
-  static const String _appTitle = 'نظام إدارة المكتب';
-  static const String _shopName = 'لخدمات الانترنت والهواتف';
-  static const String _shopCode = '(ROJ NET)';
-  static const String _phone = '07512277690 - 07853203919';
-  static const String _address = 'شنكال - سايدين حي الشهداء';
-  static const String _displayVersion = '1.0.0';
-  static const String _logoAssetPath = 'assets/images/office.png';
+  // استخدام معلومات المحل من الملف المنفصل
+  String get appTitle => StoreInfo.appTitle;
+  String get shopName => StoreInfo.shopName;
+  String get shopDescription => StoreInfo.shopDescription;
+  String get phone => StoreInfo.phone;
+  String get address => StoreInfo.address;
+  String get displayVersion => StoreInfo.displayVersion;
+  String? get logoAssetPath => StoreInfo.logoAssetPath;
 
-  String get appTitle => _appTitle;
-  String get shopName => _shopName;
-  String get shopCode => _shopCode;
-  String get phone => _phone;
-  String get address => _address;
-  String get displayVersion => _displayVersion;
-  String? get logoAssetPath => _logoAssetPath;
+  // معلومات إضافية متاحة الآن
+  String get email => StoreInfo.email;
+  String get whatsapp => StoreInfo.whatsapp;
+  String get city => StoreInfo.city;
+  String get country => StoreInfo.country;
+  String get developer => StoreInfo.developer;
+  String get language => StoreInfo.language;
+  String get releaseYear => StoreInfo.releaseYear;
 
   // لا نحتاج إلى تحميل من ملفات خارجية
   Future<void> initialize() async {
