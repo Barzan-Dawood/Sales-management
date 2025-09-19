@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:office_mangment_system/src/screens/enhanced_privacy_policy_screen.dart';
- 
- class LegalCard extends StatelessWidget {
+
+class LegalCard extends StatelessWidget {
   const LegalCard({super.key});
 
   @override
@@ -74,7 +74,7 @@ import 'package:office_mangment_system/src/screens/enhanced_privacy_policy_scree
         title: Row(
           children: [
             Image.asset(
-              'assets/images/pos.png',
+              'assets/images/office.png',
               width: 32,
               height: 32,
               color: Colors.blue.shade600,

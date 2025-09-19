@@ -56,7 +56,7 @@ class _OldSettingsScreenState extends State<_OldSettingsScreen> {
                 Row(
                   children: [
                     Image.asset(
-                      'assets/images/pos.png',
+                      'assets/images/office.png',
                       width: 20,
                       height: 20,
                       color: Colors.blue.shade600,
@@ -496,7 +496,7 @@ class _SupportCard extends StatelessWidget {
         title: Row(
           children: [
             Image.asset(
-              'assets/images/pos.png',
+              'assets/images/office.png',
               width: 32,
               height: 32,
               color: Colors.blue.shade600,

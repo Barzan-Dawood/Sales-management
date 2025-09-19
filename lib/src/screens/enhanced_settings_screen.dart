@@ -128,7 +128,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Image.asset(
-              'assets/images/pos.png',
+              'assets/images/office.png',
               width: 32,
               height: 32,
               color: Theme.of(context).colorScheme.onPrimary,
@@ -644,7 +644,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
             title: Row(
               children: [
                 Image.asset(
-                  'assets/images/pos.png',
+                  'assets/images/office.png',
                   width: 32,
                   height: 32,
                   color: Theme.of(context).colorScheme.primary,

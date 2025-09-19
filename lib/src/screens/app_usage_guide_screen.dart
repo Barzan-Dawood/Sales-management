@@ -298,7 +298,7 @@ class AppUsageGuideScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Image.asset(
-              'assets/images/pos.png',
+              'assets/images/office.png',
               width: 32,
               height: 32,
               color: scheme.onPrimary,

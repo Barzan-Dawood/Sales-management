@@ -28,7 +28,7 @@ class SupportScreen extends StatelessWidget {
                     Row(
                       children: [
                         Image.asset(
-                          'assets/images/pos.png',
+                          'assets/images/office.png',
                           width: 32,
                           height: 32,
                           color: Colors.blue.shade600,
