@@ -187,7 +187,7 @@ Future<void> main() async {
   }
 
   final storeConfig = StoreConfig();
-  await storeConfig.loadFromAssets();
+  await storeConfig.initialize();
 
   runApp(MultiProvider(
     providers: [

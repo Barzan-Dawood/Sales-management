@@ -72,7 +72,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 _buildAppearanceSection(),
                 const SizedBox(height: 20),
 
-                // Store Information Section
+                // Store Information Section (معلومات ثابتة)
                 _buildSectionHeader('معلومات المتجر'),
                 _buildStoreInfoSection(),
                 const SizedBox(height: 20),
@@ -299,7 +299,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'تُستخدم معلومات المتجر في الفواتير والتقارير. اسم المتجر محمي ولا يمكن تعديله، ويمكنك تعديل رقم الهاتف والعنوان فقط.',
+                        'معلومات المتجر ثابتة ومحددة مسبقاً، وتُستخدم في الفواتير والتقارير. لا يمكن تعديل هذه المعلومات.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.primary,
@@ -309,46 +309,36 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                   ],
                 ),
               ),
-              // اسم المتجر - غير قابل للتعديل
+              // اسم المتجر - ثابت
               _buildSettingsTile(
                 icon: Icons.store,
                 title: 'اسم المتجر',
-                subtitle: store.shopName.isEmpty
-                    ? 'لم يتم التعيين بعد'
-                    : store.shopName,
+                subtitle: store.shopName,
                 isEditable: false,
               ),
               _buildDivider(),
-              // رقم الهاتف - قابل للتعديل
+              // رمز المتجر - ثابت
+              _buildSettingsTile(
+                icon: Icons.business,
+                title: 'رمز المتجر',
+                subtitle: store.shopCode,
+                isEditable: false,
+              ),
+              _buildDivider(),
+              // رقم الهاتف - ثابت
               _buildSettingsTile(
                 icon: Icons.phone,
                 title: 'رقم الهاتف',
-                subtitle: store.phone.isEmpty
-                    ? 'أدخل رقم هاتف للتواصل ويظهر على الفواتير'
-                    : store.phone,
-                onTap: () =>
-                    _showEditDialog('رقم الهاتف', store.phone, (value) {
-                  // Update phone - you may need to implement this in StoreConfig
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تم حفظ رقم الهاتف')),
-                  );
-                }),
+                subtitle: store.phone,
+                isEditable: false,
               ),
               _buildDivider(),
-              // عنوان المتجر - قابل للتعديل
+              // عنوان المتجر - ثابت
               _buildSettingsTile(
                 icon: Icons.location_on,
                 title: 'عنوان المتجر',
-                subtitle: store.address.isEmpty
-                    ? 'أدخل العنوان الكامل لظهوره على الفواتير'
-                    : store.address,
-                onTap: () =>
-                    _showEditDialog('عنوان المتجر', store.address, (value) {
-                  // Update address - you may need to implement this in StoreConfig
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تم حفظ عنوان المتجر')),
-                  );
-                }),
+                subtitle: store.address,
+                isEditable: false,
               ),
             ],
           ),
@@ -603,37 +593,6 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
   }
 
   // Methods
-  Future<void> _showEditDialog(
-      String title, String currentValue, Function(String) onSave) async {
-    final controller = TextEditingController(text: currentValue);
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('تعديل $title'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: title,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              onSave(controller.text);
-              Navigator.pop(context);
-            },
-            child: const Text('حفظ'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showCopyrightDialog() {
     showDialog(
