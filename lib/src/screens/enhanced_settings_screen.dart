@@ -795,7 +795,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 child: Row(
                   children: [
                     Image.asset(
-                      'assets/images/pos.png',
+                      'assets/images/office.png',
                       width: 24,
                       height: 24,
                       color: Theme.of(context).colorScheme.secondary,
