@@ -3,6 +3,11 @@
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../services/store_config.dart';
 import 'package:flutter/material.dart';
 import '../services/db/database_service.dart';
@@ -1746,6 +1751,8 @@ class _DebtsScreenState extends State<DebtsScreen>
               _showPayInstallmentDialog(context, installment, db);
             } else if (value == 'edit') {
               _editInstallment(context, installment, db);
+            } else if (value == 'print') {
+              _printInstallmentReport(context, installment, db);
             } else if (value == 'delete') {
               _deleteInstallment(context, installment, db);
             }
@@ -1770,6 +1777,16 @@ class _DebtsScreenState extends State<DebtsScreen>
                   Icon(Icons.edit, size: 16, color: Colors.blue),
                   SizedBox(width: 8),
                   Text('تعديل القسط'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'print',
+              child: Row(
+                children: [
+                  Icon(Icons.print, size: 16, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Text('طباعة كشف القسط'),
                 ],
               ),
             ),
@@ -3229,5 +3246,989 @@ class _DebtsScreenState extends State<DebtsScreen>
     buffer.writeln('=' * 50);
 
     return buffer.toString();
+  }
+
+  // دالة طباعة كشف القسط
+  void _printInstallmentReport(
+    BuildContext context,
+    Map<String, dynamic> installment,
+    DatabaseService db,
+  ) async {
+    try {
+      // الحصول على معلومات العميل
+      final customerId = installment['customer_id'] as int;
+      final customers = await db.getCustomers();
+      final customer = customers.firstWhere(
+        (c) => c['id'] == customerId,
+        orElse: () => <String, Object?>{},
+      );
+
+      if (customer.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('خطأ: لم يتم العثور على معلومات العميل'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // الحصول على جميع أقساط العميل
+      final allInstallments = await db.getInstallments(customerId: customerId);
+
+      // الحصول على جميع دفعات العميل
+      final payments = await db.getCustomerPayments(customerId: customerId);
+
+      // حساب الإجماليات
+      final totalDebt = allInstallments.fold<double>(
+          0.0, (sum, inst) => sum + (inst['amount'] as num).toDouble());
+
+      final paidAmount = allInstallments
+          .where((inst) => (inst['paid'] as int) == 1)
+          .fold<double>(
+              0.0, (sum, inst) => sum + (inst['amount'] as num).toDouble());
+
+      final remainingAmount = totalDebt - paidAmount;
+
+      // إنشاء PDF لكشف القسط
+      final pdfBytes = await _generateInstallmentReportPDF(
+        customer: customer,
+        installment: installment,
+        allInstallments: allInstallments,
+        payments: payments,
+        totalDebt: totalDebt,
+        paidAmount: paidAmount,
+        remainingAmount: remainingAmount,
+      );
+
+      // طباعة PDF
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+        name:
+            'كشف_القسط_${customer['name']}_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم طباعة كشف القسط بنجاح'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      debugPrint('خطأ في طباعة كشف القسط: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في طباعة كشف القسط: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // إنشاء PDF لكشف القسط
+  Future<Uint8List> _generateInstallmentReportPDF({
+    required Map<String, dynamic> customer,
+    required Map<String, dynamic> installment,
+    required List<Map<String, dynamic>> allInstallments,
+    required List<Map<String, dynamic>> payments,
+    required double totalDebt,
+    required double paidAmount,
+    required double remainingAmount,
+  }) async {
+    final doc = pw.Document();
+    final date = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+
+    // تحميل الخط العربي
+    final arabicFont = await _loadArabicFont();
+
+    // الصفحة الأولى - المعلومات الأساسية
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(16),
+        build: (context) {
+          return pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // رأس كشف القسط
+                _buildInstallmentReportHeader(customer, date, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // ملخص القسط الحالي
+                _buildCurrentInstallmentSummary(installment, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // ملخص إجمالي الدين
+                _buildTotalDebtSummary(
+                    totalDebt, paidAmount, remainingAmount, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // جدول جميع الأقساط
+                _buildAllInstallmentsTable(allInstallments, arabicFont),
+                pw.SizedBox(height: 20),
+
+                // تذييل
+                _buildInstallmentReportFooter(arabicFont),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    // الصفحة الثانية - جدول الدفعات (إذا كانت موجودة)
+    if (payments.isNotEmpty) {
+      doc.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(16),
+          build: (context) {
+            return pw.Directionality(
+              textDirection: pw.TextDirection.rtl,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // رأس الصفحة الثانية
+                  _buildPaymentsPageHeader(customer, date, arabicFont),
+                  pw.SizedBox(height: 20),
+
+                  // جدول الدفعات
+                  _buildPaymentsTable(payments, arabicFont),
+                  pw.SizedBox(height: 20),
+
+                  // ملخص الدفعات
+                  _buildPaymentsSummary(payments, arabicFont),
+                  pw.SizedBox(height: 20),
+
+                  // تذييل
+                  _buildInstallmentReportFooter(arabicFont),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return doc.save();
+  }
+
+  // بناء رأس كشف القسط
+  pw.Widget _buildInstallmentReportHeader(
+    Map<String, dynamic> customer,
+    String date,
+    pw.Font arabicFont,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(
+            'كشف القسط',
+            style: pw.TextStyle(
+              fontSize: 18,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            'نظام إدارة المكتب',
+            style: pw.TextStyle(
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 12),
+          pw.Divider(),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            'العميل: ${customer['name'] ?? 'غير محدد'}',
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          if (customer['phone'] != null) ...[
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'هاتف العميل: ${customer['phone']}',
+              style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              textAlign: pw.TextAlign.center,
+            ),
+          ],
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'تاريخ الكشف: $date',
+            style: pw.TextStyle(fontSize: 10, font: arabicFont),
+            textAlign: pw.TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // بناء ملخص القسط الحالي
+  pw.Widget _buildCurrentInstallmentSummary(
+    Map<String, dynamic> installment,
+    pw.Font arabicFont,
+  ) {
+    final amount = (installment['amount'] as num).toDouble();
+    final dueDate = DateTime.parse(installment['due_date'] as String);
+    final isPaid = (installment['paid'] as int) == 1;
+    final paymentDate = installment['paid_at'] != null
+        ? DateTime.parse(installment['paid_at'] as String)
+        : null;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: isPaid ? PdfColors.green50 : PdfColors.orange50,
+        border: pw.Border.all(width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'تفاصيل القسط الحالي',
+            style: pw.TextStyle(
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'مبلغ القسط:',
+                style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              ),
+              pw.Text(
+                '${amount.toStringAsFixed(0)} د.ع',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  font: arabicFont,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'تاريخ الاستحقاق:',
+                style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              ),
+              pw.Text(
+                DateFormat('dd/MM/yyyy').format(dueDate),
+                style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'الحالة:',
+                style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              ),
+              pw.Text(
+                isPaid ? 'مدفوع' : 'غير مدفوع',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  color: isPaid ? PdfColors.green : PdfColors.red,
+                  font: arabicFont,
+                ),
+              ),
+            ],
+          ),
+          if (isPaid && paymentDate != null) ...[
+            pw.SizedBox(height: 4),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  'تاريخ الدفع:',
+                  style: pw.TextStyle(fontSize: 10, font: arabicFont),
+                ),
+                pw.Text(
+                  DateFormat('dd/MM/yyyy').format(paymentDate),
+                  style: pw.TextStyle(fontSize: 10, font: arabicFont),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // بناء ملخص إجمالي الدين
+  pw.Widget _buildTotalDebtSummary(
+    double totalDebt,
+    double paidAmount,
+    double remainingAmount,
+    pw.Font arabicFont,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey100,
+        border: pw.Border.all(width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'ملخص إجمالي الدين',
+            style: pw.TextStyle(
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'إجمالي الدين:',
+                style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              ),
+              pw.Text(
+                '${totalDebt.toStringAsFixed(0)} د.ع',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  font: arabicFont,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'إجمالي المدفوع:',
+                style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              ),
+              pw.Text(
+                '${paidAmount.toStringAsFixed(0)} د.ع',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.green,
+                  font: arabicFont,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Divider(),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'المتبقي:',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  font: arabicFont,
+                ),
+              ),
+              pw.Text(
+                '${remainingAmount.toStringAsFixed(0)} د.ع',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  color: remainingAmount > 0 ? PdfColors.red : PdfColors.green,
+                  font: arabicFont,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // بناء جدول جميع الأقساط
+  pw.Widget _buildAllInstallmentsTable(
+    List<Map<String, dynamic>> installments,
+    pw.Font arabicFont,
+  ) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'جدول جميع الأقساط',
+          style: pw.TextStyle(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+            font: arabicFont,
+          ),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Table(
+          border: pw.TableBorder.all(width: 1),
+          columnWidths: {
+            0: const pw.FixedColumnWidth(40),
+            1: const pw.FixedColumnWidth(80),
+            2: const pw.FixedColumnWidth(80),
+            3: const pw.FixedColumnWidth(60),
+            4: const pw.FixedColumnWidth(60),
+          },
+          children: [
+            // رأس الجدول
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(8),
+                  child: pw.Text(
+                    'رقم القسط',
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      font: arabicFont,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(8),
+                  child: pw.Text(
+                    'المبلغ',
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      font: arabicFont,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(8),
+                  child: pw.Text(
+                    'تاريخ الاستحقاق',
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      font: arabicFont,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(8),
+                  child: pw.Text(
+                    'الحالة',
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      font: arabicFont,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(8),
+                  child: pw.Text(
+                    'تاريخ الدفع',
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      font: arabicFont,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+            // صفوف الأقساط
+            ...installments.asMap().entries.map((entry) {
+              final index = entry.key;
+              final installment = entry.value;
+              final amount = (installment['amount'] as num).toDouble();
+              final dueDate = DateTime.parse(installment['due_date'] as String);
+              final isPaid = (installment['paid'] as int) == 1;
+              final paymentDate = installment['paid_at'] != null
+                  ? DateTime.parse(installment['paid_at'] as String)
+                  : null;
+
+              return pw.TableRow(
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      '${index + 1}',
+                      style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      '${amount.toStringAsFixed(0)} د.ع',
+                      style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      DateFormat('dd/MM/yyyy').format(dueDate),
+                      style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      isPaid ? 'مدفوع' : 'غير مدفوع',
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        color: isPaid ? PdfColors.green : PdfColors.red,
+                        font: arabicFont,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      paymentDate != null
+                          ? DateFormat('dd/MM/yyyy').format(paymentDate)
+                          : '-',
+                      style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // بناء تذييل كشف القسط
+  pw.Widget _buildInstallmentReportFooter(pw.Font arabicFont) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        pw.Divider(),
+        pw.SizedBox(height: 8),
+        pw.Text(
+          'شكراً لاختياركم خدماتنا',
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: pw.FontWeight.bold,
+            font: arabicFont,
+          ),
+          textAlign: pw.TextAlign.center,
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          'هذا الكشف صادر من نظام إدارة المكتب',
+          style: pw.TextStyle(fontSize: 8, font: arabicFont),
+          textAlign: pw.TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  // بناء رأس صفحة الدفعات
+  pw.Widget _buildPaymentsPageHeader(
+    Map<String, dynamic> customer,
+    String date,
+    pw.Font arabicFont,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(
+            'سجل الدفعات',
+            style: pw.TextStyle(
+              fontSize: 18,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            'نظام إدارة المكتب',
+            style: pw.TextStyle(
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 12),
+          pw.Divider(),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            'العميل: ${customer['name'] ?? 'غير محدد'}',
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          if (customer['phone'] != null) ...[
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'هاتف العميل: ${customer['phone']}',
+              style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              textAlign: pw.TextAlign.center,
+            ),
+          ],
+          pw.SizedBox(height: 4),
+          pw.Text(
+            'تاريخ الكشف: $date',
+            style: pw.TextStyle(fontSize: 10, font: arabicFont),
+            textAlign: pw.TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // بناء جدول الدفعات
+  pw.Widget _buildPaymentsTable(
+    List<Map<String, dynamic>> payments,
+    pw.Font arabicFont,
+  ) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'تفاصيل الدفعات',
+          style: pw.TextStyle(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+            font: arabicFont,
+          ),
+        ),
+        pw.SizedBox(height: 8),
+        if (payments.isEmpty)
+          pw.Text(
+            'لا توجد دفعات مسجلة',
+            style: pw.TextStyle(fontSize: 10, font: arabicFont),
+          )
+        else
+          pw.Table(
+            border: pw.TableBorder.all(width: 1),
+            columnWidths: {
+              0: const pw.FixedColumnWidth(60),
+              1: const pw.FixedColumnWidth(100),
+              2: const pw.FixedColumnWidth(80),
+              3: const pw.FixedColumnWidth(60),
+              4: const pw.FlexColumnWidth(2),
+            },
+            children: [
+              // رأس الجدول
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      'رقم الدفعة',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: arabicFont,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      'التاريخ',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: arabicFont,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      'المبلغ',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: arabicFont,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      'الطريقة',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: arabicFont,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      'الوصف',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: arabicFont,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+              // صفوف الدفعات
+              ...payments.asMap().entries.map((entry) {
+                final index = entry.key;
+                final payment = entry.value;
+                final amount = (payment['amount'] as num).toDouble();
+                final paymentDate =
+                    DateTime.parse(payment['payment_date'] as String);
+                final method = payment['payment_method'] ?? 'نقد';
+                final description = payment['description'] ?? 'دفعة';
+
+                return pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        '${index + 1}',
+                        style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        DateFormat('dd/MM/yyyy').format(paymentDate),
+                        style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        '${amount.toStringAsFixed(0)} د.ع',
+                        style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        method,
+                        style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        description,
+                        style: pw.TextStyle(fontSize: 9, font: arabicFont),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+      ],
+    );
+  }
+
+  // بناء ملخص الدفعات
+  pw.Widget _buildPaymentsSummary(
+    List<Map<String, dynamic>> payments,
+    pw.Font arabicFont,
+  ) {
+    final totalPayments = payments.fold<double>(
+      0.0,
+      (sum, payment) => sum + (payment['amount'] as num).toDouble(),
+    );
+
+    final cashPayments = payments
+        .where((p) => (p['payment_method'] ?? 'نقد')
+            .toString()
+            .toLowerCase()
+            .contains('نقد'))
+        .fold<double>(
+          0.0,
+          (sum, payment) => sum + (payment['amount'] as num).toDouble(),
+        );
+
+    final bankPayments = payments
+        .where((p) => (p['payment_method'] ?? 'نقد')
+            .toString()
+            .toLowerCase()
+            .contains('بنك'))
+        .fold<double>(
+          0.0,
+          (sum, payment) => sum + (payment['amount'] as num).toDouble(),
+        );
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.blue50,
+        border: pw.Border.all(width: 1),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'ملخص الدفعات',
+            style: pw.TextStyle(
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicFont,
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'إجمالي الدفعات:',
+                style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              ),
+              pw.Text(
+                '${totalPayments.toStringAsFixed(0)} د.ع',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  font: arabicFont,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'الدفعات النقدية:',
+                style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              ),
+              pw.Text(
+                '${cashPayments.toStringAsFixed(0)} د.ع',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.green,
+                  font: arabicFont,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'الدفعات البنكية:',
+                style: pw.TextStyle(fontSize: 10, font: arabicFont),
+              ),
+              pw.Text(
+                '${bankPayments.toStringAsFixed(0)} د.ع',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.blue,
+                  font: arabicFont,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Divider(),
+          pw.SizedBox(height: 4),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'عدد الدفعات:',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  font: arabicFont,
+                ),
+              ),
+              pw.Text(
+                '${payments.length} دفعة',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.purple,
+                  font: arabicFont,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // تحميل الخط العربي
+  Future<pw.Font> _loadArabicFont() async {
+    try {
+      final fontData = await rootBundle
+          .load('assets/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf');
+      return pw.Font.ttf(fontData);
+    } catch (e) {
+      debugPrint('خطأ في تحميل الخط العربي: $e');
+      return pw.Font.helvetica();
+    }
   }
 }
