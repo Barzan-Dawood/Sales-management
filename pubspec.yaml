@@ -48,6 +48,10 @@ dependencies:
   google_fonts: ^6.2.1
   url_launcher: ^6.2.2
   shared_preferences: ^2.2.2
+  device_info_plus: ^10.1.0
+  platform: ^3.1.0
+  encrypt: ^5.0.1
+  uuid: ^4.4.0
 
 dev_dependencies:
   flutter_test:

@@ -12,6 +12,7 @@ import '../services/db/database_service.dart';
 import '../services/store_config.dart';
 import '../services/theme_provider.dart';
 import '../config/store_info.dart';
+import 'license_check_screen.dart';
 
 class EnhancedSettingsScreen extends StatefulWidget {
   const EnhancedSettingsScreen({super.key});
@@ -474,6 +475,19 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 icon: Icons.location_on,
                 title: 'البلد',
                 value: store.country,
+              ),
+              _buildDivider(),
+              _buildSettingsTile(
+                icon: Icons.key,
+                title: 'فحص الترخيص',
+                subtitle: 'فحص حالة الترخيص وإدارة المفاتيح',
+                trailing: Icons.arrow_forward_ios,
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const LicenseCheckDialog(),
+                  );
+                },
               ),
             ],
           ),

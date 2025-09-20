@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'services/auth/auth_provider.dart';
 import 'services/store_config.dart';
 import 'services/theme_provider.dart';
+import 'services/license/license_provider.dart';
 import 'utils/strings.dart';
 import 'utils/app_themes.dart';
 import 'utils/dark_mode_utils.dart';
@@ -24,6 +25,7 @@ import 'screens/debts_screen.dart';
 import 'screens/tests_screen.dart';
 import 'screens/advanced_reports_screen.dart';
 import 'screens/inventory_reports_screen.dart';
+import 'screens/license_check_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -36,10 +38,20 @@ class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // تهيئة مزود الترخيص عند بدء الشاشة
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LicenseProvider>().initialize();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final store = context.watch<StoreConfig>();
     final themeProvider = context.watch<ThemeProvider>();
+    final licenseProvider = context.watch<LicenseProvider>();
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -49,6 +61,11 @@ class _AppShellState extends State<AppShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       themeProvider.updateDarkModeStatus(isDark);
     });
+
+    // فحص الترخيص أولاً
+    if (!licenseProvider.isActivated) {
+      return const LicenseCheckScreen();
+    }
 
     if (!auth.isAuthenticated) {
       return const LoginScreen();

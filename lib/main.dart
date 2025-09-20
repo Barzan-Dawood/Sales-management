@@ -10,6 +10,7 @@ import 'src/services/db/database_service.dart';
 import 'src/services/auth/auth_provider.dart';
 import 'src/services/store_config.dart';
 import 'src/services/theme_provider.dart';
+import 'src/services/license/license_provider.dart';
 import 'src/utils/app_themes.dart';
 
 Future<void> main() async {
@@ -195,6 +196,7 @@ Future<void> main() async {
       ChangeNotifierProvider(create: (_) => AuthProvider(databaseService)),
       ChangeNotifierProvider.value(value: storeConfig),
       ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ChangeNotifierProvider(create: (_) => LicenseProvider()),
     ],
     child: const MyApp(),
   ));
