@@ -28,9 +28,15 @@ Future<void> main() async {
       return true;
     }());
   };
+  // تهيئة قاعدة البيانات حسب المنصة
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    // للمنصات المكتبية - استخدم sqflite_common_ffi
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+    print('Main: Desktop platform - Using sqflite_common_ffi');
+  } else {
+    // للمنصات المحمولة (Android/iOS) - استخدم sqflite العادي
+    print('Main: Mobile platform - Using default sqflite');
   }
 
   final databaseService = DatabaseService();

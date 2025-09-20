@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DatabaseService {
@@ -19,6 +20,17 @@ class DatabaseService {
   String get databasePath => _dbPath;
 
   Future<void> initialize() async {
+    // تهيئة قاعدة البيانات حسب المنصة
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      // للمنصات المكتبية - استخدم sqflite_common_ffi
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+      print('Desktop platform: Using sqflite_common_ffi');
+    } else {
+      // للمنصات المحمولة (Android/iOS) - استخدم sqflite العادي
+      print('Mobile platform: Using default sqflite');
+    }
+
     final Directory appDir = await getApplicationDocumentsDirectory();
     final String dbPath = p.join(appDir.path, _dbName);
     _dbPath = dbPath;
@@ -917,10 +929,22 @@ class DatabaseService {
         color INTEGER
       );
     ''');
+
+    // التحقق من وجود العمود قبل إضافته
     try {
-      await db.execute('ALTER TABLE products ADD COLUMN category_id INTEGER');
-    } catch (_) {
-      // column already exists
+      final cols = await db.rawQuery("PRAGMA table_info('products')");
+      final hasCategoryId =
+          cols.any((c) => (c['name']?.toString() ?? '') == 'category_id');
+
+      if (!hasCategoryId) {
+        await db.execute('ALTER TABLE products ADD COLUMN category_id INTEGER');
+        print('Added category_id column to products table');
+      } else {
+        print('category_id column already exists in products table');
+      }
+    } catch (e) {
+      print('Error checking/adding category_id column: $e');
+      // column already exists or other error
     }
   }
 
