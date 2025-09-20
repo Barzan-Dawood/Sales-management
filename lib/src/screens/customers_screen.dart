@@ -316,9 +316,45 @@ class _CustomersScreenState extends State<CustomersScreen> {
       ),
     );
     if (ok != true) return;
-    await db.deleteCustomer(id);
-    if (!mounted) return;
-    setState(() {});
+    
+    try {
+      final deletedRows = await db.deleteCustomer(id);
+      if (!mounted) return;
+      
+      if (deletedRows > 0) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حذف العميل بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لم يتم العثور على العميل أو حدث خطأ في الحذف'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      String errorMessage = 'خطأ في حذف العميل';
+      if (e.toString().contains('FOREIGN KEY constraint failed')) {
+        errorMessage = 'لا يمكن حذف العميل لأنه مرتبط بفواتير أو مدفوعات';
+      } else if (e.toString().contains('database is locked')) {
+        errorMessage = 'قاعدة البيانات قيد الاستخدام، حاول مرة أخرى';
+      } else {
+        errorMessage = 'خطأ في حذف العميل: ${e.toString()}';
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _openEditor({Map<String, Object?>? customer}) async {

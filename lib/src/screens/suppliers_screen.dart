@@ -349,9 +349,45 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       ),
     );
     if (ok != true) return;
-    await db.deleteSupplier(id);
-    if (!mounted) return;
-    setState(() {});
+
+    try {
+      final deletedRows = await db.deleteSupplier(id);
+      if (!mounted) return;
+
+      if (deletedRows > 0) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم حذف المورد بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لم يتم العثور على المورد أو حدث خطأ في الحذف'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      String errorMessage = 'خطأ في حذف المورد';
+      if (e.toString().contains('FOREIGN KEY constraint failed')) {
+        errorMessage = 'لا يمكن حذف المورد لأنه مرتبط بمنتجات';
+      } else if (e.toString().contains('database is locked')) {
+        errorMessage = 'قاعدة البيانات قيد الاستخدام، حاول مرة أخرى';
+      } else {
+        errorMessage = 'خطأ في حذف المورد: ${e.toString()}';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _openEditor({Map<String, Object?>? supplier}) async {

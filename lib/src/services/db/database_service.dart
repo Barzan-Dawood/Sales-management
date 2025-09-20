@@ -3764,16 +3764,25 @@ class DatabaseService {
     try {
       // نفّذ الحذف داخل معاملة واحدة مع تعطيل المفاتيح الخارجية مؤقتاً
       await _db.transaction((txn) async {
+        // تعطيل المفاتيح الخارجية أولاً
         await txn.execute('PRAGMA foreign_keys = OFF');
 
-        // حذف جميع الجداول بالترتيب الصحيح لتجنب مشاكل المفاتيح الخارجية
+        // حذف الجداول بالترتيب الصحيح لتجنب مشاكل المفاتيح الخارجية
+        // أولاً: حذف الجداول الفرعية
         await txn.delete('installments');
         await txn.delete('sale_items');
+        await txn.delete('payments');
+        await txn.delete('expenses');
+
+        // ثانياً: حذف الجداول الرئيسية
         await txn.delete('sales');
         await txn.delete('products');
         await txn.delete('categories');
         await txn.delete('customers');
-        await txn.delete('users');
+        await txn.delete('suppliers');
+
+        // ثالثاً: حذف المستخدمين عدا المدير
+        await txn.delete('users', where: 'username != ?', whereArgs: ['admin']);
 
         // إعادة تعيين AUTO_INCREMENT
         await txn.execute('DELETE FROM sqlite_sequence');
@@ -3785,6 +3794,11 @@ class DatabaseService {
       // إعادة إنشاء البيانات الأساسية خارج المعاملة لتجنب أي تعارض مع txn
       await _seedData(_db);
     } catch (e) {
+      // إعادة تفعيل المفاتيح الخارجية في حالة الخطأ
+      try {
+        await _db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+
       throw Exception('خطأ في حذف جميع البيانات: $e');
     }
   }

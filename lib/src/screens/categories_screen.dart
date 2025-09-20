@@ -128,9 +128,44 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       ),
     );
     if (ok == true) {
-      await db.deleteCategory(id);
-      if (!mounted) return;
-      setState(() {});
+      try {
+        final deletedRows = await db.deleteCategory(id);
+        if (!mounted) return;
+
+        if (deletedRows > 0) {
+          setState(() {});
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم حذف القسم بنجاح'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لم يتم العثور على القسم أو حدث خطأ في الحذف'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        String errorMessage = 'خطأ في حذف القسم';
+        if (e.toString().contains('FOREIGN KEY constraint failed')) {
+          errorMessage = 'لا يمكن حذف القسم لأنه يحتوي على منتجات';
+        } else if (e.toString().contains('database is locked')) {
+          errorMessage = 'قاعدة البيانات قيد الاستخدام، حاول مرة أخرى';
+        } else {
+          errorMessage = 'خطأ في حذف القسم: ${e.toString()}';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

@@ -1059,7 +1059,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: color,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -1582,12 +1582,27 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
       await db.deleteAllDataNew();
 
       Navigator.of(context).pop();
-      _showSnackBar('تم حذف جميع البيانات بنجاح', Colors.red);
+      _showSnackBar('تم حذف جميع البيانات بنجاح', Colors.green);
     } catch (e) {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
-      _showSnackBar('خطأ في حذف البيانات: $e', Colors.red);
+
+      // تحليل نوع الخطأ وعرض رسالة مناسبة
+      String errorMessage = 'خطأ في حذف البيانات';
+      if (e.toString().contains('FOREIGN KEY constraint failed')) {
+        errorMessage = 'خطأ في المفاتيح الخارجية - يرجى إعادة تشغيل التطبيق';
+      } else if (e.toString().contains('database is locked')) {
+        errorMessage = 'قاعدة البيانات قيد الاستخدام - يرجى المحاولة مرة أخرى';
+      } else if (e.toString().contains('no such table')) {
+        errorMessage = 'خطأ في هيكل قاعدة البيانات - يرجى إعادة تشغيل التطبيق';
+      } else if (e.toString().contains('disk I/O error')) {
+        errorMessage = 'خطأ في القرص - تحقق من مساحة التخزين';
+      } else {
+        errorMessage = 'خطأ في حذف البيانات: ${e.toString()}';
+      }
+
+      _showSnackBar(errorMessage, Colors.red);
     }
   }
 
