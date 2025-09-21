@@ -1432,7 +1432,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                             color: Colors.red.shade50,
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: Colors.red.shade100,
+                                backgroundColor: Color(0xFFFEE2E2), // Light Red
                                 child: Icon(
                                   Icons.warning,
                                   color: Colors.red,
@@ -2188,7 +2188,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                               icon: const Icon(Icons.add),
                               label: const Text('إضافة دفعة'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
+                                backgroundColor:
+                                    Color(0xFF1976D2), // Professional Blue
                                 foregroundColor: Colors.white,
                               ),
                             ),
@@ -2370,7 +2371,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFDC2626)), // Professional Red
               child: const Text('حذف'),
             ),
           ],
@@ -2569,20 +2571,21 @@ class _DebtsScreenState extends State<DebtsScreen>
                       SnackBar(
                         content: Text(
                             'تم إضافة دين بالأقساط ${Formatters.currencyIQD(totalAmount)} للعميل ${selectedCustomer!['name']}'),
-                        backgroundColor: Colors.green,
+                        backgroundColor:
+                            Color(0xFF059669), // Professional Green
                       ),
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('خطأ في إضافة الدين بالأقساط: $e'),
-                        backgroundColor: Colors.red,
+                        backgroundColor: Color(0xFFDC2626), // Professional Red
                       ),
                     );
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
+                  backgroundColor: Color(0xFF7C3AED), // Professional Purple
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('إضافة دين بالأقساط'),
@@ -2740,19 +2743,21 @@ class _DebtsScreenState extends State<DebtsScreen>
                       SnackBar(
                         content: Text(
                             'تم إضافة دين ${Formatters.currencyIQD(double.parse(amountController.text))} للعميل ${selectedCustomer!['name']}'),
-                        backgroundColor: Colors.green,
+                        backgroundColor:
+                            Color(0xFF059669), // Professional Green
                       ),
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('خطأ في إضافة الدين: $e'),
-                        backgroundColor: Colors.red,
+                        backgroundColor: Color(0xFFDC2626), // Professional Red
                       ),
                     );
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFF59E0B)), // Professional Orange
                 child: const Text('إضافة الدين'),
               ),
             ],
@@ -2836,19 +2841,20 @@ class _DebtsScreenState extends State<DebtsScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('تم دفع القسط بنجاح'),
-                      backgroundColor: Colors.green,
+                      backgroundColor: Color(0xFF059669), // Professional Green
                     ),
                   );
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('خطأ في دفع القسط: $e'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Color(0xFFDC2626), // Professional Red
                     ),
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF059669)), // Professional Green
               child: const Text('دفع القسط'),
             ),
           ],
@@ -2921,7 +2927,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                       SnackBar(
                         content:
                             Text('تم حذف العميل ${customer['name']} بنجاح'),
-                        backgroundColor: Colors.green,
+                        backgroundColor:
+                            Color(0xFF059669), // Professional Green
                       ),
                     );
                   } else {
@@ -2930,7 +2937,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                       SnackBar(
                         content: Text(
                             'لم يتم العثور على العميل أو حدث خطأ في الحذف'),
-                        backgroundColor: Colors.orange,
+                        backgroundColor:
+                            Color(0xFFF59E0B), // Professional Orange
                       ),
                     );
                   }
@@ -2955,13 +2963,14 @@ class _DebtsScreenState extends State<DebtsScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(errorMessage),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Color(0xFFDC2626), // Professional Red
                       duration: const Duration(seconds: 4),
                     ),
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFDC2626)), // Professional Red
               child: const Text('حذف العميل'),
             ),
           ],
@@ -3043,7 +3052,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('يرجى إدخال مبلغ القسط'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Color(0xFFDC2626), // Professional Red
                     ),
                   );
                   return;
@@ -3061,14 +3070,14 @@ class _DebtsScreenState extends State<DebtsScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('تم تعديل القسط بنجاح'),
-                      backgroundColor: Colors.green,
+                      backgroundColor: Color(0xFF059669), // Professional Green
                     ),
                   );
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('خطأ في تعديل القسط: $e'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Color(0xFFDC2626), // Professional Red
                     ),
                   );
                 }
@@ -3110,7 +3119,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('تم حذف القسط بنجاح'),
-                      backgroundColor: Colors.green,
+                      backgroundColor: Color(0xFF059669), // Professional Green
                     ),
                   );
                 } catch (e) {
@@ -3118,12 +3127,13 @@ class _DebtsScreenState extends State<DebtsScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('خطأ في حذف القسط: $e'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Color(0xFFDC2626), // Professional Red
                     ),
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFDC2626)), // Professional Red
               child: const Text('حذف'),
             ),
           ],
@@ -3179,7 +3189,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم طباعة كشف الحساب بنجاح'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF059669), // Professional Green
         ),
       );
     } catch (e) {
@@ -3191,7 +3201,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في طباعة كشف الحساب: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Color(0xFFDC2626), // Professional Red
         ),
       );
     }
@@ -3267,7 +3277,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('خطأ: لم يتم العثور على معلومات العميل'),
-            backgroundColor: Colors.red,
+            backgroundColor: Color(0xFFDC2626), // Professional Red
           ),
         );
         return;
@@ -3311,7 +3321,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم طباعة كشف القسط بنجاح'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF059669), // Professional Green
         ),
       );
     } catch (e) {
@@ -3319,7 +3329,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في طباعة كشف القسط: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Color(0xFFDC2626), // Professional Red
         ),
       );
     }

@@ -48,7 +48,8 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
           'التقارير المالية المتقدمة',
           style: TextStyle(color: Colors.blue),
         ),
-        backgroundColor: isDark ? scheme.surface : Colors.white,
+        backgroundColor:
+            isDark ? scheme.surface : Color(0xFFFFFFFF), // Professional White
         foregroundColor: isDark ? scheme.onSurface : Colors.black,
         actions: [
           IconButton(

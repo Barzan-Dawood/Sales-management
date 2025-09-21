@@ -74,8 +74,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         itemCount: items.length,
                         itemBuilder: (context, index) {
                           final c = items[index];
-                          final color =
-                              Color((c['color'] as int?) ?? 0xFF607D8B);
+                          final color = Color((c['color'] as int?) ??
+                              0xFF1976D2); // Professional Blue
                           final iconData = IconData(
                               (c['icon'] as int?) ?? Icons.folder.codePoint,
                               fontFamily: 'MaterialIcons');
@@ -137,14 +137,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('تم حذف القسم بنجاح'),
-              backgroundColor: Colors.green,
+              backgroundColor: Color(0xFF059669), // Professional Green
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('لم يتم العثور على القسم أو حدث خطأ في الحذف'),
-              backgroundColor: Colors.orange,
+              backgroundColor: Color(0xFFF59E0B), // Professional Orange
             ),
           );
         }
@@ -162,7 +162,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Colors.red,
+            backgroundColor: Color(0xFFDC2626), // Professional Red
           ),
         );
       }
@@ -174,7 +174,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final formKey = GlobalKey<FormState>();
     final name =
         TextEditingController(text: category?['name']?.toString() ?? '');
-    int selectedColor = (category?['color'] as int?) ?? 0xFF607D8B;
+    int selectedColor =
+        (category?['color'] as int?) ?? 0xFF1976D2; // Professional Blue
     int selectedIcon = (category?['icon'] as int?) ?? Icons.folder.codePoint;
     final ok = await showDialog<bool>(
       context: context,
@@ -477,7 +478,8 @@ class _FancyCategoryCardState extends State<_FancyCategoryCard> {
                         children: [
                           CircleAvatar(
                             radius: 24,
-                            backgroundColor: Colors.white,
+                            backgroundColor:
+                                Color(0xFFFFFFFF), // Professional White
                             child: Icon(widget.iconData,
                                 size: 22, color: widget.color),
                           ),
@@ -593,7 +595,7 @@ class _FancyCategoryCardState extends State<_FancyCategoryCard> {
 }
 
 const _iconOptions = <IconData>[
-  // أجهزة الهاتف والاتصالات
+// أجهزة الهاتف والاتصالات
   Icons.phone_iphone,
   Icons.phone_android,
   Icons.devices_other,
@@ -601,7 +603,7 @@ const _iconOptions = <IconData>[
   Icons.headphones,
   Icons.speaker,
 
-  // أجهزة الكمبيوتر والتكنولوجيا
+// أجهزة الكمبيوتر والتكنولوجيا
   Icons.laptop,
   Icons.computer,
   Icons.desktop_windows,
@@ -613,7 +615,7 @@ const _iconOptions = <IconData>[
   Icons.usb,
   Icons.cable,
 
-  // الشبكات والاتصالات
+// الشبكات والاتصالات
   Icons.router,
   Icons.wifi,
   Icons.lan,
@@ -622,7 +624,7 @@ const _iconOptions = <IconData>[
   Icons.satellite_alt,
   Icons.satellite,
 
-  // الأجهزة المنزلية
+// الأجهزة المنزلية
   Icons.tv,
   Icons.radio,
   Icons.camera_alt,
@@ -630,7 +632,7 @@ const _iconOptions = <IconData>[
   Icons.mic,
   Icons.airplay,
 
-  // الكهرباء والإضاءة
+// الكهرباء والإضاءة
   Icons.electrical_services,
   Icons.lightbulb,
   Icons.power,
@@ -638,7 +640,7 @@ const _iconOptions = <IconData>[
   Icons.flash_on,
   Icons.battery_charging_full,
 
-  // الأجهزة المنزلية الأخرى
+// الأجهزة المنزلية الأخرى
   Icons.kitchen,
   Icons.local_laundry_service,
   Icons.ac_unit,
@@ -646,7 +648,7 @@ const _iconOptions = <IconData>[
   Icons.water_drop,
   Icons.thermostat,
 
-  // الأدوات والمعدات
+// الأدوات والمعدات
   Icons.build,
   Icons.handyman,
   Icons.settings,
@@ -654,83 +656,83 @@ const _iconOptions = <IconData>[
   Icons.precision_manufacturing,
   Icons.engineering,
 
-  // الألعاب والترفيه
+// الألعاب والترفيه
   Icons.sports_esports,
   Icons.gamepad,
   Icons.toys,
   Icons.music_note,
   Icons.movie,
 
-  // الأمن والمراقبة
+// الأمن والمراقبة
   Icons.security,
   Icons.camera_indoor,
   Icons.camera_outdoor,
   Icons.lock,
   Icons.fingerprint,
 
-  // النقل والمركبات
+// النقل والمركبات
   Icons.directions_car,
   Icons.motorcycle,
   Icons.bike_scooter,
   Icons.flight,
   Icons.train,
 
-  // الصحة والطب
+// الصحة والطب
   Icons.medical_services,
   Icons.favorite,
   Icons.local_hospital,
   Icons.healing,
   Icons.medication,
 
-  // الرياضة واللياقة
+// الرياضة واللياقة
   Icons.sports_soccer,
   Icons.sports_basketball,
   Icons.sports_tennis,
   Icons.fitness_center,
   Icons.pool,
 
-  // الطعام والشراب
+// الطعام والشراب
   Icons.restaurant,
   Icons.coffee,
   Icons.local_pizza,
   Icons.cake,
   Icons.wine_bar,
 
-  // الملابس والأزياء
+// الملابس والأزياء
   Icons.checkroom,
   Icons.diamond,
   Icons.watch,
   Icons.visibility,
   Icons.accessibility_new,
 
-  // الكتب والتعليم
+// الكتب والتعليم
   Icons.book,
   Icons.school,
   Icons.library_books,
   Icons.edit,
   Icons.calculate,
 
-  // المكتب والأعمال
+// المكتب والأعمال
   Icons.business,
   Icons.work,
   Icons.folder,
   Icons.description,
   Icons.print,
 
-  // السفر والسياحة
+// السفر والسياحة
   Icons.flight,
   Icons.hotel,
   Icons.beach_access,
   Icons.landscape,
   Icons.map,
 
-  // الحيوانات الأليفة
+// الحيوانات الأليفة
   Icons.pets,
   Icons.cruelty_free,
   Icons.grass,
   Icons.park,
 
-  // البستنة والزراعة
+// البستنة والزراعة
   Icons.local_florist,
   Icons.eco,
   Icons.agriculture,
@@ -739,35 +741,35 @@ const _iconOptions = <IconData>[
 ];
 
 const _colorOptions = <Color>[
-  // الألوان الأساسية
-  Color(0xFF1E88E5), // أزرق
-  Color(0xFF43A047), // أخضر
-  Color(0xFFF4511E), // برتقالي
-  Color(0xFF8E24AA), // بنفسجي
-  Color(0xFF00897B), // تركوازي
-  Color(0xFF6D4C41), // بني
-  Color(0xFF546E7A), // رمادي أزرق
-  Color(0xFFFFB300), // أصفر
+// ألوان احترافية لنظام المبيعات
+  Color(0xFF1976D2), // أزرق احترافي
+  Color(0xFF059669), // أخضر احترافي
+  Color(0xFFF59E0B), // برتقالي احترافي
+  Color(0xFF7C3AED), // بنفسجي احترافي
+  Color(0xFF0891B2), // تركوازي احترافي
+  Color(0xFF92400E), // بني احترافي
+  Color(0xFF475569), // رمادي أزرق احترافي
+  Color(0xFFEAB308), // أصفر احترافي
 
-  // ألوان إضافية
-  Color(0xFFE91E63), // وردي
-  Color(0xFF9C27B0), // بنفسجي فاتح
-  Color(0xFF673AB7), // بنفسجي داكن
-  Color(0xFF3F51B5), // نيلي
-  Color(0xFF2196F3), // أزرق فاتح
-  Color(0xFF00BCD4), // سماوي
-  Color(0xFF009688), // أخضر داكن
-  Color(0xFF4CAF50), // أخضر فاتح
-  Color(0xFF8BC34A), // أخضر مصفر
-  Color(0xFFCDDC39), // أصفر أخضر
-  Color(0xFFFFEB3B), // أصفر ذهبي
-  Color(0xFFFFC107), // عنبر
-  Color(0xFFFF9800), // برتقالي داكن
-  Color(0xFFFF5722), // أحمر برتقالي
-  Color(0xFF795548), // بني فاتح
-  Color(0xFF607D8B), // رمادي أزرق داكن
-  Color(0xFF9E9E9E), // رمادي
-  Color(0xFF424242), // رمادي داكن
+// ألوان إضافية احترافية
+  Color(0xFFDC2626), // أحمر احترافي
+  Color(0xFF8B5CF6), // بنفسجي فاتح احترافي
+  Color(0xFF6B21A8), // بنفسجي داكن احترافي
+  Color(0xFF3B82F6), // نيلي احترافي
+  Color(0xFF0EA5E9), // أزرق فاتح احترافي
+  Color(0xFF06B6D4), // سماوي احترافي
+  Color(0xFF10B981), // أخضر داكن احترافي
+  Color(0xFF22C55E), // أخضر فاتح احترافي
+  Color(0xFF84CC16), // أخضر مصفر احترافي
+  Color(0xFFA3E635), // أصفر أخضر احترافي
+  Color(0xFFFDE047), // أصفر ذهبي احترافي
+  Color(0xFFF59E0B), // عنبر احترافي
+  Color(0xFFF97316), // برتقالي داكن احترافي
+  Color(0xFFEF4444), // أحمر برتقالي احترافي
+  Color(0xFFA16207), // بني فاتح احترافي
+  Color(0xFF64748B), // رمادي أزرق داكن احترافي
+  Color(0xFF94A3B8), // رمادي احترافي
+  Color(0xFF374151), // رمادي داكن احترافي
 ];
 
 void _showCategoryProductsDialog(

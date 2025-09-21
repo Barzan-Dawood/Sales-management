@@ -1021,7 +1021,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             'إضافة منتج',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          backgroundColor: Colors.blue.shade600,
+          backgroundColor: Color(0xFF1976D2), // Professional Blue
           foregroundColor: Colors.white,
           elevation: 8,
           extendedPadding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1169,7 +1169,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Colors.red,
+            backgroundColor: Color(0xFFDC2626), // Professional Red
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 5),
           ),
@@ -1519,7 +1519,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             const SnackBar(
                               content: Text(
                                   'الباركود موجود بالفعل، يرجى استخدام باركود آخر'),
-                              backgroundColor: Colors.red,
+                              backgroundColor:
+                                  Color(0xFFDC2626), // Professional Red
                             ),
                           );
                         }
@@ -1534,7 +1535,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('خطأ: ${e.toString()}'),
-                        backgroundColor: Colors.red,
+                        backgroundColor: Color(0xFFDC2626), // Professional Red
                       ),
                     );
                   }
@@ -1594,7 +1595,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         width: 300,
                         height: 120,
                         color: Colors.black,
-                        backgroundColor: Colors.white,
+                        backgroundColor:
+                            Color(0xFFFFFFFF), // Professional White
                         drawText: false,
                       ),
                       const SizedBox(height: 16),

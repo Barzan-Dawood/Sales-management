@@ -10,10 +10,10 @@ class StoreInfo {
   static const String logoAssetPath = 'assets/images/office.png';
 
   // معلومات المحل الأساسية
-  static const String shopName = '(ROJ NET)';
+  static const String shopName = 'مكتب جاسم نت';
   static const String shopDescription = 'لخدمات الانترنت والهواتف';
-  static const String phone = '07512277690 - 07853203919';
-  static const String address = 'شنكال - سايدين حي الشهداء';
+  static const String phone = '07508880664 - 07828356553';
+  static const String address = 'شنكال - سوق القديم';
 
   // معلومات إضافية للمحل
   static const String email = 'barzan.dawood.dev@gmail.com';

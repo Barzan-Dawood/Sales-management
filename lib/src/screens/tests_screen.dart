@@ -34,22 +34,32 @@ class _TestsScreenState extends State<TestsScreen>
       appBar: AppBar(
         title: const Text(
           'اختبارات النظام',
-          style: TextStyle(color: Colors.blue),
+          style: TextStyle(color: Color(0xFF1976D2)), // Professional Blue
         ),
-        backgroundColor: isDark ? scheme.surface : Colors.white,
-        foregroundColor: isDark ? scheme.onSurface : Colors.black,
+        backgroundColor:
+            isDark ? scheme.surface : Color(0xFFFFFFFF), // Professional White
+        foregroundColor: isDark
+            ? scheme.onSurface
+            : Color(0xFF1E293B), // Professional Dark Gray
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Container(
-            color: isDark ? scheme.surface : Colors.white,
+            color: isDark
+                ? scheme.surface
+                : Color(0xFFFFFFFF), // Professional White
             child: TabBar(
               controller: _tabController,
-              indicatorColor: isDark ? scheme.primary : Colors.black,
+              indicatorColor: isDark
+                  ? scheme.primary
+                  : Color(0xFF1976D2), // Professional Blue
               indicatorWeight: 3,
               indicatorSize: TabBarIndicatorSize.label,
-              labelColor: isDark ? scheme.primary : Colors.black,
-              unselectedLabelColor:
-                  isDark ? scheme.onSurface.withOpacity(0.7) : Colors.grey,
+              labelColor: isDark
+                  ? scheme.primary
+                  : Color(0xFF1E293B), // Professional Dark Gray
+              unselectedLabelColor: isDark
+                  ? scheme.onSurface.withOpacity(0.7)
+                  : Color(0xFF64748B), // Professional Gray
               labelStyle:
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               unselectedLabelStyle:
@@ -137,7 +147,7 @@ class _TestsScreenState extends State<TestsScreen>
                 child: _buildTestButton(
                   'جميع الاختبارات',
                   Icons.all_inclusive,
-                  Colors.green,
+                  Color(0xFF059669), // Professional Green
                   _runAllTests,
                 ),
               ),
@@ -146,7 +156,7 @@ class _TestsScreenState extends State<TestsScreen>
                 child: _buildTestButton(
                   'قاعدة البيانات',
                   Icons.storage,
-                  Colors.blue,
+                  Color(0xFF1976D2), // Professional Blue
                   _runDatabaseTests,
                 ),
               ),
@@ -155,7 +165,7 @@ class _TestsScreenState extends State<TestsScreen>
                 child: _buildTestButton(
                   'واجهة المستخدم',
                   Icons.widgets,
-                  Colors.orange,
+                  Color(0xFFF59E0B), // Professional Orange
                   _runWidgetTests,
                 ),
               ),
@@ -164,7 +174,7 @@ class _TestsScreenState extends State<TestsScreen>
                 child: _buildTestButton(
                   'الخدمات',
                   Icons.build,
-                  Colors.purple,
+                  Color(0xFF7C3AED), // Professional Purple
                   _runServiceTests,
                 ),
               ),
@@ -252,15 +262,15 @@ class _TestsScreenState extends State<TestsScreen>
 
     switch (result.status) {
       case TestStatus.passed:
-        statusColor = Colors.green;
+        statusColor = Color(0xFF059669); // Professional Green
         statusIcon = Icons.check_circle;
         break;
       case TestStatus.failed:
-        statusColor = Colors.red;
+        statusColor = Color(0xFFDC2626); // Professional Red
         statusIcon = Icons.error;
         break;
       case TestStatus.skipped:
-        statusColor = Colors.grey;
+        statusColor = Color(0xFF64748B); // Professional Gray
         statusIcon = Icons.skip_next;
         break;
     }
@@ -495,7 +505,7 @@ class _TestsScreenState extends State<TestsScreen>
             child: Text(
               count.toString(),
               style: const TextStyle(
-                color: Colors.white,
+                color: Color(0xFFFFFFFF), // Professional White
                 fontSize: 8,
                 fontWeight: FontWeight.bold,
               ),
@@ -531,25 +541,25 @@ class _TestsScreenState extends State<TestsScreen>
                     '1. اختبار جميع الاختبارات',
                     'يختبر جميع جوانب التطبيق ويستغرق وقتاً أطول',
                     Icons.all_inclusive,
-                    Colors.green,
+                    Color(0xFF059669), // Professional Green
                   ),
                   _buildHelpItem(
                     '2. اختبار قاعدة البيانات',
                     'يختبر سلامة وهيكل قاعدة البيانات',
                     Icons.storage,
-                    Colors.blue,
+                    Color(0xFF1976D2), // Professional Blue
                   ),
                   _buildHelpItem(
                     '3. اختبار واجهة المستخدم',
                     'يختبر تفاعل المستخدم مع الواجهة',
                     Icons.widgets,
-                    Colors.orange,
+                    Color(0xFFF59E0B), // Professional Orange
                   ),
                   _buildHelpItem(
                     '4. اختبار الخدمات',
                     'يختبر خدمات الطباعة والنسخ الاحتياطي',
                     Icons.build,
-                    Colors.purple,
+                    Color(0xFF7C3AED), // Professional Purple
                   ),
                 ],
               ),

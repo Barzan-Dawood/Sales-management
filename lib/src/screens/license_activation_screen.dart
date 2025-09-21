@@ -280,7 +280,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                   Expanded(child: Text(result.message)),
                 ],
               ),
-              backgroundColor: Colors.green,
+              backgroundColor: Color(0xFF059669), // Professional Green
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 3),
             ),
@@ -305,7 +305,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                   Expanded(child: Text(result.message)),
                 ],
               ),
-              backgroundColor: Colors.red,
+              backgroundColor: Color(0xFFDC2626), // Professional Red
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 4),
               action: SnackBarAction(

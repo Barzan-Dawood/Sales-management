@@ -10,7 +10,7 @@ import '../utils/invoice_pdf.dart';
 import '../utils/dark_mode_utils.dart';
 
 class PrintService {
-  static const String _defaultPageFormat = '80';
+  static const String _defaultPageFormat = 'A4';
   static const bool _defaultShowLogo = true;
   static const bool _defaultShowBarcode = true;
 

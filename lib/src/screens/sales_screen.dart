@@ -2345,7 +2345,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                       ScaffoldMessenger.of(context).showSnackBar(
                                                                                         SnackBar(
                                                                                           content: Text('تم تحديث إعدادات الطباعة: ${_getPrintTypeDisplayName(result['pageFormat'] as String)}'),
-                                                                                          backgroundColor: Colors.blue,
+                                                                                          backgroundColor: Color(0xFF1976D2), // Professional Blue
                                                                                           duration: const Duration(seconds: 2),
                                                                                         ),
                                                                                       );
@@ -2385,7 +2385,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                       ScaffoldMessenger.of(context).showSnackBar(
                                                                                         const SnackBar(
                                                                                           content: Text('تم طباعة الفاتورة بنجاح'),
-                                                                                          backgroundColor: Colors.green,
+                                                                                          backgroundColor: Color(0xFF059669), // Professional Green
                                                                                           duration: Duration(seconds: 2),
                                                                                         ),
                                                                                       );
@@ -2395,7 +2395,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                       ScaffoldMessenger.of(context).showSnackBar(
                                                                                         SnackBar(
                                                                                           content: Text('خطأ في الطباعة: ${e.toString()}'),
-                                                                                          backgroundColor: Colors.red,
+                                                                                          backgroundColor: Color(0xFFDC2626), // Professional Red
                                                                                           duration: const Duration(seconds: 3),
                                                                                         ),
                                                                                       );
@@ -2448,7 +2448,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                     ScaffoldMessenger.of(context).showSnackBar(
                                                                                       const SnackBar(
                                                                                         content: Text('تم البيع بنجاح'),
-                                                                                        backgroundColor: Colors.green,
+                                                                                        backgroundColor: Color(0xFF059669), // Professional Green
                                                                                         duration: Duration(seconds: 2),
                                                                                       ),
                                                                                     );
@@ -2457,7 +2457,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                 icon: const Icon(Icons.check, size: 20),
                                                                                 label: const Text('تأكيد البيع'),
                                                                                 style: ElevatedButton.styleFrom(
-                                                                                  backgroundColor: Colors.purple.shade600,
+                                                                                  backgroundColor: Color(0xFF7C3AED), // Professional Purple
                                                                                   foregroundColor: Colors.white,
                                                                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                                                                   shape: RoundedRectangleBorder(
@@ -2506,7 +2506,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                               ScaffoldMessenger.of(context).showSnackBar(
                                                                                 const SnackBar(
                                                                                   content: Text('تم العودة إلى السلة - يمكنك إضافة منتجات جديدة أو تعديل الكميات'),
-                                                                                  backgroundColor: Colors.blue,
+                                                                                  backgroundColor: Color(0xFF1976D2), // Professional Blue
                                                                                   duration: Duration(seconds: 3),
                                                                                 ),
                                                                               );
@@ -2517,7 +2517,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                 const Text('العودة إلى السلة'),
                                                                             style:
                                                                                 ElevatedButton.styleFrom(
-                                                                              backgroundColor: Colors.orange.shade600,
+                                                                              backgroundColor: Color(0xFFF59E0B), // Professional Orange
                                                                               foregroundColor: Colors.white,
                                                                               padding: const EdgeInsets.symmetric(vertical: 14),
                                                                               shape: RoundedRectangleBorder(
@@ -2596,7 +2596,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                                 Navigator.of(context).pop(true);
                                                                                               },
                                                                                               style: ElevatedButton.styleFrom(
-                                                                                                backgroundColor: Colors.red.shade600,
+                                                                                                backgroundColor: Color(0xFFDC2626), // Professional Red
                                                                                                 foregroundColor: Colors.white,
                                                                                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                                                                                 shape: RoundedRectangleBorder(
@@ -2679,7 +2679,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                                                     const SnackBar(
                                                                                       content: Text('تم إلغاء العملية بالكامل وإرجاع جميع المنتجات إلى المخزن'),
-                                                                                      backgroundColor: Colors.green,
+                                                                                      backgroundColor: Color(0xFF059669), // Professional Green
                                                                                       duration: Duration(seconds: 3),
                                                                                     ),
                                                                                   );
@@ -2688,7 +2688,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                                                     SnackBar(
                                                                                       content: Text('خطأ في إلغاء العملية: $e'),
-                                                                                      backgroundColor: Colors.red,
+                                                                                      backgroundColor: Color(0xFFDC2626), // Professional Red
                                                                                       duration: Duration(seconds: 3),
                                                                                     ),
                                                                                   );
@@ -3305,7 +3305,7 @@ class _SalesScreenState extends State<SalesScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم طباعة الفاتورة بنجاح مع الإعدادات المختارة'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF059669), // Professional Green
           duration: Duration(seconds: 2),
         ),
       );

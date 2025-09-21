@@ -1,25 +1,32 @@
 import 'package:flutter/material.dart';
+import 'app_colors.dart';
 
 class AppThemes {
-  // Light Theme Colors
-  static const Color _lightPrimaryColor = Color(0xFF6750A4);
-  static const Color _lightBackgroundColor = Color(0xFFFEFBFF);
-  static const Color _lightSurfaceColor = Color(0xFFFFFBFE);
+  // Light Theme Colors - Professional Sales System Colors
+  static const Color _lightPrimaryColor =
+      Color(0xFF1976D2); // Professional Blue
+  static const Color _lightBackgroundColor =
+      Color(0xFFF8FAFC); // Light Gray Background
+  static const Color _lightSurfaceColor =
+      Color(0xFFFFFFFF); // Pure White Surface
   static const Color _lightOnPrimaryColor = Color(0xFFFFFFFF);
-  static const Color _lightOnBackgroundColor = Color(0xFF1C1B1F);
-  static const Color _lightOnSurfaceColor = Color(0xFF1C1B1F);
-  static const Color _lightErrorColor = Color(0xFFBA1A1A);
+  static const Color _lightOnBackgroundColor =
+      Color(0xFF1E293B); // Dark Gray Text
+  static const Color _lightOnSurfaceColor = Color(0xFF1E293B); // Dark Gray Text
+  static const Color _lightErrorColor = Color(0xFFDC2626); // Professional Red
   static const Color _lightOnErrorColor = Color(0xFFFFFFFF);
 
-  // Dark Theme Colors
-  static const Color _darkPrimaryColor = Color(0xFFD0BCFF);
-  static const Color _darkBackgroundColor = Color(0xFF141218);
-  static const Color _darkSurfaceColor = Color(0xFF1C1B1F);
-  static const Color _darkOnPrimaryColor = Color(0xFF381E72);
-  static const Color _darkOnBackgroundColor = Color(0xFFE6E1E5);
-  static const Color _darkOnSurfaceColor = Color(0xFFE6E1E5);
-  static const Color _darkErrorColor = Color(0xFFFFB4AB);
-  static const Color _darkOnErrorColor = Color(0xFF690005);
+  // Dark Theme Colors - Professional Sales System Colors
+  static const Color _darkPrimaryColor = Color(0xFF3B82F6); // Bright Blue
+  static const Color _darkBackgroundColor = Color(0xFF0F172A); // Dark Navy
+  static const Color _darkSurfaceColor = Color(0xFF1E293B); // Dark Gray Surface
+  static const Color _darkOnPrimaryColor =
+      Color(0xFF0F172A); // Dark Text on Primary
+  static const Color _darkOnBackgroundColor =
+      Color(0xFFF1F5F9); // Light Gray Text
+  static const Color _darkOnSurfaceColor = Color(0xFFF1F5F9); // Light Gray Text
+  static const Color _darkErrorColor = Color(0xFFEF4444); // Bright Red
+  static const Color _darkOnErrorColor = Color(0xFF0F172A);
 
   // Light Theme
   static ThemeData get lightTheme {
@@ -28,7 +35,7 @@ class AppThemes {
       brightness: Brightness.light,
       primary: _lightPrimaryColor,
       onPrimary: _lightOnPrimaryColor,
-      secondary: const Color(0xFF625B71),
+      secondary: const Color(0xFF059669), // Professional Green
       onSecondary: const Color(0xFFFFFFFF),
       error: _lightErrorColor,
       onError: _lightOnErrorColor,
@@ -135,8 +142,8 @@ class AppThemes {
       brightness: Brightness.dark,
       primary: _darkPrimaryColor,
       onPrimary: _darkOnPrimaryColor,
-      secondary: const Color(0xFFCCC2DC),
-      onSecondary: const Color(0xFF332D41),
+      secondary: const Color(0xFF10B981), // Bright Green
+      onSecondary: const Color(0xFF0F172A),
       error: _darkErrorColor,
       onError: _darkOnErrorColor,
       background: _darkBackgroundColor,
@@ -240,29 +247,80 @@ class AppThemes {
     return brightness == Brightness.dark ? darkTheme : lightTheme;
   }
 
-  // Custom colors for specific UI elements
-  static const Color lightSidebarGradientStart = Color(0xFF8E24AA);
-  static const Color lightSidebarGradientMiddle = Color(0xFF7B1FA2);
-  static const Color lightSidebarGradientEnd = Color(0xFF6A1B9A);
+  // Custom colors for specific UI elements - Professional Sales System
+  static const Color lightSidebarGradientStart =
+      Color(0xFF1976D2); // Professional Blue
+  static const Color lightSidebarGradientMiddle =
+      Color(0xFF1565C0); // Darker Blue
+  static const Color lightSidebarGradientEnd = Color(0xFF0D47A1); // Dark Blue
 
-  static const Color darkSidebarGradientStart = Color(0xFF2D2438);
-  static const Color darkSidebarGradientMiddle = Color(0xFF3A2F4A);
-  static const Color darkSidebarGradientEnd = Color(0xFF4A3A5C);
+  static const Color darkSidebarGradientStart = Color(0xFF1E293B); // Dark Gray
+  static const Color darkSidebarGradientMiddle =
+      Color(0xFF334155); // Medium Gray
+  static const Color darkSidebarGradientEnd = Color(0xFF475569); // Light Gray
 
-  // Common colors
-  static const Color successGreen = Color(0xFF4CAF50);
-  static const Color warningOrange = Color(0xFFFF9800);
-  static const Color errorRed = Color(0xFFF44336);
-  static const Color infoBlue = Color(0xFF2196F3);
+  // Professional Sales System Colors
+  static const Color successGreen = Color(0xFF059669); // Professional Green
+  static const Color warningOrange = Color(0xFFF59E0B); // Professional Orange
+  static const Color errorRed = Color(0xFFDC2626); // Professional Red
+  static const Color infoBlue = Color(0xFF3B82F6); // Professional Blue
+
+  // Additional Professional Colors
+  static const Color primaryBlue = Color(0xFF1976D2); // Primary Blue
+  static const Color secondaryGreen = Color(0xFF10B981); // Secondary Green
+  static const Color accentPurple = Color(0xFF7C3AED); // Accent Purple
+  static const Color neutralGray = Color(0xFF64748B); // Neutral Gray
+  static const Color lightGray = Color(0xFF94A3B8); // Light Gray
+  static const Color darkGray = Color(0xFF374151); // Dark Gray
+  static const Color white = Color(0xFFFFFFFF); // Pure White
+  static const Color black = Color(0xFF000000); // Pure Black
 }
 
 // Custom colors for specific UI elements
 class AppColors {
-  // Common colors (kept for compatibility; prefer ColorScheme)
-  static const Color successGreen = Color(0xFF4CAF50);
-  static const Color warningOrange = Color(0xFFFF9800);
-  static const Color errorRed = Color(0xFFF44336);
-  static const Color infoBlue = Color(0xFF2196F3);
+  // Professional Sales System Colors (kept for compatibility; prefer ColorScheme)
+  static const Color successGreen = Color(0xFF059669); // Professional Green
+  static const Color warningOrange = Color(0xFFF59E0B); // Professional Orange
+  static const Color errorRed = Color(0xFFDC2626); // Professional Red
+  static const Color infoBlue = Color(0xFF3B82F6); // Professional Blue
+
+  // Additional Professional Colors
+  static const Color primaryBlue = Color(0xFF1976D2); // Primary Blue
+  static const Color secondaryGreen = Color(0xFF10B981); // Secondary Green
+  static const Color accentPurple = Color(0xFF7C3AED); // Accent Purple
+  static const Color neutralGray = Color(0xFF64748B); // Neutral Gray
+  static const Color lightGray = Color(0xFF94A3B8); // Light Gray
+  static const Color darkGray = Color(0xFF374151); // Dark Gray
+  static const Color white = Color(0xFFFFFFFF); // Pure White
+  static const Color black = Color(0xFF000000); // Pure Black
+
+  // Status Colors
+  static const Color statusSuccess = Color(0xFF059669); // Success Green
+  static const Color statusWarning = Color(0xFFF59E0B); // Warning Orange
+  static const Color statusError = Color(0xFFDC2626); // Error Red
+  static const Color statusInfo = Color(0xFF3B82F6); // Info Blue
+
+  // Background Colors
+  static const Color backgroundLight = Color(0xFFF8FAFC); // Light Background
+  static const Color backgroundDark = Color(0xFF0F172A); // Dark Background
+  static const Color surfaceLight = Color(0xFFFFFFFF); // Light Surface
+  static const Color surfaceDark = Color(0xFF1E293B); // Dark Surface
+
+  // Text Colors
+  static const Color textPrimary = Color(0xFF1E293B); // Primary Text
+  static const Color textSecondary = Color(0xFF64748B); // Secondary Text
+  static const Color textTertiary = Color(0xFF94A3B8); // Tertiary Text
+  static const Color textInverse = Color(0xFFFFFFFF); // Inverse Text
+
+  // Border Colors
+  static const Color borderLight = Color(0xFFE2E8F0); // Light Border
+  static const Color borderDark = Color(0xFF334155); // Dark Border
+  static const Color borderFocus = Color(0xFF1976D2); // Focus Border
+
+  // Shadow Colors
+  static const Color shadowLight = Color(0x1A000000); // Light Shadow
+  static const Color shadowDark = Color(0x4D000000); // Dark Shadow
+  static const Color shadowMedium = Color(0x33000000); // Medium Shadow
 }
 
 class AppGradients extends ThemeExtension<AppGradients> {
@@ -277,14 +335,14 @@ class AppGradients extends ThemeExtension<AppGradients> {
   });
 
   const AppGradients.light()
-      : sidebarStart = const Color(0xFF8E24AA),
-        sidebarMiddle = const Color(0xFF7B1FA2),
-        sidebarEnd = const Color(0xFF6A1B9A);
+      : sidebarStart = const Color(0xFF1976D2), // Professional Blue
+        sidebarMiddle = const Color(0xFF1565C0), // Darker Blue
+        sidebarEnd = const Color(0xFF0D47A1); // Dark Blue
 
   const AppGradients.dark()
-      : sidebarStart = const Color(0xFF2D2438),
-        sidebarMiddle = const Color(0xFF3A2F4A),
-        sidebarEnd = const Color(0xFF4A3A5C);
+      : sidebarStart = const Color(0xFF1E293B), // Dark Gray
+        sidebarMiddle = const Color(0xFF334155), // Medium Gray
+        sidebarEnd = const Color(0xFF475569); // Light Gray
 
   @override
   AppGradients copyWith({

@@ -66,7 +66,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                         color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundColor: Color(0xFFFFFFFF)
+                        .withOpacity(0.2), // Professional White with opacity
                     foregroundColor: Colors.white,
                     elevation: 0,
                     padding:
@@ -384,7 +385,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                   _ActionButton(
                     icon: Icons.delete_outline_rounded,
                     color: Colors.white,
-                    backgroundColor: Colors.red.shade500,
+                    backgroundColor: Color(0xFFDC2626), // Professional Red
                     onTap: onDelete,
                     tooltip: 'حذف',
                   ),
@@ -393,7 +394,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                     _ActionButton(
                       icon: Icons.qr_code_2_rounded,
                       color: Colors.white,
-                      backgroundColor: Colors.green.shade500,
+                      backgroundColor: Color(0xFF059669), // Professional Green
                       onTap: onShowBarcode,
                       tooltip: 'عرض الباركود',
                     ),
@@ -1101,7 +1102,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                         width: 300,
                         height: 120,
                         color: Colors.black,
-                        backgroundColor: Colors.white,
+                        backgroundColor:
+                            Color(0xFFFFFFFF), // Professional White
                         drawText: false,
                       ),
                       const SizedBox(height: 16),

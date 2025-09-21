@@ -50,13 +50,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           foregroundColor: Theme.of(context).colorScheme.onSurface,
           elevation: 0,
           centerTitle: true,
-          leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
+          automaticallyImplyLeading: false,
         ),
         body: Container(
           color: Theme.of(context).colorScheme.background,
@@ -123,20 +117,6 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Image.asset(
-              'assets/images/office.png',
-              width: 32,
-              height: 32,
-              color: Theme.of(context).colorScheme.onPrimary,
-            ),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,6 +374,16 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
             trailing: Icons.arrow_forward_ios,
             onTap: () {
               _showSupportDialog();
+            },
+          ),
+          _buildDivider(),
+          _buildSettingsTile(
+            icon: Icons.web,
+            title: 'الموقع الإلكتروني',
+            subtitle: 'barzandawood.com - زيارة موقعنا الرسمي',
+            trailing: Icons.arrow_forward_ios,
+            onTap: () {
+              _openWebsite();
             },
           ),
         ],
@@ -831,6 +821,16 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                   color: Theme.of(context).colorScheme.secondary,
                   onTap: () => _copyToClipboard(store.city),
                 ),
+                const SizedBox(height: 8),
+
+                // الموقع الإلكتروني
+                _buildContactItem(
+                  icon: Icons.web,
+                  title: 'الموقع الإلكتروني',
+                  subtitle: 'barzandawood.com',
+                  color: Theme.of(context).colorScheme.primary,
+                  onTap: () => _openWebsite(),
+                ),
                 const SizedBox(height: 16),
 
                 // معلومات إضافية
@@ -1141,7 +1141,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
         builder: (context) => AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.phone, color: Colors.green.shade600),
+              Icon(Icons.phone, color: Color(0xFF059669)), // Professional Green
               const SizedBox(width: 8),
               const Text('فتح الواتساب'),
             ],
@@ -1161,7 +1161,8 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
               // فتح الواتساب
               ListTile(
-                leading: Icon(Icons.phone, color: Colors.green.shade600),
+                leading: Icon(Icons.phone,
+                    color: Color(0xFF059669)), // Professional Green
                 title: const Text('فتح الواتساب'),
                 subtitle: const Text('فتح تطبيق الواتساب'),
                 onTap: () async {
@@ -1172,7 +1173,8 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
 
               // نسخ الرقم
               ListTile(
-                leading: Icon(Icons.copy, color: Colors.blue.shade600),
+                leading: Icon(Icons.copy,
+                    color: Color(0xFF1976D2)), // Professional Blue
                 title: const Text('نسخ الرقم'),
                 subtitle: const Text('نسخ رقم الواتساب إلى الحافظة'),
                 onTap: () async {
@@ -1422,6 +1424,121 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
       context: context,
       builder: (context) => const DatabaseSettingsDialog(),
     );
+  }
+
+  Future<void> _openWebsite() async {
+    try {
+      // عرض نافذة اختيار العمل
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.web, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              const Text('فتح الموقع الإلكتروني'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'اختر طريقة فتح الموقع:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // فتح الموقع في المتصفح
+              ListTile(
+                leading: Icon(Icons.open_in_browser,
+                    color: Theme.of(context).colorScheme.primary),
+                title: const Text('فتح في المتصفح'),
+                subtitle: const Text('فتح الموقع في المتصفح الافتراضي'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _launchWebsite();
+                },
+              ),
+
+              // نسخ رابط الموقع
+              ListTile(
+                leading: Icon(Icons.copy,
+                    color: Theme.of(context).colorScheme.primary),
+                title: const Text('نسخ الرابط'),
+                subtitle: const Text('نسخ رابط الموقع إلى الحافظة'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _copyToClipboard('https://barzandawood.com');
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في فتح الموقع الإلكتروني: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchWebsite() async {
+    try {
+      final Uri websiteUri = Uri.parse('https://barzandawood.com');
+
+      // محاولة فتح الموقع في المتصفح
+      if (await canLaunchUrl(websiteUri)) {
+        await launchUrl(websiteUri, mode: LaunchMode.externalApplication);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('تم فتح الموقع الإلكتروني في المتصفح'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // إذا فشل فتح المتصفح، نسخ الرابط
+        await _copyToClipboard('https://barzandawood.com');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('تم نسخ رابط الموقع إلى الحافظة'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // في حالة الفشل، نسخ الرابط
+      await _copyToClipboard('https://barzandawood.com');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('تم نسخ رابط الموقع إلى الحافظة'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _showThemeModeDialog(ThemeProvider themeProvider) async {

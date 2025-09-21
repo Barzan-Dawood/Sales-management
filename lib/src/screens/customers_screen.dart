@@ -316,24 +316,24 @@ class _CustomersScreenState extends State<CustomersScreen> {
       ),
     );
     if (ok != true) return;
-    
+
     try {
       final deletedRows = await db.deleteCustomer(id);
       if (!mounted) return;
-      
+
       if (deletedRows > 0) {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم حذف العميل بنجاح'),
-            backgroundColor: Colors.green,
+            backgroundColor: Color(0xFF059669), // Professional Green
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('لم يتم العثور على العميل أو حدث خطأ في الحذف'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Color(0xFFF59E0B), // Professional Orange
           ),
         );
       }
@@ -347,11 +347,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
       } else {
         errorMessage = 'خطأ في حذف العميل: ${e.toString()}';
       }
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
-          backgroundColor: Colors.red,
+          backgroundColor: Color(0xFFDC2626), // Professional Red
         ),
       );
     }

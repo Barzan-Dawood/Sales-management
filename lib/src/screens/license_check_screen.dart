@@ -460,13 +460,15 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                           ? 'تم إلغاء تفعيل الترخيص بنجاح'
                           : 'فشل في إلغاء تفعيل الترخيص',
                     ),
-                    backgroundColor: success ? Colors.green : Colors.red,
+                    backgroundColor: success
+                        ? Color(0xFF059669)
+                        : Color(0xFFDC2626), // Professional Green/Red
                   ),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Color(0xFFDC2626), // Professional Red
               foregroundColor: Colors.white,
             ),
             child: const Text('تأكيد'),
@@ -515,14 +517,16 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                         ),
                       ],
                     ),
-                    backgroundColor: success ? Colors.green : Colors.red,
+                    backgroundColor: success
+                        ? Color(0xFF059669)
+                        : Color(0xFFDC2626), // Professional Green/Red
                     duration: const Duration(seconds: 3),
                   ),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: Color(0xFFF59E0B), // Professional Orange
               foregroundColor: Colors.white,
             ),
             child: const Text('تأكيد'),
@@ -902,13 +906,15 @@ class _LicenseCheckDialogState extends State<LicenseCheckDialog> {
                           ? 'تم إلغاء تفعيل الترخيص بنجاح'
                           : 'فشل في إلغاء تفعيل الترخيص',
                     ),
-                    backgroundColor: success ? Colors.green : Colors.red,
+                    backgroundColor: success
+                        ? Color(0xFF059669)
+                        : Color(0xFFDC2626), // Professional Green/Red
                   ),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Color(0xFFDC2626), // Professional Red
               foregroundColor: Colors.white,
             ),
             child: const Text('تأكيد'),
@@ -957,14 +963,16 @@ class _LicenseCheckDialogState extends State<LicenseCheckDialog> {
                         ),
                       ],
                     ),
-                    backgroundColor: success ? Colors.green : Colors.red,
+                    backgroundColor: success
+                        ? Color(0xFF059669)
+                        : Color(0xFFDC2626), // Professional Green/Red
                     duration: const Duration(seconds: 3),
                   ),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: Color(0xFFF59E0B), // Professional Orange
               foregroundColor: Colors.white,
             ),
             child: const Text('تأكيد'),

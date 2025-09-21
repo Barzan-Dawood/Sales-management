@@ -359,14 +359,14 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم حذف المورد بنجاح'),
-            backgroundColor: Colors.green,
+            backgroundColor: Color(0xFF059669), // Professional Green
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('لم يتم العثور على المورد أو حدث خطأ في الحذف'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Color(0xFFF59E0B), // Professional Orange
           ),
         );
       }
@@ -384,7 +384,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
-          backgroundColor: Colors.red,
+          backgroundColor: Color(0xFFDC2626), // Professional Red
         ),
       );
     }
