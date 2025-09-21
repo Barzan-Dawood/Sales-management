@@ -1021,59 +1021,83 @@ class _SalesScreenState extends State<SalesScreen> {
                                                   ),
                                                 ),
 
-                                                // Add to Cart Button
-                                                GestureDetector(
-                                                  onTap: isOutOfStock
-                                                      ? null
-                                                      : () => _addToCart(p),
-                                                  child: Container(
-                                                    padding:
-                                                        const EdgeInsets.all(8),
-                                                    decoration: BoxDecoration(
-                                                      color: isOutOfStock
-                                                          ? Colors.grey.shade300
-                                                          : (_addedToCartProducts
-                                                                  .contains(
-                                                                      p['id'])
-                                                              ? Colors.purple
-                                                                  .shade600
-                                                              : Colors.green
-                                                                  .shade600),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              20),
-                                                      boxShadow: isOutOfStock
-                                                          ? null
-                                                          : [
-                                                              BoxShadow(
-                                                                color: (_addedToCartProducts
-                                                                        .contains(p[
-                                                                            'id'])
-                                                                    ? Colors
-                                                                        .purple
-                                                                        .shade200
-                                                                    : Colors
-                                                                        .green
-                                                                        .shade200),
-                                                                blurRadius: 4,
-                                                                offset:
-                                                                    const Offset(
-                                                                        0, 2),
-                                                              ),
-                                                            ],
-                                                    ),
-                                                    child: Icon(
+                                                // Add to Cart Button - Enhanced Professional Design
+                                                SizedBox(
+                                                  height: 40,
+                                                  child: ElevatedButton.icon(
+                                                    onPressed: isOutOfStock
+                                                        ? null
+                                                        : () => _addToCart(p),
+                                                    icon: Icon(
                                                       isOutOfStock
                                                           ? Icons.block
                                                           : _addedToCartProducts
                                                                   .contains(
                                                                       p['id'])
-                                                              ? Icons.check
-                                                              : Icons.add,
-                                                      color: isOutOfStock
-                                                          ? Colors.grey.shade600
-                                                          : Colors.white,
-                                                      size: 15,
+                                                              ? Icons
+                                                                  .check_circle
+                                                              : Icons
+                                                                  .add_shopping_cart,
+                                                      size: 18,
+                                                    ),
+                                                    label: Text(
+                                                      isOutOfStock
+                                                          ? 'نفد المخزون'
+                                                          : _addedToCartProducts
+                                                                  .contains(
+                                                                      p['id'])
+                                                              ? 'تم الإضافة'
+                                                              : 'أضف للسلة',
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        letterSpacing: 0.5,
+                                                      ),
+                                                    ),
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      backgroundColor:
+                                                          isOutOfStock
+                                                              ? Color(
+                                                                  0xFF64748B) // Professional Gray
+                                                              : (_addedToCartProducts
+                                                                      .contains(p[
+                                                                          'id'])
+                                                                  ? Color(
+                                                                      0xFF7C3AED) // Professional Purple
+                                                                  : Color(
+                                                                      0xFF059669)), // Professional Green
+                                                      foregroundColor:
+                                                          Colors.white,
+                                                      elevation:
+                                                          isOutOfStock ? 0 : 3,
+                                                      shadowColor: isOutOfStock
+                                                          ? null
+                                                          : (_addedToCartProducts
+                                                                  .contains(
+                                                                      p['id'])
+                                                              ? Color(0xFF7C3AED)
+                                                                  .withOpacity(
+                                                                      0.4)
+                                                              : Color(0xFF059669)
+                                                                  .withOpacity(
+                                                                      0.4)),
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
+                                                      ),
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 16,
+                                                        vertical: 10,
+                                                      ),
+                                                      animationDuration:
+                                                          const Duration(
+                                                              milliseconds:
+                                                                  200),
                                                     ),
                                                   ),
                                                 ),
