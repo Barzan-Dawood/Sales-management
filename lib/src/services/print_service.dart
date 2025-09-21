@@ -8,6 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../utils/invoice_pdf.dart';
 import '../utils/dark_mode_utils.dart';
+import 'store_info_service.dart';
 
 class PrintService {
   static const String _defaultPageFormat = 'A4';
@@ -514,10 +515,14 @@ class PrintService {
         return false;
       }
 
+      // الحصول على معلومات المتجر المبسطة
+      final storeInfo = await StoreInfoService.getPrintInfo();
+
       final pdfData = await InvoicePdf.generate(
-        shopName: shopName,
-        phone: phone,
-        address: address,
+        shopName: storeInfo['store_name'] ?? shopName,
+        phone: storeInfo['phone'] ?? phone,
+        address: storeInfo['address'] ?? address,
+        description: storeInfo['description'], // وصف المحل
         items: items,
         paymentType: paymentType,
         customerName: customerName,

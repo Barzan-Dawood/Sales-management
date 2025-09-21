@@ -109,6 +109,7 @@ class InvoicePdf {
     required String shopName,
     required String? phone,
     required String? address,
+    String? description, // وصف المحل
     required List<Map<String, Object?>> items,
     required String paymentType,
     String? customerName,
@@ -151,6 +152,7 @@ class InvoicePdf {
         shopName,
         phone,
         address,
+        description,
         finalInvoiceNumber,
         date,
         paymentType,
@@ -175,6 +177,7 @@ class InvoicePdf {
       String shopName,
       String? phone,
       String? address,
+      String? description,
       String invoiceNumber,
       String date,
       String paymentType,
@@ -197,6 +200,7 @@ class InvoicePdf {
           shopName,
           phone,
           address,
+          description,
           invoiceNumber,
           date,
           customerName,
@@ -216,6 +220,7 @@ class InvoicePdf {
         shopName,
         phone,
         address,
+        description,
         invoiceNumber,
         date,
         paymentType,
@@ -237,6 +242,7 @@ class InvoicePdf {
       String shopName,
       String? phone,
       String? address,
+      String? description,
       String invoiceNumber,
       String date,
       String? customerName,
@@ -284,8 +290,8 @@ class InvoicePdf {
 
                       // Header Section - رأس الفاتورة
                       if (isFirstPage) ...[
-                        _buildHeader(shopName, phone, address, invoiceNumber,
-                            date, format, arabicFont),
+                        _buildHeader(shopName, phone, address, description,
+                            invoiceNumber, date, format, arabicFont),
                         pw.SizedBox(height: 4),
                       ],
 
@@ -322,6 +328,7 @@ class InvoicePdf {
       String shopName,
       String? phone,
       String? address,
+      String? description,
       String invoiceNumber,
       String date,
       String paymentType,
@@ -372,8 +379,8 @@ class InvoicePdf {
                         pw.SizedBox(height: format.width < 100 ? 12 : 8),
                         // Header Section
                         if (isFirstPage) ...[
-                          _buildHeader(shopName, phone, address, invoiceNumber,
-                              date, format, arabicFont),
+                          _buildHeader(shopName, phone, address, description,
+                              invoiceNumber, date, format, arabicFont),
                           pw.SizedBox(height: 4),
                         ],
 
@@ -456,8 +463,8 @@ class InvoicePdf {
                       pw.SizedBox(height: format.width < 100 ? 12 : 8),
                       // Header Section - رأس الفاتورة (في الصفحة الأولى فقط)
                       if (isFirstPage) ...[
-                        _buildHeader(shopName, phone, address, invoiceNumber,
-                            date, format, arabicFont),
+                        _buildHeader(shopName, phone, address, description,
+                            invoiceNumber, date, format, arabicFont),
                         pw.SizedBox(height: 4),
                       ],
 
@@ -509,79 +516,99 @@ class InvoicePdf {
       String shopName,
       String? phone,
       String? address,
+      String? description,
       String invoiceNumber,
       String date,
       PdfPageFormat format,
       pw.Font arabicFont) {
-    // للطابعات الحرارية - رأس مبسط
+    // للطابعات الحرارية - رأس محسن ومضغوط
     if (format.width < 100) {
       return pw.Container(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 1, vertical: 0.5),
         decoration: pw.BoxDecoration(
-          border: pw.Border.all(width: 0.5),
-          borderRadius: pw.BorderRadius.circular(2),
+          border: pw.Border.all(width: 0.3),
+          borderRadius: pw.BorderRadius.circular(1),
         ),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            // اسم المحل
+            // اسم المحل - حجم أصغر
             pw.Text(
               shopName,
-              style: _getArabicTextStyle(arabicFont, 8,
+              style: _getArabicTextStyle(arabicFont, 6,
                   fontWeight: pw.FontWeight.bold),
               textAlign: pw.TextAlign.center,
+              maxLines: 1,
             ),
 
-            pw.SizedBox(height: 1),
+            // وصف المحل - حجم أصغر ومضغوط
+            if (description != null && description.isNotEmpty) ...[
+              pw.SizedBox(height: 0.5),
+              pw.Text(
+                description,
+                style: _getArabicTextStyle(arabicFont, 4),
+                textAlign: pw.TextAlign.center,
+                maxLines: 1,
+              ),
+            ],
 
-            // معلومات المحل في صف واحد
+            pw.SizedBox(height: 0.5),
+
+            // العنوان ورقم الفاتورة في سطر واحد مضغوط
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                // العنوان (محاذاة لليمين)
+                // العنوان (محاذاة لليمين) - حجم أصغر
                 if (address != null && address.isNotEmpty)
                   pw.Expanded(
+                    flex: 2,
                     child: pw.Text(
                       address,
-                      style: _getArabicTextStyle(arabicFont, 6),
+                      style: _getArabicTextStyle(arabicFont, 4),
                       textAlign: pw.TextAlign.right,
                       maxLines: 1,
                     ),
                   ),
 
-                // رقم الفاتورة (محاذاة لليسار)
+                // رقم الفاتورة (محاذاة لليسار) - حجم أصغر
                 pw.Expanded(
+                  flex: 1,
                   child: pw.Text(
                     'فاتورة: $invoiceNumber',
-                    style: _getArabicTextStyle(arabicFont, 6,
+                    style: _getArabicTextStyle(arabicFont, 4,
                         fontWeight: pw.FontWeight.bold),
                     textAlign: pw.TextAlign.left,
+                    maxLines: 1,
                   ),
                 ),
               ],
             ),
 
-            pw.SizedBox(height: 1),
+            pw.SizedBox(height: 0.5),
 
-            // رقم الهاتف والتاريخ في صف واحد
+            // رقم الهاتف والتاريخ في سطر واحد مضغوط
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                // رقم الهاتف (محاذاة لليمين)
+                // رقم الهاتف (محاذاة لليمين) - حجم أصغر
                 if (phone != null && phone.isNotEmpty)
                   pw.Expanded(
+                    flex: 2,
                     child: pw.Text(
                       phone,
-                      style: _getArabicTextStyle(arabicFont, 6),
+                      style: _getArabicTextStyle(arabicFont, 4),
                       textAlign: pw.TextAlign.right,
+                      maxLines: 1,
                     ),
                   ),
-                // التاريخ (محاذاة لليسار)
+                // التاريخ (محاذاة لليسار) - حجم أصغر
                 pw.Expanded(
+                  flex: 1,
                   child: pw.Text(
                     date,
-                    style: _getArabicTextStyle(arabicFont, 6),
+                    style: _getArabicTextStyle(arabicFont, 4),
                     textAlign: pw.TextAlign.left,
+                    maxLines: 1,
                   ),
                 ),
               ],
@@ -608,6 +635,17 @@ class InvoicePdf {
                 fontWeight: pw.FontWeight.bold),
             textAlign: pw.TextAlign.center,
           ),
+
+          // وصف المحل (إذا كان موجود)
+          if (description != null && description.isNotEmpty) ...[
+            pw.SizedBox(height: 2),
+            pw.Text(
+              description,
+              style: _getArabicTextStyle(arabicFont, _getFontSize(format, 10)),
+              textAlign: pw.TextAlign.center,
+              maxLines: 3,
+            ),
+          ],
 
           pw.SizedBox(height: 2),
 
@@ -897,7 +935,7 @@ class InvoicePdf {
         installmentHeight.isNaN ||
         installmentHeight.isInfinite ||
         installmentHeight <= 0) {
-       return 5; // قيمة افتراضية آمنة
+      return 5; // قيمة افتراضية آمنة
     }
 
     final result = (availableHeight / installmentHeight).floor();
@@ -992,12 +1030,12 @@ class InvoicePdf {
       int startIndex = 0}) {
     return pw.Column(
       children: [
-        // خط فاصل علوي
+        // خط فاصل علوي - أرق
         pw.Container(
           width: double.infinity,
-          height: 1,
+          height: 0.5,
           color: PdfColors.black,
-          margin: const pw.EdgeInsets.only(bottom: 4),
+          margin: const pw.EdgeInsets.only(bottom: 2),
         ),
 
         // المنتجات - تخطيط مضغوط
@@ -1017,9 +1055,9 @@ class InvoicePdf {
           final qty = quantity.isFinite ? quantity.toInt() : 0;
           final lineTotal = price * qty;
 
-          // تقصير اسم المنتج حسب نوع الطابعة
+          // تقصير اسم المنتج أكثر للطابعات الحرارية
           String shortName = name;
-          final maxLength = is58mm ? 15 : 20;
+          final maxLength = is58mm ? 12 : 18;
           if (name.length > maxLength) {
             shortName = '${name.substring(0, maxLength)}...';
           }
@@ -1031,66 +1069,75 @@ class InvoicePdf {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  // التسلسل
+                  // التسلسل - حجم أصغر
                   pw.Text(
                     '${startIndex + index + 1}.',
-                    style: _getArabicTextStyle(arabicFont, is58mm ? 6 : 7,
+                    style: _getArabicTextStyle(arabicFont, is58mm ? 4 : 5,
                         fontWeight: pw.FontWeight.bold,
                         color: PdfColors.grey600),
                     textAlign: pw.TextAlign.left,
                   ),
-                  // اسم المنتج
+                  // اسم المنتج - حجم أصغر
                   pw.Expanded(
                     child: pw.Text(
                       shortName,
-                      style: _getArabicTextStyle(arabicFont, is58mm ? 7 : 8,
+                      style: _getArabicTextStyle(arabicFont, is58mm ? 5 : 6,
                           fontWeight: pw.FontWeight.bold),
                       textAlign: pw.TextAlign.right,
+                      maxLines: 1,
                     ),
                   ),
                 ],
               ),
 
-              // تفاصيل السعر والكمية
+              // تفاصيل السعر والكمية - مضغوط
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  // الكمية والسعر
-                  pw.Text(
-                    discountPercent > 0
-                        ? '$qty × ${Formatters.currencyIQD(basePrice)}  خصم ${discountPercent.toStringAsFixed(0)}%'
-                        : '$qty × ${Formatters.currencyIQD(basePrice)}',
-                    style: _getArabicTextStyle(arabicFont, is58mm ? 6 : 7),
-                    textAlign: pw.TextAlign.right,
+                  // الكمية والسعر - حجم أصغر
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Text(
+                      discountPercent > 0
+                          ? '$qty × ${Formatters.currencyIQD(basePrice)}  خصم ${discountPercent.toStringAsFixed(0)}%'
+                          : '$qty × ${Formatters.currencyIQD(basePrice)}',
+                      style: _getArabicTextStyle(arabicFont, is58mm ? 4 : 5),
+                      textAlign: pw.TextAlign.right,
+                      maxLines: 1,
+                    ),
                   ),
-                  // الإجمالي
-                  pw.Text(
-                    Formatters.currencyIQD(lineTotal),
-                    style: _getArabicTextStyle(arabicFont, is58mm ? 7 : 8,
-                        fontWeight: pw.FontWeight.bold),
-                    textAlign: pw.TextAlign.left,
+                  // الإجمالي - حجم أصغر
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text(
+                      Formatters.currencyIQD(lineTotal),
+                      style: _getArabicTextStyle(arabicFont, is58mm ? 5 : 6,
+                          fontWeight: pw.FontWeight.bold),
+                      textAlign: pw.TextAlign.left,
+                      maxLines: 1,
+                    ),
                   ),
                 ],
               ),
 
-              // خط فاصل
+              // خط فاصل - أرق
               if (index < items.length - 1)
                 pw.Container(
                   width: double.infinity,
-                  height: 0.5,
-                  color: PdfColors.grey400,
-                  margin: const pw.EdgeInsets.symmetric(vertical: 2),
+                  height: 0.3,
+                  color: PdfColors.grey300,
+                  margin: const pw.EdgeInsets.symmetric(vertical: 1),
                 ),
             ],
           );
         }),
 
-        // خط فاصل سفلي
+        // خط فاصل سفلي - أرق
         pw.Container(
           width: double.infinity,
-          height: 1,
+          height: 0.5,
           color: PdfColors.black,
-          margin: const pw.EdgeInsets.only(top: 4),
+          margin: const pw.EdgeInsets.only(top: 2),
         ),
       ],
     );
@@ -1297,12 +1344,12 @@ class InvoicePdf {
 
     return pw.Column(
       children: [
-        // خط فاصل علوي
+        // خط فاصل علوي - أرق
         pw.Container(
           width: double.infinity,
-          height: 1,
+          height: 0.5,
           color: PdfColors.black,
-          margin: const pw.EdgeInsets.only(bottom: 4),
+          margin: const pw.EdgeInsets.only(bottom: 2),
         ),
 
         // مجموع الكمية
@@ -1349,12 +1396,12 @@ class InvoicePdf {
           ],
         ),
 
-        // خط فاصل سفلي
+        // خط فاصل سفلي - أرق
         pw.Container(
           width: double.infinity,
-          height: 1,
+          height: 0.5,
           color: PdfColors.black,
-          margin: const pw.EdgeInsets.only(top: 4),
+          margin: const pw.EdgeInsets.only(top: 2),
         ),
       ],
     );

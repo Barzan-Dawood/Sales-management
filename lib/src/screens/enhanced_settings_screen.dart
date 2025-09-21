@@ -13,6 +13,8 @@ import '../services/store_config.dart';
 import '../services/theme_provider.dart';
 import '../config/store_info.dart';
 import 'license_check_screen.dart';
+import 'store_info_screen.dart';
+import '../services/store_info_service.dart';
 
 class EnhancedSettingsScreen extends StatefulWidget {
   const EnhancedSettingsScreen({super.key});
@@ -22,10 +24,21 @@ class EnhancedSettingsScreen extends StatefulWidget {
 }
 
 class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
+  int _storeInfoUpdateCounter = 0; // لتتبع تحديث معلومات المتجر
+
   @override
   void initState() {
     super.initState();
     _checkDataExists();
+    // تحديث معلومات المتجر عند فتح الشاشة
+    _refreshStoreInfo();
+  }
+
+  /// تحديث معلومات المتجر
+  void _refreshStoreInfo() {
+    setState(() {
+      _storeInfoUpdateCounter++;
+    });
   }
 
   Future<void> _checkDataExists() async {
@@ -68,7 +81,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 _buildAppearanceSection(),
                 const SizedBox(height: 20),
 
-                // Store Information Section (معلومات ثابتة)
+                // Store Information Section (قابل للتعديل)
                 _buildSectionHeader('معلومات المتجر'),
                 _buildStoreInfoSection(),
                 const SizedBox(height: 20),
@@ -281,7 +294,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'معلومات المتجر ثابتة ومحددة مسبقاً، وتُستخدم في الفواتير والتقارير. لا يمكن تعديل هذه المعلومات.',
+                        'يمكنك تعديل معلومات المتجر التي تظهر على الفواتير والتقارير من هنا',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.primary,
@@ -291,36 +304,69 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                   ],
                 ),
               ),
-              // اسم المتجر - ثابت
+              // زر تعديل معلومات المتجر
               _buildSettingsTile(
-                icon: Icons.store,
-                title: 'اسم المتجر',
-                subtitle: store.shopName,
-                isEditable: false,
+                icon: Icons.edit,
+                title: 'تعديل معلومات المتجر',
+                subtitle: 'إدارة معلومات المتجر للفواتير والتقارير',
+                trailing: Icons.arrow_forward_ios,
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const StoreInfoScreen(),
+                    ),
+                  );
+                  // تحديث الشاشة عند العودة من تعديل معلومات المتجر
+                  setState(() {
+                    _storeInfoUpdateCounter++;
+                  });
+                },
               ),
-              _buildDivider(),
-              // وصف المتجر - ثابت
-              _buildSettingsTile(
-                icon: Icons.business,
-                title: 'وصف المتجر',
-                subtitle: store.shopDescription,
-                isEditable: false,
-              ),
-              _buildDivider(),
-              // رقم الهاتف - ثابت
-              _buildSettingsTile(
-                icon: Icons.phone,
-                title: 'رقم الهاتف',
-                subtitle: store.phone,
-                isEditable: false,
-              ),
-              _buildDivider(),
-              // عنوان المتجر - ثابت
-              _buildSettingsTile(
-                icon: Icons.location_on,
-                title: 'عنوان المتجر',
-                subtitle: store.address,
-                isEditable: false,
+
+              // عرض معلومات المتجر المبسطة
+              FutureBuilder<Map<String, String>>(
+                key: ValueKey(
+                    _storeInfoUpdateCounter), // للتحديث عند تغيير المعلومات
+                future: StoreInfoService.getDisplayInfo(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    final storeInfo = snapshot.data!;
+                    return Column(
+                      children: [
+                        _buildDivider(),
+                        _buildInfoTile(
+                          icon: Icons.store,
+                          title: 'اسم المحل',
+                          value: storeInfo['اسم المحل'] ?? 'غير محدد',
+                          isEditable: false,
+                        ),
+                        _buildDivider(),
+                        _buildInfoTile(
+                          icon: Icons.location_on,
+                          title: 'العنوان',
+                          value: storeInfo['العنوان'] ?? 'غير محدد',
+                          isEditable: false,
+                        ),
+                        _buildDivider(),
+                        _buildInfoTile(
+                          icon: Icons.phone,
+                          title: 'رقم الهاتف',
+                          value: storeInfo['الهاتف'] ?? 'غير محدد',
+                          isEditable: false,
+                        ),
+                        _buildDivider(),
+                        _buildInfoTile(
+                          icon: Icons.info,
+                          title: 'الوصف',
+                          value: storeInfo['الوصف'] ?? 'غير محدد',
+                          isEditable: false,
+                        ),
+                      ],
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
               ),
             ],
           ),
