@@ -1344,7 +1344,7 @@ class InvoicePdf {
 
     return pw.Column(
       children: [
-        // خط فاصل علوي - أرق
+        // خط فاصل علوي
         pw.Container(
           width: double.infinity,
           height: 0.5,
@@ -1352,34 +1352,34 @@ class InvoicePdf {
           margin: const pw.EdgeInsets.only(bottom: 2),
         ),
 
-        // مجموع الكمية
+        // مجموع الكمية - مضغوط
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
               'إجمالي الكمية:',
-              style: _getArabicTextStyle(arabicFont, 7,
+              style: _getArabicTextStyle(arabicFont, 6,
                   fontWeight: pw.FontWeight.bold),
               textAlign: pw.TextAlign.right,
             ),
             pw.Text(
               '$totalQuantity قطعة',
-              style: _getArabicTextStyle(arabicFont, 7,
-                  fontWeight: pw.FontWeight.bold),
+              style: _getArabicTextStyle(arabicFont, 6,
+                  fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
               textAlign: pw.TextAlign.left,
             ),
           ],
         ),
 
-        pw.SizedBox(height: 3),
+        pw.SizedBox(height: 2),
 
-        // المجموع الكلي
+        // المجموع الكلي - مضغوط
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
               'المجموع الكلي:',
-              style: _getArabicTextStyle(arabicFont, 8,
+              style: _getArabicTextStyle(arabicFont, 7,
                   fontWeight: pw.FontWeight.bold),
               textAlign: pw.TextAlign.right,
             ),
@@ -1389,14 +1389,14 @@ class InvoicePdf {
                 symbol: AppStrings.currency,
                 decimalDigits: 0,
               ).format(total),
-              style: _getArabicTextStyle(arabicFont, 10,
+              style: _getArabicTextStyle(arabicFont, 8,
                   fontWeight: pw.FontWeight.bold, color: PdfColors.red),
               textAlign: pw.TextAlign.left,
             ),
           ],
         ),
 
-        // خط فاصل سفلي - أرق
+        // خط فاصل سفلي
         pw.Container(
           width: double.infinity,
           height: 0.5,
@@ -1425,100 +1425,73 @@ class InvoicePdf {
       }
     }
 
-    // تحديد نوع الورق وتكييف أبعاد الأعمدة
+    // تحديد نوع الورق وتكييف الأبعاد
     final isMediumPaper =
         format != null && format.width >= 100 && format.width < 200;
 
-    // تكييف أبعاد الأعمدة حسب حجم الورق
-    Map<int, pw.TableColumnWidth> columnWidths;
-    double fontSize;
-    double padding;
-
-    if (isMediumPaper) {
-      columnWidths = {
-        0: pw.FlexColumnWidth(1.4), // الإجمالي
-        1: pw.FlexColumnWidth(1.4), // السعر (فارغ)
-        2: pw.FlexColumnWidth(1), // الكمية
-        3: pw.FlexColumnWidth(2.8), // مجموع الكلي
-        4: pw.FlexColumnWidth(0.7), // فارغ
-      };
-      fontSize = 8;
-      padding = 4;
-    } else {
-      columnWidths = {
-        0: pw.FlexColumnWidth(1.5), // الإجمالي
-        1: pw.FlexColumnWidth(1.5), // السعر (فارغ)
-        2: pw.FlexColumnWidth(1), // الكمية
-        3: pw.FlexColumnWidth(3), // مجموع الكلي
-        4: pw.FlexColumnWidth(0.8), // فارغ
-      };
-      fontSize = 10;
-      padding = 6;
-    }
+    double fontSize = isMediumPaper ? 9 : 11;
+    double padding = isMediumPaper ? 6 : 8;
 
     return pw.Container(
+      margin: const pw.EdgeInsets.symmetric(vertical: 4),
+      padding: pw.EdgeInsets.all(padding * 0.6),
       decoration: pw.BoxDecoration(
-        border: pw.Border.all(width: 1),
+        border: pw.Border.all(color: PdfColors.black, width: 1),
         borderRadius: pw.BorderRadius.circular(4),
+        color: PdfColors.grey100,
       ),
-      child: pw.Table(
-        border: pw.TableBorder.all(width: 0.5),
-        columnWidths: columnWidths,
+      child: pw.Column(
         children: [
-          pw.TableRow(
-            decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          // عنوان مضغوط
+          pw.Text(
+            'ملخص الفاتورة',
+            style: _getArabicTextStyle(arabicFont, fontSize,
+                fontWeight: pw.FontWeight.bold),
+            textAlign: pw.TextAlign.center,
+          ),
+
+          pw.SizedBox(height: padding * 0.4),
+
+          // صف معلومات الكمية - مضغوط
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              // الإجمالي
-              pw.Padding(
-                padding: pw.EdgeInsets.all(padding),
-                child: pw.Text(
-                  NumberFormat.currency(
-                    locale: 'ar_IQ',
-                    symbol: '',
-                    decimalDigits: 0,
-                  ).format(total),
-                  style: _getArabicTextStyle(arabicFont, fontSize,
-                      fontWeight: pw.FontWeight.bold),
-                  textAlign: pw.TextAlign.center,
-                ),
+              pw.Text(
+                'إجمالي الكمية:',
+                style: _getArabicTextStyle(arabicFont, fontSize - 1,
+                    fontWeight: pw.FontWeight.bold),
+                textAlign: pw.TextAlign.right,
               ),
-              // السعر (فارغ)
-              pw.Padding(
-                padding: pw.EdgeInsets.all(padding),
-                child: pw.Text(
-                  '',
-                  style: _getArabicTextStyle(arabicFont, fontSize),
-                  textAlign: pw.TextAlign.center,
-                ),
+              pw.Text(
+                '$totalQuantity قطعة',
+                style: _getArabicTextStyle(arabicFont, fontSize - 1,
+                    fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
+                textAlign: pw.TextAlign.left,
               ),
-              // الكمية
-              pw.Padding(
-                padding: pw.EdgeInsets.all(padding),
-                child: pw.Text(
-                  totalQuantity.toString(),
-                  style: _getArabicTextStyle(arabicFont, fontSize,
-                      fontWeight: pw.FontWeight.bold),
-                  textAlign: pw.TextAlign.center,
-                ),
+            ],
+          ),
+
+          pw.SizedBox(height: padding * 0.3),
+
+          // صف المجموع الكلي - مضغوط
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'المجموع الكلي:',
+                style: _getArabicTextStyle(arabicFont, fontSize,
+                    fontWeight: pw.FontWeight.bold),
+                textAlign: pw.TextAlign.right,
               ),
-              // مجموع الكلي
-              pw.Padding(
-                padding: pw.EdgeInsets.all(padding),
-                child: pw.Text(
-                  'مجموع الكلي',
-                  style: _getArabicTextStyle(arabicFont, fontSize,
-                      fontWeight: pw.FontWeight.bold),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-              // فارغ
-              pw.Padding(
-                padding: pw.EdgeInsets.all(padding),
-                child: pw.Text(
-                  '',
-                  style: _getArabicTextStyle(arabicFont, fontSize),
-                  textAlign: pw.TextAlign.center,
-                ),
+              pw.Text(
+                NumberFormat.currency(
+                  locale: 'ar_IQ',
+                  symbol: AppStrings.currency,
+                  decimalDigits: 0,
+                ).format(total),
+                style: _getArabicTextStyle(arabicFont, fontSize + 1,
+                    fontWeight: pw.FontWeight.bold, color: PdfColors.red),
+                textAlign: pw.TextAlign.left,
               ),
             ],
           ),
