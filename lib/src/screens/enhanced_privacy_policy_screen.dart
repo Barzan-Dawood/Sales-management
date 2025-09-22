@@ -77,6 +77,42 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
+            // الأذونات المستخدمة
+            _buildEnhancedSection(
+              icon: Icons.perm_device_information,
+              title: 'الأذونات المستخدمة ولماذا',
+              content: '''
+قد يطلب التطبيق أذوناً من نظام التشغيل للوظائف التالية فقط:\n\n• التخزين/الملفات: حفظ قاعدة البيانات والنسخ الاحتياطية وتصدير التقارير.\n• الطباعة/مشاركة الملفات: إنشاء ملفات PDF وإرسالها للطابعة أو التطبيقات.\n\nلا نستخدم أي أذونات للوصول إلى معلومات شخصية غير لازمة لعمل التطبيق، ولا يتم نقل أي بيانات خارج جهازك.''',
+            ),
+            const SizedBox(height: 20),
+
+            // الاحتفاظ بالبيانات والحذف
+            _buildEnhancedSection(
+              icon: Icons.delete_outline,
+              title: 'الاحتفاظ بالبيانات وحذفها',
+              content: '''
+جميع بياناتك تبقى على جهازك طالما لم تقم بحذفها. يمكنك في أي وقت:\n\n• إنشاء نسخة احتياطية يدوياً وحفظها خارج الجهاز.\n• استعادة نسخة احتياطية سابقة.\n• حذف البيانات عبر استبدال القاعدة أو إزالة التطبيق (قد يؤدي ذلك لفقدان البيانات إن لم تكن هناك نسخة احتياطية).''',
+            ),
+            const SizedBox(height: 20),
+
+            // النسخ الاحتياطي والأمان
+            _buildEnhancedSection(
+              icon: Icons.backup,
+              title: 'النسخ الاحتياطي وأمان الملفات',
+              content: '''
+ملفات النسخ الاحتياطي قد تحتوي بيانات حساسة (مثل معلومات الفواتير والعملاء) لذا ننصح بما يلي:\n\n• حفظ النسخ في موقع آمن ومشفر عند الإمكان.\n• عدم مشاركة الملفات مع أطراف غير مخولّة.\n• اختبار الاستعادة دورياً للتأكد من سلامة النسخ.''',
+            ),
+            const SizedBox(height: 20),
+
+            // عدم التتبع وعدم استخدام طرف ثالث
+            _buildEnhancedSection(
+              icon: Icons.shield_moon,
+              title: 'عدم التتبع وعدم استخدام خدمات طرف ثالث',
+              content: '''
+لا نستخدم أي تحليلات، تتبّع، أو خدمات طرف ثالث تجمع بيانات استخدامك. لا يتم إرسال أي معلومات أو مقاييس استخدام إلى خوادم خارجية. كل ما يجري يحدث محلياً على جهازك فقط.''',
+            ),
+            const SizedBox(height: 20),
+
             // حقوقك
             _buildEnhancedSection(
               icon: Icons.person,
@@ -160,11 +196,10 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
               color: scheme.onPrimary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Image.asset(
-              'assets/images/office.png',
-              width: 32,
-              height: 32,
+            child: Icon(
+              Icons.privacy_tip,
               color: scheme.onPrimary,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),
@@ -497,6 +532,42 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
+            // سياسة الترخيص
+            _buildEnhancedSection(
+              icon: Icons.vpn_key,
+              title: 'سياسة الترخيص',
+              content: '''
+قد يتطلب التطبيق مفتاح ترخيص لاستخدام بعض الميزات أو لإزالة القيود. أنت مسؤول عن حفظ المفتاح بسرية وعدم مشاركته. يحق لنا إبطال المفاتيح التي يتم إساءة استخدامها. في حال انتهاء الترخيص، قد تتأثر بعض الوظائف إلى حين التجديد.''',
+            ),
+            const SizedBox(height: 20),
+
+            // الدعم والتحديثات
+            _buildEnhancedSection(
+              icon: Icons.support_agent,
+              title: 'الدعم الفني والتحديثات',
+              content: '''
+نوفر قنوات تواصل للدعم عبر البريد/الواتساب كما هو مذكور في الإعدادات. نسعى للرد خلال إطار زمني معقول، دون التزام زمني محدد. التحديثات قد تحتوي تحسينات أو إصلاحات وقد تتطلب إجراءات نسخ احتياطي مسبقة. استمرار استخدامك يعني قبول التغييرات.''',
+            ),
+            const SizedBox(height: 20),
+
+            // سياسة الاسترجاع/المدفوعات
+            _buildEnhancedSection(
+              icon: Icons.receipt_long,
+              title: 'سياسة المدفوعات والاسترجاع',
+              content: '''
+لا يتضمن التطبيق مدفوعات داخلية. في حال وجود اتفاقيات شراء أو اشتراك خارج التطبيق، تطبق شروط المزود/البائع الخاصّة، وقد لا يتوفر استرجاع من داخل التطبيق. يُرجى مراجعة شروط العرض الذي حصلت بموجبه على الترخيص.''',
+            ),
+            const SizedBox(height: 20),
+
+            // توضيح حدود المسؤولية الموسع
+            _buildEnhancedSection(
+              icon: Icons.warning,
+              title: 'حدود المسؤولية (توضيح)',
+              content: '''
+نوصي بأخذ نسخ احتياطية دورية. نحن غير مسؤولين عن أي فقدان بيانات ناتج عن سوء الاستخدام، الأعطال، أو عدم القيام بالنسخ الاحتياطي. استخدامك للتطبيق يعني موافقتك على تحمل المسؤولية عن إدارة بياناتك ونسخك الاحتياطية.''',
+            ),
+            const SizedBox(height: 20),
+
             // معلومات الاتصال
             _buildEnhancedSection(
               icon: Icons.contact_support,
@@ -576,11 +647,10 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
               color: scheme.onPrimary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Image.asset(
-              'assets/images/office.png',
-              width: 32,
-              height: 32,
+            child: Icon(
+              Icons.description,
               color: scheme.onPrimary,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),

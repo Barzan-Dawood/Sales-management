@@ -38,9 +38,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(StoreConfig().appTitle,
-                        style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 16),
+                    if (StoreConfig().logoAssetPath != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Image.asset(
+                          StoreConfig().logoAssetPath!,
+                          width: 300,
+                          height: 220,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     Text('أهلاً بك',
                         style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 24),

@@ -652,10 +652,8 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           child: AlertDialog(
             title: Row(
               children: [
-                Image.asset(
-                  'assets/images/office.png',
-                  width: 32,
-                  height: 32,
+                Icon(
+                  Icons.copyright,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 12),
@@ -803,10 +801,8 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                   ),
                   child: Row(
                     children: [
-                      Image.asset(
-                        'assets/images/office.png',
-                        width: 24,
-                        height: 24,
+                      Icon(
+                        Icons.support_agent,
                         color: Theme.of(context).colorScheme.secondary,
                       ),
                       const SizedBox(width: 8),

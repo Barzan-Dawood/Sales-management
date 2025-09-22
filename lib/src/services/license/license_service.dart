@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:encrypt/encrypt.dart';
 import 'hardware_service.dart';
@@ -9,6 +10,12 @@ class LicenseService {
   static const String _deviceFingerprintKey = 'DEVICE_FINGERPRINT';
   static const String _activationDateKey = 'ACTIVATION_DATE';
   static const String _customerInfoKey = 'CUSTOMER_INFO';
+  static const String _trialStartDateKey = 'TRIAL_START_DATE';
+
+  // مدة التجربة بالأيام
+  static const int _trialDays = 7;
+  static const String _trialFileName = 'trial_store.json';
+  static const String _trialFolderName = 'OfficeMgmtSystem';
 
   // مفتاح التشفير الثابت (يجب تغييره في الإنتاج)
   static const String _encryptionKey =
@@ -33,7 +40,63 @@ class LicenseService {
       // التحقق من وجود مفتاح الترخيص
       final licenseKey = prefs.getString(_licenseKey);
       if (licenseKey == null || licenseKey.isEmpty) {
-        return LicenseStatus.notActivated;
+        // لا يوجد ترخيص - افحص التجربة المجانية (مقيدة بالبصمة ومحفوظة خارج التطبيق على أجهزة سطح المكتب)
+        final trialStartIso = prefs.getString(_trialStartDateKey);
+        String? persistentTrialStart;
+        String? deviceFingerprint;
+        try {
+          deviceFingerprint = await _hardwareService.getDeviceFingerprint();
+          persistentTrialStart =
+              await _readPersistentTrialStart(deviceFingerprint);
+        } catch (_) {}
+
+        // اختر أقدم تاريخ كبداية فعلية للتجربة لتجنب إعادة الضبط
+        String? effectiveStart;
+        if (persistentTrialStart != null && persistentTrialStart.isNotEmpty) {
+          if (trialStartIso != null && trialStartIso.isNotEmpty) {
+            final a = DateTime.tryParse(persistentTrialStart);
+            final b = DateTime.tryParse(trialStartIso);
+            if (a != null && b != null) {
+              effectiveStart =
+                  a.isBefore(b) ? a.toIso8601String() : b.toIso8601String();
+            } else {
+              effectiveStart = persistentTrialStart;
+            }
+          } else {
+            effectiveStart = persistentTrialStart;
+            // مزامنة إلى SharedPreferences للمرة القادمة
+            await prefs.setString(_trialStartDateKey, effectiveStart);
+          }
+        } else {
+          effectiveStart = trialStartIso;
+        }
+
+        if (trialStartIso == null || trialStartIso.isEmpty) {
+          // بدء التجربة لأول مرة
+          final nowIso = DateTime.now().toIso8601String();
+          await prefs.setString(_trialStartDateKey, nowIso);
+          if (deviceFingerprint != null) {
+            await _writePersistentTrialStart(deviceFingerprint, nowIso);
+          }
+          return LicenseStatus.trialActive;
+        } else {
+          final start = DateTime.tryParse(effectiveStart ?? trialStartIso);
+          if (start == null) {
+            // تاريخ غير صالح - إعادة ضبط وبداية تجربة
+            final nowIso = DateTime.now().toIso8601String();
+            await prefs.setString(_trialStartDateKey, nowIso);
+            if (deviceFingerprint != null) {
+              await _writePersistentTrialStart(deviceFingerprint, nowIso);
+            }
+            return LicenseStatus.trialActive;
+          }
+          final elapsed = DateTime.now().difference(start).inDays;
+          if (elapsed < _trialDays) {
+            return LicenseStatus.trialActive;
+          } else {
+            return LicenseStatus.trialExpired;
+          }
+        }
       }
 
       // فك تشفير مفتاح الترخيص
@@ -73,7 +136,31 @@ class LicenseService {
       } catch (_) {
         // تجاهل الأخطاء في الحذف
       }
-      return LicenseStatus.notActivated;
+      // حتى في حالة الخطأ، حاول السماح بالتجربة إن لم تبدأ
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final trialStartIso = prefs.getString(_trialStartDateKey);
+        if (trialStartIso == null || trialStartIso.isEmpty) {
+          // حاول قراءة مخزن التجربة الدائم قبل البدء
+          try {
+            final fp = await _hardwareService.getDeviceFingerprint();
+            final persistent = await _readPersistentTrialStart(fp);
+            if (persistent != null && persistent.isNotEmpty) {
+              await prefs.setString(_trialStartDateKey, persistent);
+              final start = DateTime.tryParse(persistent);
+              if (start != null &&
+                  DateTime.now().difference(start).inDays < _trialDays) {
+                return LicenseStatus.trialActive;
+              }
+              return LicenseStatus.trialExpired;
+            }
+          } catch (_) {}
+          final nowIso = DateTime.now().toIso8601String();
+          await prefs.setString(_trialStartDateKey, nowIso);
+          return LicenseStatus.trialActive;
+        }
+      } catch (_) {}
+      return LicenseStatus.trialExpired;
     }
   }
 
@@ -123,6 +210,106 @@ class LicenseService {
     }
   }
 
+  // ===================== دعم تخزين تجربة دائم على سطح المكتب =====================
+  Future<File?> _getPersistentTrialFile() async {
+    try {
+      if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+        return null; // المنصات المحمولة تعتمد على SharedPreferences فقط
+      }
+
+      String? baseDir;
+      if (Platform.isWindows) {
+        baseDir = Platform.environment['APPDATA'] ??
+            Platform.environment['LOCALAPPDATA'];
+      } else if (Platform.isMacOS) {
+        final home = Platform.environment['HOME'];
+        baseDir = home != null ? '$home/Library/Application Support' : null;
+      } else if (Platform.isLinux) {
+        final xdg = Platform.environment['XDG_CONFIG_HOME'];
+        if (xdg != null && xdg.isNotEmpty) {
+          baseDir = xdg;
+        } else {
+          final home = Platform.environment['HOME'];
+          baseDir = home != null ? '$home/.config' : null;
+        }
+      }
+
+      if (baseDir == null) return null;
+
+      final folderPath = Platform.isWindows
+          ? '$baseDir\\$_trialFolderName'
+          : '$baseDir/$_trialFolderName';
+      final filePath = Platform.isWindows
+          ? '$folderPath\\$_trialFileName'
+          : '$folderPath/$_trialFileName';
+
+      final dir = Directory(folderPath);
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      final file = File(filePath);
+      if (!await file.exists()) {
+        await file.create();
+        await file.writeAsString(jsonEncode({}));
+      }
+      return file;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> _readPersistentTrialStart(String fingerprint) async {
+    try {
+      final file = await _getPersistentTrialFile();
+      if (file == null) return null;
+      final content = await file.readAsString();
+      if (content.isEmpty) return null;
+      final data = jsonDecode(content);
+      if (data is Map<String, dynamic>) {
+        final v = data[fingerprint];
+        if (v is String) return v;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _writePersistentTrialStart(
+      String fingerprint, String isoDate) async {
+    try {
+      final file = await _getPersistentTrialFile();
+      if (file == null) return;
+      Map<String, dynamic> data = {};
+      try {
+        final content = await file.readAsString();
+        if (content.isNotEmpty) {
+          final parsed = jsonDecode(content);
+          if (parsed is Map<String, dynamic>) {
+            data = parsed;
+          }
+        }
+      } catch (_) {}
+      // احتفظ بأقدم تاريخ إن وجد
+      if (data.containsKey(fingerprint)) {
+        final existing = DateTime.tryParse(data[fingerprint] as String? ?? '');
+        final incoming = DateTime.tryParse(isoDate);
+        if (existing != null && incoming != null) {
+          data[fingerprint] = existing.isBefore(incoming)
+              ? existing.toIso8601String()
+              : incoming.toIso8601String();
+        } else {
+          data[fingerprint] = isoDate;
+        }
+      } else {
+        data[fingerprint] = isoDate;
+      }
+      await file.writeAsString(jsonEncode(data));
+    } catch (_) {
+      // تجاهل أخطاء الكتابة
+    }
+  }
+
   /// إلغاء تفعيل الترخيص
   Future<bool> deactivateLicense() async {
     try {
@@ -140,6 +327,7 @@ class LicenseService {
     await prefs.remove(_deviceFingerprintKey);
     await prefs.remove(_activationDateKey);
     await prefs.remove(_customerInfoKey);
+    // لا تزل مفتاح بداية التجربة حتى لا يعاد ضبطها
   }
 
   /// الحصول على معلومات الترخيص
@@ -170,6 +358,18 @@ class LicenseService {
     } catch (e) {
       return null;
     }
+  }
+
+  /// الحصول على عدد الأيام المتبقية في التجربة
+  Future<int> getTrialDaysLeft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final trialStartIso = prefs.getString(_trialStartDateKey);
+    if (trialStartIso == null || trialStartIso.isEmpty) return _trialDays;
+    final start = DateTime.tryParse(trialStartIso);
+    if (start == null) return _trialDays;
+    final elapsed = DateTime.now().difference(start).inDays;
+    final remaining = _trialDays - elapsed;
+    return remaining > 0 ? remaining : 0;
   }
 
   /// حفظ معلومات العميل
@@ -287,6 +487,8 @@ enum LicenseStatus {
   invalid, // مفتاح الترخيص غير صحيح
   deviceMismatch, // الجهاز لا يطابق الترخيص
   error, // خطأ في التحقق
+  trialActive, // تجربة مجانية نشطة
+  trialExpired, // انتهت الفترة التجريبية
 }
 
 /// نتيجة التفعيل

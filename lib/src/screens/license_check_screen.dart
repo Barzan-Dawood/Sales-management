@@ -178,6 +178,18 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
             textAlign: TextAlign.center,
           ),
 
+          // إذا كانت التجربة فعالة، عرض الأيام المتبقية
+          if (licenseProvider.isTrialActive) ...[
+            const SizedBox(height: 8),
+            Text(
+              'الأيام المتبقية في التجربة: ${licenseProvider.trialDaysLeft}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+
           // معلومات إضافية إذا كان الترخيص مفعل
           if (licenseProvider.isActivated &&
               licenseProvider.licenseInfo != null) ...[
@@ -397,6 +409,10 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
         return 'الجهاز لا يطابق الترخيص';
       case LicenseStatus.error:
         return 'خطأ في فحص الترخيص';
+      case LicenseStatus.trialActive:
+        return 'نسخة تجريبية فعالة';
+      case LicenseStatus.trialExpired:
+        return 'انتهت الفترة التجريبية';
     }
   }
 
@@ -412,6 +428,10 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
         return 'هذا المفتاح مرتبط بجهاز آخر';
       case LicenseStatus.error:
         return 'حدث خطأ أثناء فحص الترخيص';
+      case LicenseStatus.trialActive:
+        return 'يمكنك استخدام التطبيق خلال الفترة التجريبية (7 أيام)';
+      case LicenseStatus.trialExpired:
+        return 'انتهت الفترة التجريبية. يرجى إدخال مفتاح الترخيص للمتابعة';
     }
   }
 
@@ -851,6 +871,10 @@ class _LicenseCheckDialogState extends State<LicenseCheckDialog> {
         return 'الجهاز لا يطابق الترخيص';
       case LicenseStatus.error:
         return 'خطأ في فحص الترخيص';
+      case LicenseStatus.trialActive:
+        return 'نسخة تجريبية فعالة';
+      case LicenseStatus.trialExpired:
+        return 'انتهت الفترة التجريبية';
     }
   }
 
@@ -866,6 +890,10 @@ class _LicenseCheckDialogState extends State<LicenseCheckDialog> {
         return 'هذا المفتاح مرتبط بجهاز آخر';
       case LicenseStatus.error:
         return 'حدث خطأ أثناء فحص الترخيص';
+      case LicenseStatus.trialActive:
+        return 'يمكنك استخدام التطبيق خلال الفترة التجريبية (7 أيام)';
+      case LicenseStatus.trialExpired:
+        return 'انتهت الفترة التجريبية. يرجى إدخال مفتاح الترخيص للمتابعة';
     }
   }
 

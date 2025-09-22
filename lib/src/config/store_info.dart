@@ -7,7 +7,7 @@ class StoreInfo {
   // معلومات التطبيق
   static const String appTitle = 'Rojsoft Manager';
   static const String displayVersion = '1.0.0';
-  static const String logoAssetPath = 'assets/images/office.png';
+  static const String logoAssetPath = 'assets/images/poss.png';
 
   // معلومات المحل الأساسية
   static const String shopName = 'مكتب';

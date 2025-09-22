@@ -12,17 +12,21 @@ class LicenseProvider extends ChangeNotifier {
   LicenseInfo? _licenseInfo;
   String _deviceFingerprint = '';
   Map<String, String> _deviceInfo = {};
+  int _trialDaysLeft = 0;
 
   LicenseStatus get status => _status;
   LicenseInfo? get licenseInfo => _licenseInfo;
   String get deviceFingerprint => _deviceFingerprint;
   Map<String, String> get deviceInfo => _deviceInfo;
+  int get trialDaysLeft => _trialDaysLeft;
 
   bool get isActivated => _status == LicenseStatus.valid;
   bool get isNotActivated => _status == LicenseStatus.notActivated;
   bool get isInvalid => _status == LicenseStatus.invalid;
   bool get hasDeviceMismatch => _status == LicenseStatus.deviceMismatch;
   bool get hasError => _status == LicenseStatus.error;
+  bool get isTrialActive => _status == LicenseStatus.trialActive;
+  bool get isTrialExpired => _status == LicenseStatus.trialExpired;
 
   /// تهيئة مزود الترخيص
   Future<void> initialize() async {
@@ -52,10 +56,18 @@ class LicenseProvider extends ChangeNotifier {
         _licenseInfo = null;
       }
 
+      // تحديث أيام التجربة المتبقية إذا كانت التجربة فعالة
+      if (_status == LicenseStatus.trialActive) {
+        _trialDaysLeft = await _licenseService.getTrialDaysLeft();
+      } else {
+        _trialDaysLeft = 0;
+      }
+
       notifyListeners();
     } catch (e) {
       _status = LicenseStatus.error;
       _licenseInfo = null;
+      _trialDaysLeft = 0;
       notifyListeners();
     }
   }
@@ -133,6 +145,10 @@ class LicenseProvider extends ChangeNotifier {
         return 'الجهاز لا يطابق الترخيص المسجل';
       case LicenseStatus.error:
         return 'خطأ في فحص الترخيص';
+      case LicenseStatus.trialActive:
+        return 'نسخة تجريبية فعالة - متبقي $_trialDaysLeft يوم';
+      case LicenseStatus.trialExpired:
+        return 'انتهت الفترة التجريبية - يرجى تفعيل الترخيص';
       case LicenseStatus.valid:
         return 'الترخيص صحيح ومفعل';
     }
@@ -148,6 +164,10 @@ class LicenseProvider extends ChangeNotifier {
       case LicenseStatus.invalid:
       case LicenseStatus.deviceMismatch:
       case LicenseStatus.error:
+        return Colors.red;
+      case LicenseStatus.trialActive:
+        return Colors.blue;
+      case LicenseStatus.trialExpired:
         return Colors.red;
     }
   }
@@ -165,6 +185,10 @@ class LicenseProvider extends ChangeNotifier {
         return Icons.device_unknown;
       case LicenseStatus.error:
         return Icons.warning;
+      case LicenseStatus.trialActive:
+        return Icons.hourglass_bottom;
+      case LicenseStatus.trialExpired:
+        return Icons.hourglass_disabled;
     }
   }
 }

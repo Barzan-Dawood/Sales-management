@@ -62,8 +62,8 @@ class _AppShellState extends State<AppShell> {
       themeProvider.updateDarkModeStatus(isDark);
     });
 
-    // فحص الترخيص أولاً
-    if (!licenseProvider.isActivated) {
+    // فحص الترخيص أولاً (يسمح بالتجربة المجانية)
+    if (!licenseProvider.isActivated && !licenseProvider.isTrialActive) {
       return const LicenseCheckScreen();
     }
 
@@ -129,6 +129,47 @@ class _AppShellState extends State<AppShell> {
             onPressed: () => context.read<AuthProvider>().logout(),
           ),
         ],
+        bottom: licenseProvider.isTrialActive
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(36),
+                child: Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: Colors.blue.withOpacity(0.1),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.hourglass_bottom,
+                          size: 16, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'نسخة تجريبية: متبقّي ${context.read<LicenseProvider>().trialDaysLeft} يوم',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const LicenseCheckScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.key, size: 16),
+                        label: const Text('تفعيل الآن'),
+                        style: TextButton.styleFrom(
+                          foregroundColor:
+                              Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : null,
       ),
       body: Row(
         children: [
