@@ -83,12 +83,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                             name: c['name']?.toString() ?? '',
                             color: color,
                             iconData: iconData,
-                            onTap: () {
-                              _showCategoryProductsDialog(
+                            onTap: () async {
+                              await _showCategoryProductsDialog(
                                 context,
                                 c['id'] as int,
                                 c['name']?.toString() ?? 'القسم',
                                 color,
+                                () => setState(() {}), // callback لتحديث الصفحة
                               );
                             },
                             onEdit: () => _openEditor(category: c),
@@ -772,13 +773,14 @@ const _colorOptions = <Color>[
   Color(0xFF374151), // رمادي داكن احترافي
 ];
 
-void _showCategoryProductsDialog(
+Future<void> _showCategoryProductsDialog(
   BuildContext context,
   int categoryId,
   String categoryName,
   Color categoryColor,
-) {
-  showDialog(
+  VoidCallback onProductAdded,
+) async {
+  final result = await showDialog<bool>(
     context: context,
     builder: (context) => Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
@@ -792,8 +794,17 @@ void _showCategoryProductsDialog(
           categoryId: categoryId,
           categoryName: categoryName,
           categoryColor: categoryColor,
+          onProductAdded: () {
+            // إغلاق الحوار مع إشارة إلى إضافة منتج
+            Navigator.of(context).pop(true);
+          },
         ),
       ),
     ),
   );
+
+  // إذا تم إضافة منتج، قم بتحديث الصفحة
+  if (result == true && context.mounted) {
+    onProductAdded();
+  }
 }

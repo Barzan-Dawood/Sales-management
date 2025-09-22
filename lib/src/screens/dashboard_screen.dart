@@ -178,80 +178,284 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      width: double.infinity,
+      padding:
+          EdgeInsets.all(MediaQuery.of(context).size.width > 800 ? 16 : 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            DarkModeUtils.getPrimaryColor(context),
-            Colors.purple.shade600,
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.primary.withOpacity(0.8),
+            Theme.of(context).colorScheme.primaryContainer,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          stops: const [0.0, 0.6, 1.0],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: DarkModeUtils.getPrimaryColor(context).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+            spreadRadius: 1,
+          ),
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.2)
+                : Colors.white.withOpacity(0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: DarkModeUtils.getCardColor(context).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              Icons.analytics,
-              color: DarkModeUtils.getCardColor(context),
-              size: 32,
-            ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWideScreen = constraints.maxWidth > 800;
+
+          return isWideScreen
+              ? _buildWideHeaderLayout()
+              : _buildCompactHeaderLayout();
+        },
+      ),
+    );
+  }
+
+  Widget _buildWideHeaderLayout() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Row(
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isMediumScreen = constraints.maxWidth < 1000;
+            return Container(
+              padding: EdgeInsets.all(isMediumScreen ? 16 : 20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(isDark ? 0.15 : 0.2),
+                borderRadius: BorderRadius.circular(isMediumScreen ? 16 : 20),
+                border: Border.all(
+                  color: Colors.white.withOpacity(isDark ? 0.2 : 0.3),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.analytics_rounded,
+                color: Theme.of(context).colorScheme.onSurface,
+                size: isMediumScreen ? 32 : 36,
+              ),
+            );
+          },
+        ),
+        const SizedBox(width: 24),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isMediumScreen = constraints.maxWidth < 1000;
+                  return Text(
+                    'مرحباً بك في لوحة التحكم',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: isMediumScreen ? 22 : 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isMediumScreen = constraints.maxWidth < 1000;
+                  return Text(
+                    'نظرة شاملة على أداء متجرك وإحصائيات المبيعات',
+                    style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.7),
+                      fontSize: isMediumScreen ? 14 : 16,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  );
+                },
+              ),
+            ],
           ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isMediumScreen = constraints.maxWidth < 1000;
+            return Container(
+              padding: EdgeInsets.symmetric(
+                  horizontal: isMediumScreen ? 16 : 20,
+                  vertical: isMediumScreen ? 12 : 16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(isDark ? 0.15 : 0.2),
+                borderRadius: BorderRadius.circular(isMediumScreen ? 14 : 16),
+                border: Border.all(
+                  color: Colors.white.withOpacity(isDark ? 0.2 : 0.3),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    size: isMediumScreen ? 18 : 20,
+                  ),
+                  SizedBox(height: isMediumScreen ? 6 : 8),
+                  Text(
+                    DateTime.now().toString().substring(0, 10),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: isMediumScreen ? 14 : 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactHeaderLayout() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isVerySmall = constraints.maxWidth < 400;
+            return Row(
               children: [
-                Text(
-                  'مرحباً بك في لوحة التحكم ${context.watch<StoreConfig>().shopName}',
-                  style: TextStyle(
-                    color: DarkModeUtils.getCardColor(context),
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding: EdgeInsets.all(isVerySmall ? 12 : 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(isDark ? 0.15 : 0.2),
+                    borderRadius: BorderRadius.circular(isVerySmall ? 12 : 16),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(isDark ? 0.2 : 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.analytics_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    size: isVerySmall ? 24 : 28,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'نظرة شاملة على أداء متجرك',
-                  style: TextStyle(
-                    color: DarkModeUtils.getCardColor(context).withOpacity(0.9),
-                    fontSize: 16,
+                const Spacer(),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: isVerySmall ? 12 : 16,
+                      vertical: isVerySmall ? 8 : 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(isDark ? 0.15 : 0.2),
+                    borderRadius: BorderRadius.circular(isVerySmall ? 10 : 12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(isDark ? 0.2 : 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        size: isVerySmall ? 14 : 16,
+                      ),
+                      SizedBox(width: isVerySmall ? 6 : 8),
+                      Text(
+                        DateTime.now().toString().substring(0, 10),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: isVerySmall ? 12 : 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: DarkModeUtils.getCardColor(context).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              DateTime.now().toString().substring(0, 10),
+            );
+          },
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isVerySmall = constraints.maxWidth < 400;
+            return SizedBox(height: isVerySmall ? 12 : 16);
+          },
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isVerySmall = constraints.maxWidth < 400;
+            return Text(
+              'مرحباً بك في لوحة التحكم ${context.watch<StoreConfig>().shopName}',
               style: TextStyle(
-                color: DarkModeUtils.getCardColor(context),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: isVerySmall ? 18 : 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.3,
+                height: 1.3,
               ),
-            ),
-          ),
-        ],
-      ),
+              maxLines: isVerySmall ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+            );
+          },
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isVerySmall = constraints.maxWidth < 400;
+            return SizedBox(height: isVerySmall ? 6 : 8);
+          },
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isVerySmall = constraints.maxWidth < 400;
+            return Text(
+              'نظرة شاملة على أداء متجرك وإحصائيات المبيعات',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                fontSize: isVerySmall ? 12 : 14,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.2,
+              ),
+              maxLines: isVerySmall ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+            );
+          },
+        ),
+      ],
     );
   }
 

@@ -1,9 +1,9 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-import 'package:office_mangment_system/src/screens/enhanced_privacy_policy_screen.dart';
-import 'package:office_mangment_system/src/services/store_config.dart';
 import 'package:provider/provider.dart';
+import 'package:rojsoft_manager/src/screens/enhanced_privacy_policy_screen.dart';
+import 'package:rojsoft_manager/src/services/store_config.dart';
 import '../services/auth/auth_provider.dart';
 import '../utils/dark_mode_utils.dart';
 

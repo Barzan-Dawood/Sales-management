@@ -1,11 +1,11 @@
 {
-    "name": "ROJ NET - نظام إدارة المكتب",
-    "short_name": "ROJ NET",
+    "name": "RojSoft Manager",
+    "short_name": "RojSoft Manager",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#2196F3",
-    "description": "نظام إدارة المكتب لخدمات الانترنت والهواتف",
+    "description": "RojSoft Manager - نظام إدارة المكتب",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

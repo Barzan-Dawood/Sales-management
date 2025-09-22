@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:office_mangment_system/src/screens/enhanced_privacy_policy_screen.dart';
-import 'package:office_mangment_system/src/screens/app_usage_guide_screen.dart';
-import 'package:office_mangment_system/src/screens/database_settings_dialog.dart';
 import 'package:provider/provider.dart';
+import 'package:rojsoft_manager/src/screens/app_usage_guide_screen.dart';
+import 'package:rojsoft_manager/src/screens/database_settings_dialog.dart';
+import 'package:rojsoft_manager/src/screens/enhanced_privacy_policy_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/dark_mode_utils.dart';
 import '../services/db/database_service.dart';
@@ -311,12 +311,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 subtitle: 'إدارة معلومات المتجر للفواتير والتقارير',
                 trailing: Icons.arrow_forward_ios,
                 onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const StoreInfoScreen(),
-                    ),
-                  );
+                  await StoreInfoScreen.show(context);
                   // تحديث الشاشة عند العودة من تعديل معلومات المتجر
                   setState(() {
                     _storeInfoUpdateCounter++;

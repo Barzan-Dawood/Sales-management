@@ -1221,9 +1221,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1)
+                            : Colors.blue.shade50,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.shade200),
+                        border: Border.all(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.3)
+                              : Colors.blue.shade200,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1231,13 +1243,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           Row(
                             children: [
                               Icon(Icons.info_outline,
-                                  color: Colors.blue.shade700, size: 20),
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.blue.shade700,
+                                  size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'المعلومات الأساسية',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade800,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Theme.of(context).colorScheme.onSurface
+                                      : Colors.blue.shade800,
                                   fontSize: 16,
                                 ),
                               ),
@@ -1303,9 +1322,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.green.shade50,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withOpacity(0.1)
+                            : Colors.green.shade50,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.shade200),
+                        border: Border.all(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .secondary
+                                  .withOpacity(0.3)
+                              : Colors.green.shade200,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1313,13 +1344,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           Row(
                             children: [
                               Icon(Icons.attach_money,
-                                  color: Colors.green.shade700, size: 20),
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : Colors.green.shade700,
+                                  size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'الأسعار والمخزون',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.green.shade800,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Theme.of(context).colorScheme.onSurface
+                                      : Colors.green.shade800,
                                   fontSize: 16,
                                 ),
                               ),
@@ -1564,9 +1602,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
         content: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).colorScheme.surface
+                : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue.shade200),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).colorScheme.outline
+                  : Colors.blue.shade200,
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1575,12 +1619,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context).colorScheme.surface
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade300, width: 2),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Theme.of(context).colorScheme.outline
+                          : Colors.grey.shade300,
+                      width: 2,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.black.withOpacity(0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -1605,9 +1658,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                              : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Theme.of(context).colorScheme.outline
+                                    : Colors.grey.shade300,
+                          ),
                         ),
                         child: Text(
                           code,
@@ -1615,7 +1677,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             fontFamily: 'monospace',
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade800,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : Colors.grey.shade800,
                             letterSpacing: 2,
                           ),
                           textAlign: TextAlign.center,
@@ -1625,7 +1690,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       Text(
                         'باركود المنتج',
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.7)
+                              : Colors.grey.shade600,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1637,13 +1707,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 Icon(
                   Icons.qr_code_2_rounded,
                   size: 48,
-                  color: Colors.grey.shade400,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                      : Colors.grey.shade400,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'لا يوجد باركود لهذا المنتج',
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.7)
+                        : Colors.grey.shade600,
                     fontSize: 14,
                   ),
                 ),

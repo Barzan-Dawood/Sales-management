@@ -15,6 +15,8 @@ import '../services/print_service.dart';
 import '../utils/format.dart';
 import '../utils/export.dart';
 import '../utils/dark_mode_utils.dart';
+import '../services/error_handler_service.dart';
+import '../widgets/error_display_widgets.dart';
 
 class DebtsScreen extends StatefulWidget {
   const DebtsScreen({super.key});
@@ -102,6 +104,34 @@ class _DebtsScreenState extends State<DebtsScreen>
     }
   }
 
+  // دالة لحساب ملخص الأقساط
+  Future<Map<String, double>> _getInstallmentsSummary(
+      DatabaseService db) async {
+    try {
+      final installments = await db.getInstallments();
+      double installmentTotal = 0.0;
+      double creditTotal = 0.0;
+
+      for (final installment in installments) {
+        final amount = (installment['amount'] as num?)?.toDouble() ?? 0.0;
+        final saleType = installment['sale_type']?.toString();
+
+        if (saleType == 'installment') {
+          installmentTotal += amount;
+        } else if (saleType == 'credit') {
+          creditTotal += amount;
+        }
+      }
+
+      return {
+        'installment': installmentTotal,
+        'credit': creditTotal,
+      };
+    } catch (e) {
+      return {'installment': 0.0, 'credit': 0.0};
+    }
+  }
+
   // دالة لعرض المعاينة المفصلة للعميل
   void _showCustomerDetailedPreview(
     BuildContext context,
@@ -116,7 +146,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           child: Container(
             width: MediaQuery.of(context).size.width * 0.9,
             height: MediaQuery.of(context).size.height * 0.8,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -130,7 +160,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       child: Text(
                         'معاينة مفصلة - ${customer['name'] ?? 'غير محدد'}',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.primary,
                         ),
@@ -293,12 +323,12 @@ class _DebtsScreenState extends State<DebtsScreen>
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             ...children,
           ],
         ),
@@ -309,7 +339,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   // دالة لبناء صف معلومات
   Widget _buildInfoRow(String label, String value, {Color? valueColor}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -356,6 +386,21 @@ class _DebtsScreenState extends State<DebtsScreen>
       print('First installment data: ${installments.first}');
     }
 
+    // حساب إجمالي مبلغ الأقساط الأصلية والبيع الآجل
+    double totalInstallmentAmount = 0.0;
+    double totalCreditAmount = 0.0;
+
+    for (final installment in installments) {
+      final amount = (installment['amount'] as num?)?.toDouble() ?? 0.0;
+      final saleType = installment['sale_type']?.toString();
+
+      if (saleType == 'installment') {
+        totalInstallmentAmount += amount;
+      } else if (saleType == 'credit') {
+        totalCreditAmount += amount;
+      }
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -365,12 +410,105 @@ class _DebtsScreenState extends State<DebtsScreen>
             Text(
               'تفاصيل الأقساط',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+
+            // إضافة ملخص المبالغ
+            if (totalInstallmentAmount > 0 || totalCreditAmount > 0) ...[
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    if (totalInstallmentAmount > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'إجمالي مبلغ الأقساط الأصلية:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          Text(
+                            Formatters.currencyIQD(totalInstallmentAmount),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    if (totalCreditAmount > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'إجمالي مبلغ البيع الآجل:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                          Text(
+                            Formatters.currencyIQD(totalCreditAmount),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'المجموع الكلي:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          Formatters.currencyIQD(
+                              totalInstallmentAmount + totalCreditAmount),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
             ...installments.asMap().entries.map((entry) {
               final index = entry.key;
               final installment = entry.value;
@@ -383,8 +521,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                   !isPaid;
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 3),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: isPaid
                       ? DarkModeUtils.getSuccessColor(context).withOpacity(0.08)
@@ -405,7 +543,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                                 .withOpacity(0.4)
                             : Colors.orange.withOpacity(0.35),
                   ),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,11 +553,12 @@ class _DebtsScreenState extends State<DebtsScreen>
                       children: [
                         Text(
                           'القسط ${index + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 10),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                              horizontal: 4, vertical: 2),
                           decoration: BoxDecoration(
                             color: isPaid
                                 ? DarkModeUtils.getSuccessColor(context)
@@ -436,46 +575,104 @@ class _DebtsScreenState extends State<DebtsScreen>
                                     : 'مستحق',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
+                              fontSize: 8,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        Row(
+                          children: [
+                            Text('المبلغ: ',
+                                style: const TextStyle(fontSize: 9)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 3, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: installment['sale_type'] == 'installment'
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.1)
+                                    : Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                Formatters.currencyIQD(
+                                    (installment['amount'] as num?)
+                                            ?.toDouble() ??
+                                        0.0),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 9,
+                                  color: installment['sale_type'] ==
+                                          'installment'
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.orange.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                         Text(
-                            'المبلغ: ${Formatters.currencyIQD((installment['amount'] as num?)?.toDouble() ?? 0.0)}'),
-                        Text(
-                            'تاريخ الاستحقاق: ${dueDate != null ? DateFormat('yyyy/MM/dd').format(dueDate) : 'غير محدد'}'),
+                            'تاريخ الاستحقاق: ${dueDate != null ? DateFormat('yyyy/MM/dd').format(dueDate) : 'غير محدد'}',
+                            style: const TextStyle(fontSize: 9)),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'معرف القسط: ${installment['id'] ?? 'غير محدد'}',
                           style:
-                              const TextStyle(fontSize: 12, color: Colors.grey),
+                              const TextStyle(fontSize: 8, color: Colors.grey),
                         ),
-                        Text(
-                          'نوع البيع: ${_translateSaleType(installment['sale_type'])}',
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.grey),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 3, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: installment['sale_type'] == 'installment'
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withOpacity(0.1)
+                                : Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: installment['sale_type'] == 'installment'
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.3)
+                                  : Colors.orange.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            'نوع البيع: ${_translateSaleType(installment['sale_type'])}',
+                            style: TextStyle(
+                              fontSize: 8,
+                              color: installment['sale_type'] == 'installment'
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.orange.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     if (isPaid && installment['payment_date'] != null) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 0.1),
                       Text(
                         'تاريخ الدفع: ${DateFormat('yyyy/MM/dd').format(DateTime.parse(installment['payment_date']))}',
                         style: TextStyle(
                           color: Colors.green.shade700,
-                          fontSize: 12,
+                          fontSize: 8,
                         ),
                       ),
                     ],
@@ -515,7 +712,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                     Text(
                       'اختيار نوع الطابعة',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Colors.blue.shade700,
                       ),
@@ -534,7 +731,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 const Text(
                   'اختر نوع الطابعة:',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -551,7 +748,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                   () => _printWithFormat(context, customer, db, '58'),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
 
                 // طابعة حرارية 80mm
                 _buildPrinterOption(
@@ -564,7 +761,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                   () => _printWithFormat(context, customer, db, '80'),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
 
                 // ورقة A4
                 _buildPrinterOption(
@@ -577,7 +774,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                   () => _printWithFormat(context, customer, db, 'A4'),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
 
                 // ورقة A5
                 _buildPrinterOption(
@@ -611,7 +808,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(color: color.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(12),
@@ -620,7 +817,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -635,7 +832,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: color,
                     ),
@@ -684,18 +881,18 @@ class _DebtsScreenState extends State<DebtsScreen>
             const Text(
               'سجل المدفوعات',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Colors.blue,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             ...payments.map((payment) {
               final paymentDate =
                   DateTime.tryParse(payment['payment_date'] ?? '');
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.green.shade50,
                   border: Border.all(color: Colors.green.shade200),
@@ -750,7 +947,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         appBar: AppBar(
           title: const Text(
             'دفتر الديون',
-            style: TextStyle(color: Colors.blue),
+            style: TextStyle(color: Colors.blue, fontSize: 12),
           ),
           backgroundColor: Theme.of(context).brightness == Brightness.dark
               ? Theme.of(context).colorScheme.surface
@@ -784,7 +981,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           children: [
             // شريط البحث
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               color: Theme.of(context).colorScheme.surfaceVariant,
               child: TextField(
                 controller: _searchController,
@@ -813,7 +1010,7 @@ class _DebtsScreenState extends State<DebtsScreen>
 
             // إحصائيات بسيطة
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               child: FutureBuilder<Map<String, dynamic>>(
                 future: db.getDebtStatistics(),
                 builder: (context, snapshot) {
@@ -831,7 +1028,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                           Colors.red,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: _buildSimpleStatCard(
                           'المدفوع',
@@ -839,7 +1036,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                           Colors.green,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: _buildSimpleStatCard(
                           'المتبقي',
@@ -865,24 +1062,29 @@ class _DebtsScreenState extends State<DebtsScreen>
                 indicatorColor: Theme.of(context).colorScheme.primary,
                 tabs: const [
                   Tab(
-                    icon: Icon(Icons.warning, size: 20),
+                    icon: Icon(Icons.warning, size: 16),
                     text: 'الذين لديهم ديون',
+                    height: 50,
                   ),
                   Tab(
-                    icon: Icon(Icons.schedule, size: 20),
+                    icon: Icon(Icons.schedule, size: 16),
                     text: 'الأقساط',
+                    height: 50,
                   ),
                   Tab(
-                    icon: Icon(Icons.check_circle, size: 20),
+                    icon: Icon(Icons.check_circle, size: 16),
                     text: 'المدفوعين بالكامل',
+                    height: 50,
                   ),
                   Tab(
-                    icon: Icon(Icons.people, size: 20),
+                    icon: Icon(Icons.people, size: 16),
                     text: 'جميع العملاء',
+                    height: 50,
                   ),
                   Tab(
-                    icon: Icon(Icons.analytics, size: 20),
+                    icon: Icon(Icons.analytics, size: 16),
                     text: 'التقارير',
+                    height: 50,
                   ),
                 ],
               ),
@@ -955,12 +1157,12 @@ class _DebtsScreenState extends State<DebtsScreen>
         border: Border.all(
           color: Theme.of(context).dividerColor.withOpacity(0.3),
         ),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
             color: DarkModeUtils.getShadowColor(context),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -969,16 +1171,16 @@ class _DebtsScreenState extends State<DebtsScreen>
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               color: color,
               fontWeight: FontWeight.bold,
             ),
@@ -1014,7 +1216,7 @@ class _DebtsScreenState extends State<DebtsScreen>
             child: Text(
               'لا توجد عملاء',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
@@ -1022,7 +1224,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           itemCount: customers.length,
           itemBuilder: (context, index) {
             final customer = customers[index];
@@ -1060,7 +1262,7 @@ class _DebtsScreenState extends State<DebtsScreen>
             child: Text(
               'لا توجد عملاء',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
@@ -1068,7 +1270,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           itemCount: customers.length,
           itemBuilder: (context, index) {
             final customer = customers[index];
@@ -1085,7 +1287,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       children: [
         // شريط الفلترة
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           color: Theme.of(context).colorScheme.surface,
           child: Column(
             children: [
@@ -1118,7 +1320,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                            horizontal: 10, vertical: 8),
                       ),
                       items: const [
                         DropdownMenuItem(
@@ -1152,7 +1354,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 ],
               ),
               if (_fromDate != null || _toDate != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     if (_fromDate != null)
@@ -1179,6 +1381,117 @@ class _DebtsScreenState extends State<DebtsScreen>
                 ),
               ],
             ],
+          ),
+        ),
+
+        // ملخص إجمالي الأقساط
+        Container(
+          padding: const EdgeInsets.all(8),
+          margin: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color:
+                Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            ),
+          ),
+          child: FutureBuilder<Map<String, double>>(
+            future: _getInstallmentsSummary(db),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                final summary = snapshot.data!;
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'إجمالي الأقساط الأصلية',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.7),
+                            ),
+                          ),
+                          Text(
+                            Formatters.currencyIQD(summary['installment'] ?? 0),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 50,
+                      color: Theme.of(context).dividerColor,
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'إجمالي البيع الآجل',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.7),
+                            ),
+                          ),
+                          Text(
+                            Formatters.currencyIQD(summary['credit'] ?? 0),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 50,
+                      color: Theme.of(context).dividerColor,
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'المجموع الكلي',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.7),
+                            ),
+                          ),
+                          Text(
+                            Formatters.currencyIQD(
+                                (summary['installment'] ?? 0) +
+                                    (summary['credit'] ?? 0)),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
         ),
 
@@ -1242,7 +1555,7 @@ class _DebtsScreenState extends State<DebtsScreen>
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(8),
                 itemCount: filteredInstallments.length,
                 itemBuilder: (context, index) {
                   final installment = filteredInstallments[index];
@@ -1281,13 +1594,13 @@ class _DebtsScreenState extends State<DebtsScreen>
           return const Center(
             child: Text(
               'لا توجد عملاء',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           );
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           itemCount: customers.length,
           itemBuilder: (context, index) {
             final customer = customers[index];
@@ -1300,21 +1613,21 @@ class _DebtsScreenState extends State<DebtsScreen>
 
   Widget _buildReportsTab(DatabaseService db) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // إحصائيات الأقساط
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'إحصائيات الأقساط',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1339,7 +1652,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                                   Colors.blue,
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 4),
                               Expanded(
                                 child: _buildStatCard(
                                   'المدفوعة',
@@ -1350,7 +1663,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
                               Expanded(
@@ -1362,7 +1675,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                                   Colors.orange,
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 4),
                               Expanded(
                                 child: _buildStatCard(
                                   'المتأخرة',
@@ -1388,14 +1701,14 @@ class _DebtsScreenState extends State<DebtsScreen>
           // الأقساط المتأخرة
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'الأقساط المتأخرة',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1475,14 +1788,14 @@ class _DebtsScreenState extends State<DebtsScreen>
           // الأقساط المستحقة هذا الشهر
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'الأقساط المستحقة هذا الشهر',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1565,7 +1878,7 @@ class _DebtsScreenState extends State<DebtsScreen>
   Widget _buildStatCard(
       String title, String count, String amount, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         border: Border.all(color: color.withOpacity(0.3)),
@@ -1586,7 +1899,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           Text(
             count,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 12,
               color: color,
               fontWeight: FontWeight.bold,
             ),
@@ -1701,13 +2014,15 @@ class _DebtsScreenState extends State<DebtsScreen>
     final isPaid = (installment['paid'] as int) == 1;
     final amount = (installment['amount'] as num).toDouble();
     final customerName = installment['customer_name'] ?? 'غير محدد';
-    final customerPhone = installment['customer_phone'] ?? '';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       elevation: 1,
       child: ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         leading: CircleAvatar(
+          radius: 16,
           backgroundColor: isPaid
               ? Colors.green.shade100
               : isOverdue
@@ -1724,24 +2039,25 @@ class _DebtsScreenState extends State<DebtsScreen>
                 : isOverdue
                     ? Colors.red
                     : Colors.orange,
-            size: 20,
+            size: 16,
           ),
         ),
         title: Text(
           customerName,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (customerPhone.isNotEmpty) Text('الهاتف: $customerPhone'),
-            Text('المبلغ: ${Formatters.currencyIQD(amount)}'),
+            Text('المبلغ: ${Formatters.currencyIQD(amount)}',
+                style: const TextStyle(fontSize: 11)),
             Text(
-                'تاريخ الاستحقاق: ${dueDate.day}/${dueDate.month}/${dueDate.year}'),
+                'تاريخ الاستحقاق: ${dueDate.day}/${dueDate.month}/${dueDate.year}',
+                style: const TextStyle(fontSize: 11)),
             if (isPaid)
               Text(
                 'تم الدفع في: ${DateTime.parse(installment['paid_at'] as String).day}/${DateTime.parse(installment['paid_at'] as String).month}/${DateTime.parse(installment['paid_at'] as String).year}',
-                style: const TextStyle(color: Colors.green),
+                style: const TextStyle(color: Colors.green, fontSize: 11),
               ),
           ],
         ),
@@ -1868,26 +2184,32 @@ class _DebtsScreenState extends State<DebtsScreen>
           }
 
           return ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             leading: CircleAvatar(
+              radius: 16,
               backgroundColor:
                   remaining > 0 ? Colors.red.shade100 : Colors.green.shade100,
               child: Icon(
                 remaining > 0 ? Icons.warning : Icons.check_circle,
                 color: remaining > 0 ? Colors.red : Colors.green,
-                size: 20,
+                size: 16,
               ),
             ),
             title: Text(
               customer['name'] ?? 'غير محدد',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: 14,
               ),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('الهاتف: ${customer['phone'] ?? 'غير محدد'}'),
+                Text(
+                  'الهاتف: ${customer['phone'] ?? 'غير محدد'}',
+                  style: const TextStyle(fontSize: 12),
+                ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -1895,7 +2217,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                       'المتبقي: ',
                       style: TextStyle(
                         color: Colors.grey.shade600,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                     Text(
@@ -2024,7 +2346,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           child: Container(
             width: MediaQuery.of(context).size.width * 0.9,
             height: MediaQuery.of(context).size.height * 0.7,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8),
             child: Column(
               children: [
                 Row(
@@ -2032,7 +2354,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                     Text(
                       'أقساط العميل - ${customer['name']}',
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -2058,7 +2380,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                         return const Center(
                           child: Text(
                             'لا توجد أقساط لهذا العميل',
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         );
                       }
@@ -2095,7 +2417,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                 child: Container(
                   width: MediaQuery.of(context).size.width * 0.9,
                   height: MediaQuery.of(context).size.height * 0.7,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(8),
                   child: Column(
                     children: [
                       Row(
@@ -2103,7 +2425,7 @@ class _DebtsScreenState extends State<DebtsScreen>
                           Text(
                             'سجل المدفوعات - ${customer['name']}',
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -2328,8 +2650,11 @@ class _DebtsScreenState extends State<DebtsScreen>
                         const SnackBar(content: Text('تم إضافة الدفعة بنجاح')),
                       );
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('خطأ: $e')),
+                      ErrorHandlerService.handleError(
+                        context,
+                        () async => throw e,
+                        showSnackBar: true,
+                        showDialog: false,
                       );
                     }
                   },
@@ -2366,8 +2691,11 @@ class _DebtsScreenState extends State<DebtsScreen>
                     const SnackBar(content: Text('تم حذف الدفعة بنجاح')),
                   );
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('خطأ: $e')),
+                  ErrorHandlerService.handleError(
+                    context,
+                    () async => throw e,
+                    showSnackBar: true,
+                    showDialog: false,
                   );
                 }
               },
@@ -2879,15 +3207,15 @@ class _DebtsScreenState extends State<DebtsScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('هل أنت متأكد من حذف العميل:'),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
                 '${customer['name'] ?? 'غير محدد'}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 12,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               const Text(
                 'تحذير: سيتم حذف جميع البيانات المرتبطة بهذا العميل بما في ذلك المدفوعات والفواتير.',
                 style: TextStyle(
@@ -3355,7 +3683,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(16),
+        margin: const pw.EdgeInsets.all(8),
         build: (context) {
           return pw.Directionality(
             textDirection: pw.TextDirection.rtl,
@@ -3393,7 +3721,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       doc.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(16),
+          margin: const pw.EdgeInsets.all(8),
           build: (context) {
             return pw.Directionality(
               textDirection: pw.TextDirection.rtl,
@@ -3432,7 +3760,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     pw.Font arabicFont,
   ) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(16),
+      padding: const pw.EdgeInsets.all(8),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(width: 1),
         borderRadius: pw.BorderRadius.circular(8),
@@ -3443,7 +3771,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           pw.Text(
             'كشف القسط',
             style: pw.TextStyle(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: pw.FontWeight.bold,
               font: arabicFont,
             ),
@@ -3503,7 +3831,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         : null;
 
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.all(6),
       decoration: pw.BoxDecoration(
         color: isPaid ? PdfColors.green50 : PdfColors.orange50,
         border: pw.Border.all(width: 1),
@@ -3600,7 +3928,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     pw.Font arabicFont,
   ) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.all(6),
       decoration: pw.BoxDecoration(
         color: PdfColors.grey100,
         border: pw.Border.all(width: 1),
@@ -3878,7 +4206,7 @@ class _DebtsScreenState extends State<DebtsScreen>
     pw.Font arabicFont,
   ) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(16),
+      padding: const pw.EdgeInsets.all(8),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(width: 1),
         borderRadius: pw.BorderRadius.circular(8),
@@ -3889,7 +4217,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           pw.Text(
             'سجل الدفعات',
             style: pw.TextStyle(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: pw.FontWeight.bold,
               font: arabicFont,
             ),
@@ -4127,7 +4455,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         );
 
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.all(6),
       decoration: pw.BoxDecoration(
         color: PdfColors.blue50,
         border: pw.Border.all(width: 1),

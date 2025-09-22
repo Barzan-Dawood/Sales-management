@@ -159,22 +159,30 @@ class _AppShellState extends State<AppShell> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: isDark ? scheme.primaryContainer : scheme.primary,
+                    gradient: LinearGradient(
+                      colors: [
+                        scheme.primary,
+                        scheme.primary.withOpacity(0.8),
+                        scheme.primaryContainer,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      stops: const [0.0, 0.6, 1.0],
+                    ),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: isDark
-                            ? Colors.black.withOpacity(0.3)
-                            : Colors.black.withOpacity(0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                        color: scheme.primary.withOpacity(0.4),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                        spreadRadius: 1,
                       ),
                       BoxShadow(
                         color: isDark
-                            ? Colors.black.withOpacity(0.1)
+                            ? Colors.black.withOpacity(0.2)
                             : Colors.white.withOpacity(0.4),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
                       ),
                     ],
                   ),
@@ -189,15 +197,13 @@ class _AppShellState extends State<AppShell> {
                             Text(
                               AppStrings.mainMenu,
                               style: TextStyle(
-                                color: isDark
-                                    ? scheme.onPrimaryContainer
-                                    : scheme.onPrimary,
+                                color: scheme.onPrimary,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
                                 shadows: [
                                   Shadow(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.black26,
                                     offset: const Offset(0, 1),
                                     blurRadius: 2,
                                   ),
@@ -207,10 +213,7 @@ class _AppShellState extends State<AppShell> {
                             Text(
                               AppStrings.selectSection,
                               style: TextStyle(
-                                color: (isDark
-                                        ? scheme.onPrimaryContainer
-                                        : scheme.onPrimary)
-                                    .withOpacity(0.85),
+                                color: scheme.onPrimary.withOpacity(0.9),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w400,
                                 letterSpacing: 0.2,

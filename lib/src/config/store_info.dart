@@ -5,20 +5,20 @@ library;
 
 class StoreInfo {
   // معلومات التطبيق
-  static const String appTitle = 'نظام إدارة المكتب';
+  static const String appTitle = 'Rojsoft Manager';
   static const String displayVersion = '1.0.0';
   static const String logoAssetPath = 'assets/images/office.png';
 
   // معلومات المحل الأساسية
-  static const String shopName = 'مكتب جاسم نت';
-  static const String shopDescription = 'لخدمات الانترنت والهواتف';
-  static const String phone = '07508880664 - 07828356553';
-  static const String address = 'شنكال - سوق القديم';
+  static const String shopName = 'مكتب';
+  static const String shopDescription = 'البرمجة والتطوير';
+  static const String phone = '07866744144';
+  static const String address = 'شنكال - سنجار';
 
   // معلومات إضافية للمحل
   static const String email = 'barzan.dawood.dev@gmail.com';
   static const String whatsapp = '07866744144';
-  static const String city = 'نينوى - شنكال';
+  static const String city = 'شنكال - نينوى';
   static const String country = 'جمهورية العراق';
 
   // معلومات المطور
@@ -29,7 +29,7 @@ class StoreInfo {
   // معلومات التواصل والدعم
   static const String supportPhone = '07866744144';
   static const String supportEmail = 'barzan.dawood.dev@gmail.com';
-  static const String supportAddress = 'نينوى - شنكال';
+  static const String supportAddress = 'شنكال(سنجار) - نينوى';
 
   // معلومات قانونية
   static const String copyright = '© 2025 نظام إدارة المكتب';
