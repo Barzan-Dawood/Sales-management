@@ -33,6 +33,10 @@ void main() {
         'password': 'testpass',
         'name': 'Test User',
         'role': 'employee',
+        'employee_code': 'TEST001',
+        'active': 1,
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
       final result = await authProvider.login('testuser', 'testpass');
@@ -40,7 +44,7 @@ void main() {
       expect(result, isTrue);
       expect(authProvider.isAuthenticated, isTrue);
       expect(authProvider.currentUser, isNotNull);
-      expect(authProvider.currentUser!['username'], equals('testuser'));
+      expect(authProvider.currentUser!.username, equals('testuser'));
     });
 
     test('should handle login with invalid credentials', () async {
@@ -58,6 +62,10 @@ void main() {
         'password': 'testpass2',
         'name': 'Test User 2',
         'role': 'manager',
+        'employee_code': 'TEST002',
+        'active': 1,
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
       await authProvider.login('testuser2', 'testpass2');
@@ -75,6 +83,10 @@ void main() {
         'password': 'managerpass',
         'name': 'Manager User',
         'role': 'manager',
+        'employee_code': 'MGR001',
+        'active': 1,
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
       await authProvider.login('manager', 'managerpass');
@@ -87,6 +99,10 @@ void main() {
         'password': 'employeepass',
         'name': 'Employee User',
         'role': 'employee',
+        'employee_code': 'EMP001',
+        'active': 1,
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       });
 
       await authProvider.login('employee', 'employeepass');

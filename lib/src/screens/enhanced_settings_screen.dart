@@ -1456,6 +1456,10 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
     );
   }
 
+  // تم حذف منطق إدارة المستخدمين من شاشة الإعدادات بعد نقله إلى صفحة إدارة المستخدمين
+
+  // تم إزالة دالة _sha256 بعد نقل إدارة المستخدمين
+
   Future<void> _showDatabaseSettingsDialog() async {
     await showDialog(
       context: context,

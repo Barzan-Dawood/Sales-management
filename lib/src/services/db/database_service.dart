@@ -2,16 +2,18 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crypto/crypto.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
-  static const int _dbVersion = 6;
+  static const int _dbVersion = 8;
 
   late Database _db;
   late String _dbPath;
@@ -58,6 +60,12 @@ class DatabaseService {
         }
         if (oldVersion < 6) {
           await _migrateToV6(db);
+        }
+        if (oldVersion < 7) {
+          await _migrateToV7(db);
+        }
+        if (oldVersion < 8) {
+          await _migrateToV8(db);
         }
         // Ensure no legacy triggers/views remain that reference old temp tables
         await _cleanupOrphanObjects(db);
@@ -740,7 +748,7 @@ class DatabaseService {
       if (users.isEmpty) {
         await _db.insert('users', {
           'name': 'Administrator',
-          'username': 'admin',
+          'username': 'mgr',
           'password': desired,
           'role': 'manager',
           'active': 1,
@@ -809,8 +817,11 @@ class DatabaseService {
         name TEXT NOT NULL,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        role TEXT NOT NULL CHECK(role IN ('manager','employee')),
-        active INTEGER NOT NULL DEFAULT 1
+        role TEXT NOT NULL CHECK(role IN ('manager','supervisor','employee')),
+        employee_code TEXT UNIQUE NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
       );
     ''');
 
@@ -989,18 +1000,290 @@ class DatabaseService {
     }
   }
 
+  Future<void> _migrateToV7(Database db) async {
+    // تحديث جدول المستخدمين لدعم النظام الجديد
+    try {
+      debugPrint('بدء Migration V7...');
+
+      // إعادة إنشاء جدول المستخدمين لدعم supervisor
+      await db.execute('PRAGMA foreign_keys=off');
+
+      // إنشاء جدول مؤقت
+      await db.execute('''
+        CREATE TABLE users_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          role TEXT NOT NULL CHECK(role IN ('manager','supervisor','employee')),
+          employee_code TEXT UNIQUE NOT NULL,
+          active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      ''');
+
+      // نسخ البيانات الموجودة
+      await db.execute('''
+        INSERT INTO users_new (id, name, username, password, role, employee_code, active, created_at, updated_at)
+        SELECT 
+          id, 
+          name, 
+          username, 
+          password, 
+          role,
+          COALESCE(employee_code, 'LEGACY' || id) as employee_code,
+          active,
+          COALESCE(created_at, datetime('now')) as created_at,
+          datetime('now') as updated_at
+        FROM users;
+      ''');
+
+      // حذف الجدول القديم
+      await db.execute('DROP TABLE users');
+
+      // إعادة تسمية الجدول الجديد
+      await db.execute('ALTER TABLE users_new RENAME TO users');
+
+      await db.execute('PRAGMA foreign_keys=on');
+      debugPrint('تم إعادة إنشاء جدول المستخدمين بنجاح');
+
+      // تحديث البيانات الموجودة
+      final now = DateTime.now().toIso8601String();
+      final existingUsers = await db.query('users');
+      debugPrint('المستخدمون الموجودون: ${existingUsers.length}');
+
+      for (final user in existingUsers) {
+        await db.update(
+            'users',
+            {
+              'employee_code': user['employee_code'] ?? 'LEGACY001',
+              'created_at': user['created_at'] ?? now,
+              'updated_at': now,
+            },
+            where: 'id = ?',
+            whereArgs: [user['id']]);
+      }
+
+      // إضافة المستخدمين الجدد
+      final defaultUsers = [
+        {
+          'name': 'المدير',
+          'username': 'mgr',
+          'password': 'Manager@2025',
+          'role': 'manager',
+          'employee_code': 'MGR001',
+          'active': 1,
+          'created_at': now,
+          'updated_at': now,
+        },
+        {
+          'name': 'المشرف',
+          'username': 'sup',
+          'password': 'Super@2025',
+          'role': 'supervisor',
+          'employee_code': 'SUP001',
+          'active': 1,
+          'created_at': now,
+          'updated_at': now,
+        },
+        {
+          'name': 'الموظف',
+          'username': 'emp',
+          'password': 'Emp@2025',
+          'role': 'employee',
+          'employee_code': 'EMP001',
+          'active': 1,
+          'created_at': now,
+          'updated_at': now,
+        },
+      ];
+
+      for (final user in defaultUsers) {
+        final existing = await db.query('users',
+            where: 'username = ?', whereArgs: [user['username']], limit: 1);
+
+        if (existing.isEmpty) {
+          await db.insert('users', user);
+          debugPrint('تم إضافة مستخدم: ${user['username']}');
+        } else {
+          debugPrint('المستخدم موجود بالفعل: ${user['username']}');
+        }
+      }
+
+      debugPrint('انتهى Migration V7 بنجاح');
+    } catch (e) {
+      debugPrint('خطأ في Migration V7: $e');
+    }
+  }
+
+  Future<void> _migrateToV8(Database db) async {
+    // إصلاح جدول المستخدمين لدعم supervisor
+    try {
+      debugPrint('بدء Migration V8 - إصلاح جدول المستخدمين...');
+
+      // إعادة إنشاء جدول المستخدمين لدعم supervisor
+      await db.execute('PRAGMA foreign_keys=off');
+
+      // إنشاء جدول مؤقت
+      await db.execute('''
+        CREATE TABLE users_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          username TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          role TEXT NOT NULL CHECK(role IN ('manager','supervisor','employee')),
+          employee_code TEXT UNIQUE NOT NULL,
+          active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      ''');
+
+      // نسخ البيانات الموجودة
+      await db.execute('''
+        INSERT INTO users_new (id, name, username, password, role, employee_code, active, created_at, updated_at)
+        SELECT 
+          id, 
+          name, 
+          username, 
+          password, 
+          role,
+          COALESCE(employee_code, 'LEGACY' || id) as employee_code,
+          active,
+          COALESCE(created_at, datetime('now')) as created_at,
+          datetime('now') as updated_at
+        FROM users;
+      ''');
+
+      // حذف الجدول القديم
+      await db.execute('DROP TABLE users');
+
+      // إعادة تسمية الجدول الجديد
+      await db.execute('ALTER TABLE users_new RENAME TO users');
+
+      await db.execute('PRAGMA foreign_keys=on');
+      debugPrint('تم إعادة إنشاء جدول المستخدمين بنجاح في V8');
+
+      // إضافة المستخدمين الجدد
+      final now = DateTime.now().toIso8601String();
+      final defaultUsers = [
+        {
+          'name': 'المدير',
+          'username': 'mgr',
+          'password': 'Manager@2025',
+          'role': 'manager',
+          'employee_code': 'MGR001',
+          'active': 1,
+          'created_at': now,
+          'updated_at': now,
+        },
+        {
+          'name': 'المشرف',
+          'username': 'sup',
+          'password': 'Super@2025',
+          'role': 'supervisor',
+          'employee_code': 'SUP001',
+          'active': 1,
+          'created_at': now,
+          'updated_at': now,
+        },
+        {
+          'name': 'الموظف',
+          'username': 'emp',
+          'password': 'Emp@2025',
+          'role': 'employee',
+          'employee_code': 'EMP001',
+          'active': 1,
+          'created_at': now,
+          'updated_at': now,
+        },
+      ];
+
+      for (final user in defaultUsers) {
+        final existing = await db.query('users',
+            where: 'username = ?', whereArgs: [user['username']], limit: 1);
+
+        if (existing.isEmpty) {
+          await db.insert('users', user);
+          debugPrint('تم إضافة مستخدم في V8: ${user['username']}');
+        } else {
+          debugPrint('المستخدم موجود بالفعل في V8: ${user['username']}');
+        }
+      }
+
+      debugPrint('انتهى Migration V8 بنجاح');
+    } catch (e) {
+      debugPrint('خطأ في Migration V8: $e');
+    }
+  }
+
   Future<void> _seedData(Database db) async {
-    // Ensure an admin user exists with a plain password as requested
+    final now = DateTime.now().toIso8601String();
+    debugPrint('بدء إنشاء البيانات الافتراضية...');
+
+    // إنشاء المستخدمين الافتراضيين
+    final defaultUsers = [
+      {
+        'name': 'المدير',
+        'username': 'manager001',
+        'password': 'Manager@2025',
+        'role': 'manager',
+        'employee_code': 'MGR001',
+        'active': 1,
+        'created_at': now,
+        'updated_at': now,
+      },
+      {
+        'name': 'المشرف',
+        'username': 'sup',
+        'password': 'Super@2025',
+        'role': 'supervisor',
+        'employee_code': 'SUP001',
+        'active': 1,
+        'created_at': now,
+        'updated_at': now,
+      },
+      {
+        'name': 'الموظف',
+        'username': 'employee001',
+        'password': 'Emp@2025',
+        'role': 'employee',
+        'employee_code': 'EMP001',
+        'active': 1,
+        'created_at': now,
+        'updated_at': now,
+      },
+    ];
+
+    for (final user in defaultUsers) {
+      final existing = await db.query('users',
+          where: 'username = ?', whereArgs: [user['username']], limit: 1);
+
+      if (existing.isEmpty) {
+        await db.insert('users', user);
+        debugPrint('تم إنشاء مستخدم جديد: ${user['username']}');
+      } else {
+        await db.update('users', user,
+            where: 'username = ?', whereArgs: [user['username']]);
+        debugPrint('تم تحديث مستخدم موجود: ${user['username']}');
+      }
+    }
+
+    // الاحتفاظ بالمستخدم الإداري القديم للتوافق
     final existing = await db.query('users',
         where: 'username = ?', whereArgs: ['admin'], limit: 1);
     const plain = 'admin123';
     if (existing.isEmpty) {
       await db.insert('users', {
         'name': 'Administrator',
-        'username': 'admin',
+        'username': 'mgr',
         'password': plain,
         'role': 'manager',
+        'employee_code': 'ADM001',
         'active': 1,
+        'created_at': now,
+        'updated_at': now,
       });
     } else {
       await db.update(
@@ -1009,7 +1292,9 @@ class DatabaseService {
             'name': existing.first['name'] ?? 'Administrator',
             'password': plain,
             'role': 'manager',
+            'employee_code': 'ADM001',
             'active': 1,
+            'updated_at': now,
           },
           where: 'username = ?',
           whereArgs: ['admin']);
@@ -1019,14 +1304,71 @@ class DatabaseService {
   // Simple helpers for common queries used early in development
   Future<Map<String, Object?>?> findUserByCredentials(
       String username, String password) async {
+    // جلب المستخدم بالاسم والتأكد من كونه فعّالاً
     final result = await _db.query(
       'users',
-      where: 'username = ? AND password = ? AND active = 1',
-      whereArgs: [username, password],
+      where: 'username = ? AND active = 1',
+      whereArgs: [username],
       limit: 1,
     );
-    if (result.isEmpty) return null;
-    return result.first;
+
+    if (result.isEmpty) {
+      debugPrint('لم يتم العثور على مستخدم فعّال بهذا الاسم');
+      return null;
+    }
+
+    final user = result.first;
+    final stored = (user['password'] ?? '').toString();
+
+    // تحقق كلمة المرور: دعم نص صريح تاريخي أو SHA-256 سداسي حديث
+    bool matches = false;
+    try {
+      // حساب SHA-256 للنص المدخل
+      // ملاحظة: نستخدم crypto في طبقة أعلى لتجنّب استيراد هنا إذا لم يكن ضرورياً،
+      // لكن لأجل الاكتفاء الذاتي سنحوّل هنا باستخدام صيغة بسيطة عبر دارت.
+      // سنستخدم صيغة مقارنة ثنائية: إذا تخزين سداسي بطول 64 ويماثل هاش الإدخال.
+      final hashed = _sha256Hex(password);
+      final isHex64 =
+          RegExp(r'^[a-f0-9]{64} ?$', caseSensitive: false).hasMatch(stored);
+      if (stored == password) {
+        matches = true; // توافق نص صريح قديم
+      } else if (isHex64 && stored.toLowerCase() == hashed) {
+        matches = true; // توافق كلمة مرور مهدّدة SHA-256
+      } else {
+        matches = false;
+      }
+    } catch (_) {
+      matches = stored == password;
+    }
+
+    if (!matches) {
+      debugPrint('بيانات الدخول غير صحيحة للمستخدم: $username');
+      return null;
+    }
+
+    return user;
+  }
+
+  // حساب SHA-256 وإرجاعه كنص سداسي صغير الأحرف
+  String _sha256Hex(String input) {
+    // تجنّب إضافة تبعية مباشرة هنا: سنستدعي crypto عبر MethodChannel ليس مناسباً.
+    // لذلك سنستخدم dart:convert و package:crypto في أعلى الملف إن كانت مستوردة.
+    // لضمان العمل حتى إن لم تتوفر، نتحقق ديناميكياً عبر try/catch في الاستدعاء.
+    // هنا نفترض تواجد crypto حسب pubspec.
+    // ignore: avoid_print
+    try {
+      // سيستبدل Dart المحوّل عند البناء حسب الاستيراد أعلى الملف
+      // نكتب الاستدعاءات بشكل منعزل لتجنب أخطاء إن لم تتوفر.
+      // سيتم حقن الدوال فعلياً عبر imports الموجودة في الملف.
+    } catch (_) {}
+    // تنفيذ فعلي باستخدام crypto
+    // سيتم حقنه عبر imports أعلى الملف: import 'dart:convert'; import 'package:crypto/crypto.dart';
+    // نستخدم dynamic للسلامة في التحويل بدون إنكسار عند تحليل ثابت
+    final dynamic utf8Dyn = utf8;
+    final dynamic sha256Dyn = sha256;
+    final bytes = utf8Dyn.encode(input) as List<int>;
+    final digest = sha256Dyn.convert(bytes);
+    return digest.toString();
   }
 
   // updateUserPassword removed: password changes are disabled
@@ -3991,7 +4333,7 @@ class DatabaseService {
         // إعادة إنشاء المستخدم الافتراضي
         await txn.insert('users', {
           'name': 'مدير النظام',
-          'username': 'admin',
+          'username': 'mgr',
           'password': 'admin123',
           'role': 'manager',
           'active': 1,

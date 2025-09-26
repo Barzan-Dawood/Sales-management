@@ -8,6 +8,8 @@ import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 import '../../services/db/database_service.dart';
+import '../../services/auth/auth_provider.dart';
+import '../../models/user_model.dart';
 import '../../utils/format.dart';
 import '../../utils/export.dart';
 import 'package:intl/intl.dart';
@@ -38,6 +40,46 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   Widget build(BuildContext context) {
     final db = context.read<DatabaseService>();
+    final auth = context.watch<AuthProvider>();
+
+    // فحص صلاحية إدارة المنتجات
+    if (!auth.hasPermission(UserPermission.manageProducts)) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('إدارة المنتجات'),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.lock,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'ليس لديك صلاحية للوصول إلى هذه الصفحة',
+                style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'هذه الصفحة متاحة للمديرين والمشرفين فقط',
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('العودة'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Directionality(
       textDirection: ui.TextDirection.rtl,

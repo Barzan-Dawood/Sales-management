@@ -26,6 +26,8 @@ import 'screens/tests_screen.dart';
 import 'screens/advanced_reports_screen.dart';
 import 'screens/inventory_reports_screen.dart';
 import 'screens/license_check_screen.dart';
+import 'screens/users_management_screen.dart';
+import 'models/user_model.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -89,7 +91,52 @@ class _AppShellState extends State<AppShell> {
       const InventoryReportsScreen(),
       const TestsScreen(),
       const SettingsScreen(),
+      const UsersManagementScreen(), // إدارة المستخدمين
     ];
+
+    bool canAccessIndex(int index) {
+      switch (index) {
+        case 0:
+          return true; // Dashboard متاح للجميع بعد تسجيل الدخول
+        case 1:
+          return auth.hasPermission(UserPermission.manageSales);
+        case 2:
+          return auth.hasPermission(UserPermission.viewReports);
+        case 3:
+          return auth.hasPermission(UserPermission.manageProducts);
+        case 4:
+          return auth.hasPermission(UserPermission.manageCategories);
+        case 5:
+          return auth.hasPermission(UserPermission.manageInventory);
+        case 6:
+          return auth.hasPermission(UserPermission.manageCustomers);
+        case 7:
+          return auth.hasPermission(UserPermission.manageSuppliers);
+        case 8:
+          return auth.hasPermission(UserPermission.viewReports);
+        case 9:
+          return auth.hasPermission(UserPermission.viewReports);
+        case 10:
+          return auth.hasPermission(UserPermission.viewReports);
+        case 11:
+          return auth.hasPermission(UserPermission.viewProfitCosts);
+        case 12:
+          return auth.hasPermission(UserPermission.viewReports);
+        case 13:
+          return true; // شاشة الاختبارات لأغراض التطوير فقط
+        case 14:
+          return auth.hasPermission(UserPermission.systemSettings);
+        case 15:
+          return auth.hasPermission(UserPermission.manageUsers);
+        default:
+          return false;
+      }
+    }
+
+    // منع الوصول غير المصرّح به عند تغيير المستخدم أو الصلاحيات
+    if (!canAccessIndex(_selectedIndex)) {
+      _selectedIndex = 0;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -118,7 +165,9 @@ class _AppShellState extends State<AppShell> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Center(
               child: Text(
-                auth.currentUser?['name']?.toString() ?? '',
+                auth.currentUserName.isNotEmpty
+                    ? auth.currentUserName
+                    : 'المستخدم',
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ),
@@ -278,90 +327,112 @@ class _AppShellState extends State<AppShell> {
                         index: 0,
                         isSelected: _selectedIndex == 0,
                       ),
-                      _buildNavItem(
-                        icon: Icons.point_of_sale,
-                        label: AppStrings.sales,
-                        index: 1,
-                        isSelected: _selectedIndex == 1,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.history,
-                        label: AppStrings.salesHistory,
-                        index: 2,
-                        isSelected: _selectedIndex == 2,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.inventory_2,
-                        label: AppStrings.products,
-                        index: 3,
-                        isSelected: _selectedIndex == 3,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.category,
-                        label: AppStrings.categories,
-                        index: 4,
-                        isSelected: _selectedIndex == 4,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.warehouse,
-                        label: AppStrings.inventory,
-                        index: 5,
-                        isSelected: _selectedIndex == 5,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.people_alt,
-                        label: AppStrings.customers,
-                        index: 6,
-                        isSelected: _selectedIndex == 6,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.local_shipping,
-                        label: AppStrings.suppliers,
-                        index: 7,
-                        isSelected: _selectedIndex == 7,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.account_balance,
-                        label: AppStrings.accounting,
-                        index: 8,
-                        isSelected: _selectedIndex == 8,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.payments,
-                        label: AppStrings.debts,
-                        index: 9,
-                        isSelected: _selectedIndex == 9,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.bar_chart,
-                        label: AppStrings.reports,
-                        index: 10,
-                        isSelected: _selectedIndex == 10,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.account_balance_wallet,
-                        label: 'التقارير المالية',
-                        index: 11,
-                        isSelected: _selectedIndex == 11,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.inventory_2,
-                        label: 'تقارير الجرد',
-                        index: 12,
-                        isSelected: _selectedIndex == 12,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.science,
-                        label: 'الاختبارات',
-                        index: 13,
-                        isSelected: _selectedIndex == 13,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.settings,
-                        label: AppStrings.settings,
-                        index: 14,
-                        isSelected: _selectedIndex == 14,
-                      ),
+                      if (canAccessIndex(1))
+                        _buildNavItem(
+                          icon: Icons.point_of_sale,
+                          label: AppStrings.sales,
+                          index: 1,
+                          isSelected: _selectedIndex == 1,
+                        ),
+                      if (canAccessIndex(2))
+                        _buildNavItem(
+                          icon: Icons.history,
+                          label: AppStrings.salesHistory,
+                          index: 2,
+                          isSelected: _selectedIndex == 2,
+                        ),
+                      if (canAccessIndex(3))
+                        _buildNavItem(
+                          icon: Icons.inventory_2,
+                          label: AppStrings.products,
+                          index: 3,
+                          isSelected: _selectedIndex == 3,
+                        ),
+                      if (canAccessIndex(4))
+                        _buildNavItem(
+                          icon: Icons.category,
+                          label: AppStrings.categories,
+                          index: 4,
+                          isSelected: _selectedIndex == 4,
+                        ),
+                      if (canAccessIndex(5))
+                        _buildNavItem(
+                          icon: Icons.warehouse,
+                          label: AppStrings.inventory,
+                          index: 5,
+                          isSelected: _selectedIndex == 5,
+                        ),
+                      if (canAccessIndex(6))
+                        _buildNavItem(
+                          icon: Icons.people_alt,
+                          label: AppStrings.customers,
+                          index: 6,
+                          isSelected: _selectedIndex == 6,
+                        ),
+                      if (canAccessIndex(7))
+                        _buildNavItem(
+                          icon: Icons.local_shipping,
+                          label: AppStrings.suppliers,
+                          index: 7,
+                          isSelected: _selectedIndex == 7,
+                        ),
+                      if (canAccessIndex(8))
+                        _buildNavItem(
+                          icon: Icons.account_balance,
+                          label: AppStrings.accounting,
+                          index: 8,
+                          isSelected: _selectedIndex == 8,
+                        ),
+                      if (canAccessIndex(9))
+                        _buildNavItem(
+                          icon: Icons.payments,
+                          label: AppStrings.debts,
+                          index: 9,
+                          isSelected: _selectedIndex == 9,
+                        ),
+                      if (canAccessIndex(10))
+                        _buildNavItem(
+                          icon: Icons.bar_chart,
+                          label: AppStrings.reports,
+                          index: 10,
+                          isSelected: _selectedIndex == 10,
+                        ),
+                      if (canAccessIndex(11))
+                        _buildNavItem(
+                          icon: Icons.account_balance_wallet,
+                          label: 'التقارير المالية',
+                          index: 11,
+                          isSelected: _selectedIndex == 11,
+                        ),
+                      if (canAccessIndex(12))
+                        _buildNavItem(
+                          icon: Icons.inventory_2,
+                          label: 'تقارير الجرد',
+                          index: 12,
+                          isSelected: _selectedIndex == 12,
+                        ),
+                      if (canAccessIndex(13))
+                        _buildNavItem(
+                          icon: Icons.science,
+                          label: 'الاختبارات',
+                          index: 13,
+                          isSelected: _selectedIndex == 13,
+                        ),
+                      // إدارة المستخدمين - للمديرين فقط
+                      if (canAccessIndex(15))
+                        _buildNavItem(
+                          icon: Icons.people,
+                          label: 'إدارة المستخدمين',
+                          index: 15,
+                          isSelected: _selectedIndex == 15,
+                        ),
+                      if (canAccessIndex(14))
+                        _buildNavItem(
+                          icon: Icons.settings,
+                          label: AppStrings.settings,
+                          index: 14,
+                          isSelected: _selectedIndex == 14,
+                        ),
                     ],
                   ),
                 ),
@@ -396,8 +467,9 @@ class _AppShellState extends State<AppShell> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              auth.currentUser?['name']?.toString() ??
-                                  AppStrings.user,
+                              auth.currentUserName.isNotEmpty
+                                  ? auth.currentUserName
+                                  : AppStrings.user,
                               style: TextStyle(
                                 color: DarkModeUtils.getTextColor(context),
                                 fontWeight: FontWeight.w600,
@@ -405,7 +477,9 @@ class _AppShellState extends State<AppShell> {
                               ),
                             ),
                             Text(
-                              AppStrings.activeUser,
+                              auth.currentUserRole.isNotEmpty
+                                  ? auth.currentUserRole
+                                  : AppStrings.activeUser,
                               style: TextStyle(
                                 color: DarkModeUtils.getSecondaryTextColor(
                                     context),
@@ -444,7 +518,11 @@ class _AppShellState extends State<AppShell> {
               },
               child: Container(
                 key: ValueKey(_selectedIndex),
-                child: pages[_selectedIndex],
+                child: canAccessIndex(_selectedIndex)
+                    ? pages[_selectedIndex]
+                    : const Center(
+                        child: Text('صلاحيات غير كافية للوصول إلى هذه الصفحة'),
+                      ),
               ),
             ),
           ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../services/db/database_service.dart';
+import '../services/auth/auth_provider.dart';
+import '../models/user_model.dart';
 import '../utils/export.dart';
+import '../widgets/require_permission.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -21,6 +23,47 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     final db = context.read<DatabaseService>();
+    final auth = context.watch<AuthProvider>();
+
+    // فحص صلاحية إدارة المخزون
+    if (!auth.hasPermission(UserPermission.manageInventory)) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('إدارة المخزون'),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.lock,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'ليس لديك صلاحية للوصول إلى هذه الصفحة',
+                style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'هذه الصفحة متاحة للمديرين والمشرفين فقط',
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('العودة'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -44,12 +87,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ],
               icon: const Icon(Icons.trending_down),
             ),
-            IconButton(
-              onPressed: () async {
-                await _exportInventory(db);
-              },
-              tooltip: 'تصدير PDF',
-              icon: const Icon(Icons.picture_as_pdf),
+            RequirePermission(
+              permission: UserPermission.exportReports,
+              child: IconButton(
+                onPressed: () async {
+                  await _exportInventory(db);
+                },
+                tooltip: 'تصدير PDF',
+                icon: const Icon(Icons.picture_as_pdf),
+              ),
             ),
             IconButton(
               onPressed: _refresh,
