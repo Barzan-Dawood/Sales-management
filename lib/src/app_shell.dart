@@ -140,11 +140,26 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          store.appTitle,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/images/sun.png',
+                height: 28,
+                width: 28,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              store.appTitle,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
         leading: _selectedIndex != 0
             ? IconButton(
@@ -279,6 +294,16 @@ class _AppShellState extends State<AppShell> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/images/sun.png',
+                          height: 36,
+                          width: 36,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

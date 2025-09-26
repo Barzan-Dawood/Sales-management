@@ -2,8 +2,8 @@
 
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../utils/click_guard.dart';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -251,10 +251,14 @@ class _DebtsScreenState extends State<DebtsScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _showAddPaymentDialog(context, db, customer: customer);
-                      },
+                      onPressed: () => ClickGuard.runExclusive(
+                        'debts_add_payment_dialog_bottom',
+                        () {
+                          Navigator.of(context).pop();
+                          _showAddPaymentDialog(context, db,
+                              customer: customer);
+                        },
+                      ),
                       icon: const Icon(Icons.payment, size: 18),
                       label: const Text('إضافة دفعة'),
                       style: ElevatedButton.styleFrom(
@@ -264,10 +268,13 @@ class _DebtsScreenState extends State<DebtsScreen>
                       ),
                     ),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _showPrintOptionsDialog(context, customer, db);
-                      },
+                      onPressed: () => ClickGuard.runExclusive(
+                        'debts_print_options',
+                        () {
+                          Navigator.of(context).pop();
+                          _showPrintOptionsDialog(context, customer, db);
+                        },
+                      ),
                       icon: const Icon(Icons.print, size: 18),
                       label: const Text('طباعة كشف'),
                       style: ElevatedButton.styleFrom(
@@ -962,7 +969,10 @@ class _DebtsScreenState extends State<DebtsScreen>
                   color: Theme.of(context).brightness == Brightness.dark
                       ? Theme.of(context).colorScheme.onSurface
                       : Colors.black),
-              onPressed: () => _showAddPaymentDialog(context, db),
+              onPressed: () => ClickGuard.runExclusive(
+                'debts_add_payment',
+                () => _showAddPaymentDialog(context, db),
+              ),
               tooltip: 'إضافة دفعة',
             ),
             IconButton(
@@ -971,9 +981,10 @@ class _DebtsScreenState extends State<DebtsScreen>
                       ? Theme.of(context).colorScheme.onSurface
                       : Colors.black),
               tooltip: 'تصدير PDF',
-              onPressed: () async {
-                await _exportDebtsSummary(db);
-              },
+              onPressed: () => ClickGuard.runExclusive(
+                'debts_export_summary',
+                () => _exportDebtsSummary(db),
+              ),
             ),
           ],
         ),
@@ -2487,8 +2498,11 @@ class _DebtsScreenState extends State<DebtsScreen>
                                     trailing: IconButton(
                                       icon: const Icon(Icons.delete,
                                           color: Colors.red),
-                                      onPressed: () => _deletePayment(
-                                          context, payment['id'], db),
+                                      onPressed: () => ClickGuard.runExclusive(
+                                        'debts_delete_payment_${payment['id']}',
+                                        () => _deletePayment(
+                                            context, payment['id'], db),
+                                      ),
                                     ),
                                   ),
                                 );
@@ -2502,11 +2516,14 @@ class _DebtsScreenState extends State<DebtsScreen>
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _showAddPaymentDialog(context, db,
-                                    customer: customer);
-                              },
+                              onPressed: () => ClickGuard.runExclusive(
+                                'debts_add_payment_dialog',
+                                () {
+                                  Navigator.pop(context);
+                                  _showAddPaymentDialog(context, db,
+                                      customer: customer);
+                                },
+                              ),
                               icon: const Icon(Icons.add),
                               label: const Text('إضافة دفعة'),
                               style: ElevatedButton.styleFrom(

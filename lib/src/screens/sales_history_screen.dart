@@ -8,6 +8,7 @@ import '../services/print_service.dart';
 import '../services/store_config.dart';
 import '../utils/format.dart';
 import '../utils/dark_mode_utils.dart';
+import '../utils/click_guard.dart';
 import 'package:intl/intl.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_display_widgets.dart' as errw;
@@ -339,7 +340,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                       if (_selectedSales.isNotEmpty)
                         IconButton(
                           icon: Icon(Icons.delete, color: Colors.white),
-                          onPressed: _confirmBulkDelete,
+                          onPressed: () => ClickGuard.runExclusive(
+                            'sales_history_bulk_delete',
+                            _confirmBulkDelete,
+                          ),
                           tooltip: 'حذف المحدد',
                         ),
                       IconButton(
@@ -359,7 +363,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           ? Icons.arrow_downward
                           : Icons.arrow_upward,
                       color: DarkModeUtils.getTextColor(context)),
-                  onPressed: _toggleSortOrder,
+                  onPressed: () => ClickGuard.runExclusive(
+                    'sales_history_toggle_sort',
+                    _toggleSortOrder,
+                    cooldown: const Duration(milliseconds: 250),
+                  ),
                   tooltip: _sortDescending ? 'ترتيب تصاعدي' : 'ترتيب تنازلي',
                 ),
                 IconButton(

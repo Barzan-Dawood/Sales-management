@@ -8,6 +8,7 @@ import '../services/db/database_service.dart';
 import '../utils/format.dart';
 import '../utils/export.dart';
 import '../services/print_service.dart';
+import '../utils/click_guard.dart';
 import '../services/store_config.dart';
 import '../utils/dark_mode_utils.dart';
 
@@ -58,7 +59,10 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
               color: Colors.pink,
             ),
             tooltip: 'تصدير PDF',
-            onPressed: () => _exportCurrentTab(db),
+            onPressed: () => ClickGuard.runExclusive(
+              'advanced_reports_export',
+              () => _exportCurrentTab(db),
+            ),
           ),
           IconButton(
             icon: const Icon(
@@ -66,7 +70,10 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
               color: Colors.blue,
             ),
             tooltip: 'طباعة التقرير',
-            onPressed: () => _printCurrentTab(db),
+            onPressed: () => ClickGuard.runExclusive(
+              'advanced_reports_print',
+              () => _printCurrentTab(db),
+            ),
           ),
           IconButton(
             icon: const Icon(

@@ -252,11 +252,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // عنوان الترحيب
+                      // عنوان الترحيب + الشعار
                       Container(
                         margin: const EdgeInsets.only(bottom: 32),
                         child: Column(
                           children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.asset(
+                                'assets/images/sun.png',
+                                width: 180,
+                                height: 150,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
                             Text(
                               'RojSoft Manager',
                               style: Theme.of(context)
@@ -268,69 +278,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                         Theme.of(context).colorScheme.primary,
                                   ),
                             ),
-                            const SizedBox(height: 16),
-                            Container(
-                              width: 100,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withOpacity(0.1),
-                                    Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withOpacity(0.05),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.3),
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                children: [
-                                  Center(
-                                    child: Icon(
-                                      Icons.point_of_sale,
-                                      size: 32,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 4,
-                                    right: 4,
-                                    child: Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: BoxDecoration(
-                                        color: Colors.green,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            const SizedBox(height: 14),
+                            // تمت إضافة الشعار بدلاً من الصندوق الزخرفي
                           ],
                         ),
                       ),
