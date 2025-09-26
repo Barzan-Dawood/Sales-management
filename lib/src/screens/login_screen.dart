@@ -27,9 +27,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // بيانات المستخدمين الحقيقية من قاعدة البيانات
   final Map<String, String> _realUsernames = {
-    'manager': 'mgr',
-    'supervisor': 'sup',
-    'employee': 'emp',
+    'manager': 'admin',
+    'supervisor': 'supervisor',
+    'employee': 'employee',
   };
 
   @override
@@ -40,10 +40,21 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
+  void didUpdateWidget(LoginScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // إعادة تحميل أسماء المستخدمين عند تحديث الصفحة
+    _loadRealUsernames();
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // إعادة تحميل أسماء المستخدمين عند العودة من صفحات أخرى
     _loadRealUsernames();
+    // إعادة تحميل آخر اسم مستخدم لتحديث المؤشر والحقل بعد تسجيل الخروج
+    _loadLastUsername();
+    // تأكيد الاتساق عند العودة
+    _reconcileUserTypeAndUsername();
   }
 
   Future<void> _loadLastUsername() async {
@@ -53,8 +64,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (lastUsername != null && lastUsername.isNotEmpty) {
         _usernameController.text = lastUsername;
         _autoSelectRoleFor(lastUsername);
+        _passwordController.clear();
       }
     } catch (_) {}
+    // Ensure consistency after loading
+    if (mounted) _reconcileUserTypeAndUsername();
   }
 
   Future<void> _loadRealUsernames() async {
@@ -66,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
               where: 'role = ?', whereArgs: ['manager'], limit: 1))
           .firstOrNull;
       if (manager != null) {
-        _realUsernames['manager'] = manager['username']?.toString() ?? 'mgr';
+        _realUsernames['manager'] = manager['username']?.toString() ?? 'admin';
       }
 
       // جلب اسم المستخدم للمشرف
@@ -75,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
           .firstOrNull;
       if (supervisor != null) {
         _realUsernames['supervisor'] =
-            supervisor['username']?.toString() ?? 'sup';
+            supervisor['username']?.toString() ?? 'supervisor';
       }
 
       // جلب اسم المستخدم للموظف
@@ -83,15 +97,15 @@ class _LoginScreenState extends State<LoginScreen> {
               where: 'role = ?', whereArgs: ['employee'], limit: 1))
           .firstOrNull;
       if (employee != null) {
-        _realUsernames['employee'] = employee['username']?.toString() ?? 'emp';
+        _realUsernames['employee'] =
+            employee['username']?.toString() ?? 'employee';
       }
 
-      // تحديث واجهة المستخدم إذا كانت مفتوحة
       if (mounted) {
         setState(() {});
+        _reconcileUserTypeAndUsername();
       }
     } catch (e) {
-      // في حالة الخطأ، استخدم القيم الافتراضية
       debugPrint('خطأ في جلب أسماء المستخدمين: $e');
     }
   }
@@ -108,11 +122,11 @@ class _LoginScreenState extends State<LoginScreen> {
       _selectedUserType = 'employee';
     } else {
       // التحقق من الأسماء الافتراضية كبديل
-      if (u == 'mgr') {
+      if (u == 'admin') {
         _selectedUserType = 'manager';
-      } else if (u == 'sup') {
+      } else if (u == 'supervisor') {
         _selectedUserType = 'supervisor';
-      } else if (u == 'emp') {
+      } else if (u == 'employee') {
         _selectedUserType = 'employee';
       }
     }
@@ -162,12 +176,69 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _selectUserType(String userType) {
+  Future<String> _fetchUsernameForRole(
+      BuildContext context, String role) async {
+    try {
+      final db = context.read<DatabaseService>();
+      final result = await db.database.query(
+        'users',
+        columns: ['username'],
+        where: 'role = ?',
+        whereArgs: [role],
+        limit: 1,
+      );
+      if (result.isNotEmpty) {
+        final value = result.first['username']?.toString();
+        if (value != null && value.isNotEmpty) return value;
+      }
+    } catch (e) {
+      debugPrint('fetchUsernameForRole error for role=$role: $e');
+    }
+    // Fallbacks
+    switch (role) {
+      case 'manager':
+        return 'admin';
+      case 'supervisor':
+        return 'supervisor';
+      case 'employee':
+      default:
+        return 'employee';
+    }
+  }
+
+  void _showLoginSuccessSnack(BuildContext context) {
+    final authProvider = context.read<AuthProvider>();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            'مرحباً ${authProvider.currentUserName} - ${authProvider.currentUserRole}'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _selectUserType(String userType) async {
+    final username = await _fetchUsernameForRole(context, userType);
+    if (!mounted) return;
     setState(() {
       _selectedUserType = userType;
-      _usernameController.text = _realUsernames[userType] ?? '';
+      _realUsernames[userType] = username; // keep cache in sync
+      _usernameController.text = username;
       _passwordController.clear();
     });
+  }
+
+  void _reconcileUserTypeAndUsername() {
+    final currentText = _usernameController.text.trim();
+    if (currentText.isNotEmpty) {
+      // اجعل المؤشر يطابق النص الحالي
+      _autoSelectRoleFor(currentText);
+    } else {
+      // اجعل النص يطابق المؤشر الحالي باستخدام القيم الحقيقية من قاعدة البيانات
+      // ignore: discarded_futures
+      _selectUserType(_selectedUserType);
+    }
   }
 
   @override
@@ -520,7 +591,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
             selected: _selectedUserType == o.$1,
-            onSelected: (_) => _selectUserType(o.$1),
+            onSelected: (_) async {
+              await _selectUserType(o.$1);
+            },
             selectedColor:
                 Theme.of(context).colorScheme.primary.withOpacity(0.15),
             labelStyle: Theme.of(context).textTheme.bodySmall,

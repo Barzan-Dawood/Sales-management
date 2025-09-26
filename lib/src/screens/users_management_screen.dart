@@ -15,6 +15,7 @@ class UsersManagementScreen extends StatefulWidget {
 }
 
 class _UsersManagementScreenState extends State<UsersManagementScreen> {
+  int _credsVersion = 0;
   @override
   void dispose() {
     super.dispose();
@@ -104,7 +105,23 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
               color: DarkModeUtils.getCardColor(context),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: _UserCredsEditor(db: db),
+                child: Column(
+                  children: [
+                    _UserCredsEditor(key: ValueKey(_credsVersion), db: db),
+                    const SizedBox(height: 16),
+                    // زر إعادة ضبط كلمات المرور (للمدير فقط)
+                    if (authProvider.currentUserRole == 'مدير')
+                      _buildResetPasswordsButton(
+                        context,
+                        db,
+                        () {
+                          setState(() {
+                            _credsVersion++;
+                          });
+                        },
+                      ),
+                  ],
+                ),
               ),
             ),
 
@@ -212,7 +229,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
 }
 
 class _UserCredsEditor extends StatefulWidget {
-  const _UserCredsEditor({required this.db});
+  const _UserCredsEditor({super.key, required this.db});
   final DatabaseService db;
 
   @override
@@ -739,5 +756,325 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
         backgroundColor: Theme.of(context).colorScheme.primary,
       ));
     }
+  }
+}
+
+// زر إعادة ضبط كلمات المرور (للمدير فقط)
+Widget _buildResetPasswordsButton(
+    BuildContext context, DatabaseService db, VoidCallback onAfterReset) {
+  return Container(
+    width: double.infinity,
+    decoration: BoxDecoration(
+      border: Border.all(
+        color: Colors.orange,
+        width: 1,
+      ),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: ElevatedButton.icon(
+      onPressed: () => _showResetPasswordsDialog(context, db, onAfterReset),
+      icon: const Icon(Icons.refresh, color: Colors.white),
+      label: const Text(
+        'إعادة ضبط أسماء المستخدمين وكلمات المرور',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.orange,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    ),
+  );
+}
+
+// حوار تأكيد إعادة ضبط كلمات المرور
+Future<void> _showResetPasswordsDialog(
+    BuildContext context, DatabaseService db, VoidCallback onAfterReset) async {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('تأكيد إعادة الضبط'),
+          ],
+        ),
+        content: const Text(
+          'هل أنت متأكد من إعادة ضبط أسماء المستخدمين وكلمات المرور لجميع المستخدمين إلى القيم الافتراضية؟\n\n'
+          'سيتم إعادة تعيين إلى:\n'
+          '• المدير: admin / Admin@2025\n'
+          '• المشرف: supervisor / Supervisor@2025\n'
+          '• الموظف: employee / Employee@2025',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _resetAllPasswords(context, db, onAfterReset);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('تأكيد الإعادة'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// دالة إعادة ضبط كلمات المرور
+Future<void> _resetAllPasswords(
+    BuildContext context, DatabaseService db, VoidCallback onAfterReset) async {
+  try {
+    debugPrint('بدء إعادة ضبط كلمات المرور...');
+
+    // إظهار مؤشر التحميل
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    final nowIso = DateTime.now().toIso8601String();
+    debugPrint('وقت التحديث: $nowIso');
+
+    // إعادة ضبط المدير (اسم المستخدم + كلمة المرور)
+    final managerId = await _getUserIdByRole(db, 'manager');
+    debugPrint('معرف المدير: $managerId');
+    if (managerId != null) {
+      // فض أي تعارض على اسم admin
+      final conflict = await db.database.query(
+        'users',
+        columns: ['id'],
+        where: 'username = ? AND id != ?',
+        whereArgs: ['admin', managerId],
+        limit: 1,
+      );
+      if (conflict.isNotEmpty) {
+        final otherId = conflict.first['id'];
+        await db.database.update(
+          'users',
+          {
+            'username': 'admin_conflict_$otherId',
+            'updated_at': nowIso,
+          },
+          where: 'id = ?',
+          whereArgs: [otherId],
+        );
+      }
+      final result = await db.database.update(
+        'users',
+        {
+          'username': 'admin',
+          'password': _sha256('Admin@2025'),
+          'updated_at': nowIso,
+        },
+        where: 'id = ?',
+        whereArgs: [managerId],
+      );
+      debugPrint('نتيجة تحديث المدير: $result');
+    } else {
+      debugPrint('لم يتم العثور على المدير');
+    }
+
+    // إعادة ضبط المشرف (اسم المستخدم + كلمة المرور)
+    final supervisorId = await _getUserIdByRole(db, 'supervisor');
+    debugPrint('معرف المشرف: $supervisorId');
+    if (supervisorId != null) {
+      try {
+        // فض أي تعارض على اسم supervisor
+        final conflict = await db.database.query(
+          'users',
+          columns: ['id'],
+          where: 'username = ? AND id != ?',
+          whereArgs: ['supervisor', supervisorId],
+          limit: 1,
+        );
+        if (conflict.isNotEmpty) {
+          final otherId = conflict.first['id'];
+          await db.database.update(
+            'users',
+            {
+              'username': 'supervisor_conflict_$otherId',
+              'updated_at': nowIso,
+            },
+            where: 'id = ?',
+            whereArgs: [otherId],
+          );
+        }
+        final result = await db.database.update(
+          'users',
+          {
+            'username': 'supervisor',
+            'password': _sha256('Supervisor@2025'),
+            'updated_at': nowIso,
+          },
+          where: 'id = ?',
+          whereArgs: [supervisorId],
+        );
+        debugPrint('نتيجة تحديث المشرف: $result');
+      } catch (e) {
+        debugPrint('خطأ في تحديث المشرف: $e');
+        // محاولة تحديث كلمة المرور فقط
+        try {
+          final result = await db.database.update(
+            'users',
+            {
+              'password': _sha256('Supervisor@2025'),
+              'updated_at': nowIso,
+            },
+            where: 'id = ?',
+            whereArgs: [supervisorId],
+          );
+          debugPrint('تم تحديث كلمة مرور المشرف فقط: $result');
+        } catch (e2) {
+          debugPrint('خطأ في تحديث كلمة مرور المشرف: $e2');
+        }
+      }
+    } else {
+      debugPrint('لم يتم العثور على المشرف');
+    }
+
+    // إعادة ضبط الموظف (اسم المستخدم + كلمة المرور)
+    final employeeId = await _getUserIdByRole(db, 'employee');
+    debugPrint('معرف الموظف: $employeeId');
+    if (employeeId != null) {
+      try {
+        // فض أي تعارض على اسم employee
+        final conflict = await db.database.query(
+          'users',
+          columns: ['id'],
+          where: 'username = ? AND id != ?',
+          whereArgs: ['employee', employeeId],
+          limit: 1,
+        );
+        if (conflict.isNotEmpty) {
+          final otherId = conflict.first['id'];
+          await db.database.update(
+            'users',
+            {
+              'username': 'employee_conflict_$otherId',
+              'updated_at': nowIso,
+            },
+            where: 'id = ?',
+            whereArgs: [otherId],
+          );
+        }
+        final result = await db.database.update(
+          'users',
+          {
+            'username': 'employee',
+            'password': _sha256('Employee@2025'),
+            'updated_at': nowIso,
+          },
+          where: 'id = ?',
+          whereArgs: [employeeId],
+        );
+        debugPrint('نتيجة تحديث الموظف: $result');
+      } catch (e) {
+        debugPrint('خطأ في تحديث الموظف: $e');
+        // محاولة تحديث كلمة المرور فقط
+        try {
+          final result = await db.database.update(
+            'users',
+            {
+              'password': _sha256('Employee@2025'),
+              'updated_at': nowIso,
+            },
+            where: 'id = ?',
+            whereArgs: [employeeId],
+          );
+          debugPrint('تم تحديث كلمة مرور الموظف فقط: $result');
+        } catch (e2) {
+          debugPrint('خطأ في تحديث كلمة مرور الموظف: $e2');
+        }
+      }
+    } else {
+      debugPrint('لم يتم العثور على الموظف');
+    }
+
+    // إغلاق مؤشر التحميل
+    if (context.mounted) Navigator.of(context).pop();
+
+    // إظهار رسالة نجاح
+    if (context.mounted) {
+      debugPrint('تم إعادة ضبط جميع البيانات بنجاح!');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'تم إعادة ضبط أسماء المستخدمين وكلمات المرور بنجاح!\n'
+            'المدير: admin / Admin@2025\n'
+            'المشرف: supervisor / Supervisor@2025\n'
+            'الموظف: employee / Employee@2025',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+    onAfterReset();
+  } catch (e) {
+    // إغلاق مؤشر التحميل
+    if (context.mounted) Navigator.of(context).pop();
+
+    // إظهار رسالة خطأ
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'خطأ في إعادة ضبط أسماء المستخدمين وكلمات المرور: $e',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+  }
+}
+
+// دالة تشفير كلمة المرور
+String _sha256(String input) {
+  var bytes = utf8.encode(input);
+  var digest = sha256.convert(bytes);
+  return digest.toString();
+}
+
+// دالة مساعدة للحصول على معرف المستخدم حسب الدور
+Future<int?> _getUserIdByRole(DatabaseService db, String role) async {
+  try {
+    final result = await db.database.query(
+      'users',
+      columns: ['id'],
+      where: 'role = ?',
+      whereArgs: [role],
+      limit: 1,
+    );
+
+    if (result.isNotEmpty) {
+      return result.first['id'] as int?;
+    }
+    return null;
+  } catch (e) {
+    debugPrint('خطأ في جلب معرف المستخدم للدور $role: $e');
+    return null;
   }
 }

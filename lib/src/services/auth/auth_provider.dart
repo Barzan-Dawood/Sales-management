@@ -7,11 +7,11 @@ import 'package:crypto/crypto.dart';
 // Default usernames and passwords (manager can change them later from settings)
 const String kDefaultAdminUsername = 'admin';
 const String kDefaultSupervisorUsername = 'supervisor';
-const String kDefaultEmployeeUsername = 'cashier';
+const String kDefaultEmployeeUsername = 'employee';
 
-const String kDefaultAdminPassword = 'admin123';
-const String kDefaultSupervisorPassword = '1111';
-const String kDefaultEmployeePassword = '1234';
+const String kDefaultAdminPassword = 'Admin@2025';
+const String kDefaultSupervisorPassword = 'Supervisor@2025';
+const String kDefaultEmployeePassword = 'Employee@2025';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider(this._db);
@@ -44,10 +44,13 @@ class AuthProvider extends ChangeNotifier {
   String get currentUserRole => _currentUser?.roleDisplayName ?? '';
 
   Future<bool> login(String username, String password) async {
+    debugPrint('محاولة تسجيل الدخول: $username');
+
     // التأكد من وجود المستخدمين الافتراضيين
     await _ensureDefaultUsersExist();
 
     final userData = await _db.findUserByCredentials(username, password);
+    debugPrint('نتيجة البحث عن المستخدم: $userData');
     if (userData == null) return false;
 
     _currentUser = UserModel.fromMap(userData);

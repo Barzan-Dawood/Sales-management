@@ -252,21 +252,21 @@ class DefaultUsers {
   static const List<Map<String, dynamic>> users = [
     {
       'name': 'المدير',
-      'username': 'mgr',
+      'username': 'admin',
       // لا نخزن كلمة مرور واضحة هنا
       'role': 'manager',
       'employee_code': 'A1',
     },
     {
       'name': 'المشرف',
-      'username': 'sup',
+      'username': 'supervisor',
       // لا نخزن كلمة مرور واضحة هنا
       'role': 'supervisor',
       'employee_code': 'S1',
     },
     {
       'name': 'الموظف',
-      'username': 'emp',
+      'username': 'employee',
       // لا نخزن كلمة مرور واضحة هنا
       'role': 'employee',
       'employee_code': 'C1',

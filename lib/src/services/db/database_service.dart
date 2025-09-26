@@ -748,7 +748,7 @@ class DatabaseService {
       if (users.isEmpty) {
         await _db.insert('users', {
           'name': 'Administrator',
-          'username': 'mgr',
+          'username': 'admin',
           'password': desired,
           'role': 'manager',
           'active': 1,
@@ -1069,8 +1069,8 @@ class DatabaseService {
       final defaultUsers = [
         {
           'name': 'المدير',
-          'username': 'mgr',
-          'password': 'Manager@2025',
+          'username': 'admin',
+          'password': 'Admin@2025',
           'role': 'manager',
           'employee_code': 'MGR001',
           'active': 1,
@@ -1079,8 +1079,8 @@ class DatabaseService {
         },
         {
           'name': 'المشرف',
-          'username': 'sup',
-          'password': 'Super@2025',
+          'username': 'supervisor',
+          'password': 'Supervisor@2025',
           'role': 'supervisor',
           'employee_code': 'SUP001',
           'active': 1,
@@ -1089,8 +1089,8 @@ class DatabaseService {
         },
         {
           'name': 'الموظف',
-          'username': 'emp',
-          'password': 'Emp@2025',
+          'username': 'employee',
+          'password': 'Employee@2025',
           'role': 'employee',
           'employee_code': 'EMP001',
           'active': 1,
@@ -1170,8 +1170,8 @@ class DatabaseService {
       final defaultUsers = [
         {
           'name': 'المدير',
-          'username': 'mgr',
-          'password': 'Manager@2025',
+          'username': 'admin',
+          'password': 'Admin@2025',
           'role': 'manager',
           'employee_code': 'MGR001',
           'active': 1,
@@ -1180,8 +1180,8 @@ class DatabaseService {
         },
         {
           'name': 'المشرف',
-          'username': 'sup',
-          'password': 'Super@2025',
+          'username': 'supervisor',
+          'password': 'Supervisor@2025',
           'role': 'supervisor',
           'employee_code': 'SUP001',
           'active': 1,
@@ -1190,8 +1190,8 @@ class DatabaseService {
         },
         {
           'name': 'الموظف',
-          'username': 'emp',
-          'password': 'Emp@2025',
+          'username': 'employee',
+          'password': 'Employee@2025',
           'role': 'employee',
           'employee_code': 'EMP001',
           'active': 1,
@@ -1227,7 +1227,7 @@ class DatabaseService {
       {
         'name': 'المدير',
         'username': 'manager001',
-        'password': 'Manager@2025',
+        'password': 'Admin@2025',
         'role': 'manager',
         'employee_code': 'MGR001',
         'active': 1,
@@ -1236,8 +1236,8 @@ class DatabaseService {
       },
       {
         'name': 'المشرف',
-        'username': 'sup',
-        'password': 'Super@2025',
+        'username': 'supervisor',
+        'password': 'Supervisor@2025',
         'role': 'supervisor',
         'employee_code': 'SUP001',
         'active': 1,
@@ -1247,7 +1247,7 @@ class DatabaseService {
       {
         'name': 'الموظف',
         'username': 'employee001',
-        'password': 'Emp@2025',
+        'password': 'Employee@2025',
         'role': 'employee',
         'employee_code': 'EMP001',
         'active': 1,
@@ -1277,7 +1277,7 @@ class DatabaseService {
     if (existing.isEmpty) {
       await db.insert('users', {
         'name': 'Administrator',
-        'username': 'mgr',
+        'username': 'admin',
         'password': plain,
         'role': 'manager',
         'employee_code': 'ADM001',
@@ -4333,7 +4333,7 @@ class DatabaseService {
         // إعادة إنشاء المستخدم الافتراضي
         await txn.insert('users', {
           'name': 'مدير النظام',
-          'username': 'mgr',
+          'username': 'admin',
           'password': 'admin123',
           'role': 'manager',
           'active': 1,
