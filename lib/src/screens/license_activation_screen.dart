@@ -55,7 +55,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.primaryColor.withOpacity(0.3),
+                              color: theme.primaryColor.withValues(alpha: 0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -86,7 +86,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                         'نظام إدارة المكتب والمحاسبة',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: DarkModeUtils.getTextColor(context)
-                              .withOpacity(0.7),
+                              .withValues(alpha: 0.7),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -210,10 +210,10 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: theme.primaryColor.withOpacity(0.1),
+                          color: theme.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: theme.primaryColor.withOpacity(0.3),
+                            color: theme.primaryColor.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Column(

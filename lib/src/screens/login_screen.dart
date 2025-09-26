@@ -206,17 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showLoginSuccessSnack(BuildContext context) {
-    final authProvider = context.read<AuthProvider>();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-            'مرحباً ${authProvider.currentUserName} - ${authProvider.currentUserRole}'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+  // removed unused: _showLoginSuccessSnack
 
   Future<void> _selectUserType(String userType) async {
     final username = await _fetchUsernameForRole(context, userType);
