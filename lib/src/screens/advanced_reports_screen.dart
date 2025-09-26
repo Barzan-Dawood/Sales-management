@@ -22,7 +22,7 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
   DateTime _selectedDate = DateTime.now();
-  final int _selectedMonths = 6;
+  int _selectedMonths = 6;
 
   @override
   void initState() {
@@ -75,6 +75,34 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
             ),
             onPressed: _selectDate,
             tooltip: 'اختيار التاريخ',
+          ),
+          // Months selector for trend analysis
+          PopupMenuButton<int>(
+            tooltip: 'عدد الأشهر للتحليل',
+            icon: const Icon(Icons.timeline, color: Colors.deepPurple),
+            onSelected: (value) {
+              setState(() {
+                _selectedMonths = value;
+              });
+            },
+            itemBuilder: (context) => <PopupMenuEntry<int>>[
+              const PopupMenuItem<int>(
+                value: 3,
+                child: Text('آخر 3 أشهر'),
+              ),
+              const PopupMenuItem<int>(
+                value: 6,
+                child: Text('آخر 6 أشهر'),
+              ),
+              const PopupMenuItem<int>(
+                value: 12,
+                child: Text('آخر 12 شهر'),
+              ),
+              const PopupMenuItem<int>(
+                value: 24,
+                child: Text('آخر 24 شهر'),
+              ),
+            ],
           ),
           IconButton(
             icon: const Icon(

@@ -11,31 +11,38 @@ import 'src/services/auth/auth_provider.dart';
 import 'src/services/store_config.dart';
 import 'src/services/theme_provider.dart';
 import 'src/services/license/license_provider.dart';
+import 'src/services/dashboard_view_model.dart';
+import 'src/services/sales_history_view_model.dart';
 import 'src/utils/app_themes.dart';
 
+/// نقطة الدخول للتطبيق
+/// - تهيئة البيئة العامة وبيانات اللغة العربية
+/// - اختيار محرك قاعدة البيانات حسب المنصة (مكتبي/محمول)
+/// - تهيئة قاعدة البيانات مع محاولات تنظيف تلقائية عند وجود مشاكل
+/// - إعداد مزودي الحالة (Providers) وتشغيل التطبيق
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // تهيئة بيانات اللغة العربية
   await initializeDateFormatting('ar_IQ', null);
-  // Basic crash reporting hook (prints in debug, can be wired to a service later)
+  // نقطة مركزية لالتقاط أخطاء Flutter
+  // في وضع التطوير تطبع الأخطاء، ويمكن لاحقًا ربطها بخدمة تتبع (Sentry مثلًا)
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
     assert(() {
-      // Only log stack in debug/profile
-      // In release, integrate with a reporting service (e.g., Sentry) later
+      // يسجّل التتبع في وضع التطوير فقط
       debugPrint(details.toStringShort());
       return true;
     }());
   };
   // تهيئة قاعدة البيانات حسب المنصة
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    // للمنصات المكتبية - استخدم sqflite_common_ffi
+    // للمنصات المكتبية: استخدام محرك FFI للتوافق والأداء
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     print('Main: Desktop platform - Using sqflite_common_ffi');
   } else {
-    // للمنصات المحمولة (Android/iOS) - استخدم sqflite العادي
+    // للمنصات المحمولة (Android/iOS): استخدام المحرك الافتراضي
     print('Main: Mobile platform - Using default sqflite');
   }
 
@@ -44,18 +51,18 @@ Future<void> main() async {
   try {
     await databaseService.initialize();
 
-    // تنظيف إضافي للتأكد من عدم وجود مراجع لـ sales_old
+    // تنظيف إضافي لضمان إزالة أي بقايا جداول/مُشغّلات قديمة
     try {
       await databaseService.comprehensiveSalesOldCleanup();
       await databaseService.cleanupAllTriggers();
     } catch (e) {
       assert(() {
-        // Log details only in debug/profile builds
+        // تجاهُل الخطأ هنا آمن في التطوير، الأهم عدم إيقاف التشغيل
         return true;
       }());
     }
 
-    // تشغيل النسخ الاحتياطي التلقائي
+    // تشغيل النسخ الاحتياطي التلقائي في الخلفية
     try {
       await databaseService.runAutoBackup();
     } catch (e) {
@@ -64,7 +71,7 @@ Future<void> main() async {
       }());
     }
 
-    // Check database integrity and perform cleanup if needed
+    // فحص سلامة القاعدة ومحاولة الإصلاح التلقائي عند الحاجة
     final issues = await databaseService.checkDatabaseIntegrity();
     if (issues.isNotEmpty) {
       assert(() {
@@ -74,7 +81,7 @@ Future<void> main() async {
       try {
         await databaseService.forceCleanup();
 
-        // Check again after cleanup
+        // إعادة الفحص بعد التنظيف
         final remainingIssues = await databaseService.checkDatabaseIntegrity();
         if (remainingIssues.isEmpty) {
           assert(() {
@@ -86,7 +93,7 @@ Future<void> main() async {
           }());
           await databaseService.comprehensiveCleanup();
 
-          // Final check
+          // فحص نهائي
           final finalIssues = await databaseService.checkDatabaseIntegrity();
           if (finalIssues.isEmpty) {
             assert(() {
@@ -98,7 +105,7 @@ Future<void> main() async {
             }());
             await databaseService.aggressiveCleanup();
 
-            // Final final check
+            // فحص أخير بعد أقسى تنظيف
             final finalFinalIssues =
                 await databaseService.checkDatabaseIntegrity();
             if (finalFinalIssues.isEmpty) {
@@ -143,7 +150,7 @@ Future<void> main() async {
       return true;
     }());
 
-    // تحسين رسائل الخطأ
+    // تحسين رسائل الخطأ لعرضها للمستخدم عند الفشل المبكر
     String errorMessage = 'خطأ في تهيئة قاعدة البيانات';
     if (e.toString().contains('database is locked')) {
       errorMessage = 'قاعدة البيانات قيد الاستخدام، يرجى إعادة تشغيل التطبيق';
@@ -159,7 +166,7 @@ Future<void> main() async {
       return true;
     }());
 
-    // Try to perform emergency cleanup
+    // محاولة تنظيف طارئة قبل إعادة رمي الاستثناء
     try {
       await databaseService.forceCleanup();
       assert(() {
@@ -196,6 +203,7 @@ Future<void> main() async {
   final storeConfig = StoreConfig();
   await storeConfig.initialize();
 
+  // إعداد مزودي الحالة وتشغيل التطبيق
   runApp(MultiProvider(
     providers: [
       Provider<DatabaseService>.value(value: databaseService),
@@ -203,11 +211,16 @@ Future<void> main() async {
       ChangeNotifierProvider.value(value: storeConfig),
       ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ChangeNotifierProvider(create: (_) => LicenseProvider()),
+      ChangeNotifierProvider(
+          create: (_) => DashboardViewModel(databaseService)),
+      ChangeNotifierProvider(
+          create: (_) => SalesHistoryViewModel(databaseService)),
     ],
     child: const MyApp(),
   ));
 }
 
+/// الجذر الأساسي للتطبيق، يطبّق السمات والاتجاه ويحقن `AppShell`
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -221,6 +234,7 @@ class MyApp extends StatelessWidget {
           theme: AppThemes.lightTheme,
           darkTheme: AppThemes.darkTheme,
           themeMode: themeProvider.themeMode,
+          // فرض اتجاه من اليمين لليسار لجميع الواجهات العربية
           home: const Directionality(
               textDirection: TextDirection.rtl, child: AppShell()),
         );

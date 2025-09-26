@@ -3,10 +3,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/db/database_service.dart';
+import '../services/dashboard_view_model.dart';
 import '../utils/format.dart';
 import '../services/store_config.dart';
 import '../utils/dark_mode_utils.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/error_display_widgets.dart' as errw;
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -17,23 +19,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
-  double _todaySales = 0;
-  double _todayProfit = 0;
-  int _lowStockCount = 0;
-  int _totalProducts = 0;
-  int _availableProductsCount = 0;
-  int _totalProductQuantity = 0;
-  int _totalCustomers = 0;
-  int _totalSuppliers = 0;
-  double _monthlySales = 0;
-  double _monthlyProfit = 0;
-  double _totalDebt = 0;
-  double _overdueDebt = 0;
-  int _customersWithDebt = 0;
-  List<Map<String, dynamic>> _recentSales = [];
-  List<Map<String, dynamic>> _topProducts = [];
-  List<Map<String, dynamic>> _lowStockProducts = [];
-
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
@@ -59,7 +44,11 @@ class _DashboardScreenState extends State<DashboardScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
 
-    _loadStats();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DashboardViewModel>().load();
+      _fadeController.forward();
+      _slideController.forward();
+    });
   }
 
   @override
@@ -69,110 +58,48 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.dispose();
   }
 
-  Future<void> _loadStats() async {
-    final db = context.read<DatabaseService>().database;
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    final currentMonth = DateTime.now().toIso8601String().substring(0, 7);
-
-    // اليوم
-    final todaySales = await db.rawQuery(
-        "SELECT IFNULL(SUM(total),0) as t, IFNULL(SUM(profit),0) as p FROM sales WHERE substr(created_at,1,10)=?",
-        [today]);
-
-    // الشهر
-    final monthSales = await db.rawQuery(
-        "SELECT IFNULL(SUM(total),0) as t, IFNULL(SUM(profit),0) as p FROM sales WHERE substr(created_at,1,7)=?",
-        [currentMonth]);
-
-    // إحصائيات عامة
-    final products = await db.rawQuery("SELECT COUNT(*) as c FROM products");
-    final availableProducts = await db
-        .rawQuery("SELECT COUNT(*) as c FROM products WHERE quantity > 0");
-    final totalQty =
-        await db.rawQuery("SELECT IFNULL(SUM(quantity),0) as q FROM products");
-    final customers = await db.rawQuery("SELECT COUNT(*) as c FROM customers");
-    final suppliers = await db.rawQuery("SELECT COUNT(*) as c FROM suppliers");
-    final lowStock = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM products WHERE quantity <= min_quantity");
-
-    // آخر المنتجات المباعة
-    final recentSales = await db.rawQuery('''
-      SELECT p.name, p.price, si.quantity, si.price as sale_price, s.created_at
-      FROM sale_items si
-      JOIN products p ON si.product_id = p.id
-      JOIN sales s ON si.sale_id = s.id
-      ORDER BY s.created_at DESC 
-      LIMIT 8
-    ''');
-
-    // المنتجات الأكثر مبيعاً
-    final topProducts = await db.rawQuery(
-        "SELECT p.name, p.quantity, p.price FROM products p ORDER BY p.quantity DESC LIMIT 5");
-
-    // المنتجات منخفضة المخزون
-    final lowStockProducts = await db.rawQuery(
-        "SELECT name, quantity, min_quantity FROM products WHERE quantity <= min_quantity LIMIT 5");
-
-    // إحصائيات الديون
-    final debtStats = await context.read<DatabaseService>().getDebtStatistics();
-
-    if (mounted) {
-      setState(() {
-        _todaySales = (todaySales.first['t'] as num).toDouble();
-        _todayProfit = (todaySales.first['p'] as num).toDouble();
-        _monthlySales = (monthSales.first['t'] as num).toDouble();
-        _monthlyProfit = (monthSales.first['p'] as num).toDouble();
-        _totalProducts = (products.first['c'] as int);
-        _availableProductsCount = (availableProducts.first['c'] as int);
-        _totalProductQuantity = (totalQty.first['q'] as num).toInt();
-        _totalCustomers = (customers.first['c'] as int);
-        _totalSuppliers = (suppliers.first['c'] as int);
-        _lowStockCount = (lowStock.first['c'] as int);
-        _recentSales = recentSales;
-        _topProducts = topProducts;
-        _lowStockProducts = lowStockProducts;
-        _totalDebt = debtStats['total_debt']!;
-        _overdueDebt = debtStats['overdue_debt']!;
-        _customersWithDebt = debtStats['customers_with_debt']!.toInt();
-      });
-
-      _fadeController.forward();
-      _slideController.forward();
-    }
-  }
+  // ViewModel handles loading
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<DashboardViewModel>();
     return Scaffold(
       backgroundColor: DarkModeUtils.getBackgroundColor(context),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Section
-                _buildHeader(),
-                const SizedBox(height: 32),
+      body: vm.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : vm.error != null
+              ? errw.ErrorWidget(
+                  error: vm.error,
+                  onRetry: () => context.read<DashboardViewModel>().load(),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header Section
+                          _buildHeader(),
+                          const SizedBox(height: 32),
 
-                // Stats Cards
-                _buildStatsSection(),
-                const SizedBox(height: 32),
+                          // Stats Cards
+                          _buildStatsSection(vm),
+                          const SizedBox(height: 32),
 
-                // Charts Section
-                _buildChartsSection(),
-                const SizedBox(height: 32),
+                          // Charts Section
+                          _buildChartsSection(vm),
+                          const SizedBox(height: 32),
 
-                // Bottom Section
-                _buildBottomSection(),
-              ],
-            ),
-          ),
-        ),
-      ),
+                          // Bottom Section
+                          _buildBottomSection(vm),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
     );
   }
 
@@ -459,7 +386,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildStatsSection() {
+  Widget _buildStatsSection(DashboardViewModel vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -482,91 +409,91 @@ class _DashboardScreenState extends State<DashboardScreen>
           children: [
             _buildStatCard(
               'مبيعات اليوم',
-              Formatters.currencyIQD(_todaySales),
+              Formatters.currencyIQD(vm.todaySales),
               Icons.trending_up,
               Colors.blue.shade600,
               Colors.blue.shade50,
             ),
             _buildStatCard(
               'ربح اليوم',
-              Formatters.currencyIQD(_todayProfit),
+              Formatters.currencyIQD(vm.todayProfit),
               Icons.monetization_on,
               Colors.green.shade600,
               Colors.green.shade50,
             ),
             _buildStatCard(
               'مبيعات الشهر',
-              Formatters.currencyIQD(_monthlySales),
+              Formatters.currencyIQD(vm.monthlySales),
               Icons.calendar_month,
               Colors.purple.shade600,
               Colors.purple.shade50,
             ),
             _buildStatCard(
               'ربح الشهر',
-              Formatters.currencyIQD(_monthlyProfit),
+              Formatters.currencyIQD(vm.monthlyProfit),
               Icons.account_balance_wallet,
               Colors.orange.shade600,
               Colors.orange.shade50,
             ),
             _buildStatCard(
               'إجمالي المنتجات',
-              '$_totalProducts',
+              '${vm.totalProducts}',
               Icons.inventory_2,
               Colors.indigo.shade600,
               Colors.indigo.shade50,
             ),
             _buildStatCard(
               'إجمالي الكمية في المخزون',
-              '$_totalProductQuantity',
+              '${vm.totalProductQuantity}',
               Icons.warehouse,
               Colors.brown.shade600,
               Colors.brown.shade50,
             ),
             _buildStatCard(
               'عدد المنتجات المتوفرة',
-              '$_availableProductsCount',
+              '${vm.availableProductsCount}',
               Icons.inventory,
               Colors.deepPurple.shade600,
               Colors.deepPurple.shade50,
             ),
             _buildStatCard(
               'العملاء',
-              '$_totalCustomers',
+              '${vm.totalCustomers}',
               Icons.people,
               Colors.teal.shade600,
               Colors.teal.shade50,
             ),
             _buildStatCard(
               'الموردون',
-              '$_totalSuppliers',
+              '${vm.totalSuppliers}',
               Icons.local_shipping,
               Colors.cyan.shade600,
               Colors.cyan.shade50,
             ),
             _buildStatCard(
               'تنبيهات المخزون',
-              '$_lowStockCount',
+              '${vm.lowStockCount}',
               Icons.warning,
               Colors.red.shade600,
               Colors.red.shade50,
             ),
             _buildStatCard(
               'إجمالي الديون',
-              Formatters.currencyIQD(_totalDebt),
+              Formatters.currencyIQD(vm.totalDebt),
               Icons.account_balance_wallet,
               Colors.deepOrange.shade600,
               Colors.deepOrange.shade50,
             ),
             _buildStatCard(
               'ديون متأخرة',
-              Formatters.currencyIQD(_overdueDebt),
+              Formatters.currencyIQD(vm.overdueDebt),
               Icons.warning_amber,
               Colors.pink.shade600,
               Colors.pink.shade50,
             ),
             _buildStatCard(
               'عملاء مدينون',
-              '$_customersWithDebt',
+              '${vm.customersWithDebt}',
               Icons.people_outline,
               Colors.amber.shade600,
               Colors.amber.shade50,
@@ -669,7 +596,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildChartsSection() {
+  Widget _buildChartsSection(DashboardViewModel vm) {
     return Row(
       children: [
         Expanded(
@@ -679,7 +606,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         const SizedBox(width: 24),
         Expanded(
           flex: 1,
-          child: _buildTopProductsChart(),
+          child: _buildTopProductsChart(vm),
         ),
       ],
     );
@@ -860,7 +787,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildTopProductsChart() {
+  Widget _buildTopProductsChart(DashboardViewModel vm) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -896,102 +823,111 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 20),
           SizedBox(
             height: 300,
-            child: ListView.builder(
-              itemCount: _topProducts.length,
-              itemBuilder: (context, index) {
-                final product = _topProducts[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: DarkModeUtils.getBackgroundColor(context),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
+            child: vm.topProducts.isEmpty
+                ? EmptyState(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'لا توجد منتجات لعرضها',
+                    message: 'أضف منتجات أو حدث البيانات لعرض الأفضل مبيعاً',
+                    actionLabel: 'تحديث',
+                    onAction: () => context.read<DashboardViewModel>().load(),
+                  )
+                : ListView.builder(
+                    itemCount: vm.topProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = vm.topProducts[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: DarkModeUtils.getInfoColor(context)
-                              .withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(8),
+                          color: DarkModeUtils.getBackgroundColor(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
                         ),
-                        child: Icon(
-                          Icons.inventory_2,
-                          color: DarkModeUtils.getInfoColor(context),
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Text(
-                              product['name']?.toString() ?? 'منتج',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: DarkModeUtils.getInfoColor(context)
+                                    .withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
+                              child: Icon(
+                                Icons.inventory_2,
+                                color: DarkModeUtils.getInfoColor(context),
+                                size: 18,
+                              ),
                             ),
-                            Text(
-                              'الكمية: ${product['quantity']}',
-                              style: TextStyle(
-                                color: DarkModeUtils.getSecondaryTextColor(
-                                    context),
-                                fontSize: 11,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product['name']?.toString() ?? 'منتج',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                  Text(
+                                    'الكمية: ${product['quantity']}',
+                                    style: TextStyle(
+                                      color:
+                                          DarkModeUtils.getSecondaryTextColor(
+                                              context),
+                                      fontSize: 11,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ],
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
+                            ),
+                            Flexible(
+                              child: Text(
+                                Formatters.currencyIQD(
+                                    (product['price'] as num?) ?? 0),
+                                style: TextStyle(
+                                  color: DarkModeUtils.getSuccessColor(context),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      Flexible(
-                        child: Text(
-                          Formatters.currencyIQD(
-                              (product['price'] as num?) ?? 0),
-                          style: TextStyle(
-                            color: DarkModeUtils.getSuccessColor(context),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomSection() {
+  Widget _buildBottomSection(DashboardViewModel vm) {
     return Row(
       children: [
         Expanded(
           flex: 1,
-          child: _buildRecentSales(),
+          child: _buildRecentSales(vm),
         ),
         const SizedBox(width: 24),
         Expanded(
           flex: 1,
-          child: _buildLowStockAlert(),
+          child: _buildLowStockAlert(vm),
         ),
       ],
     );
   }
 
-  Widget _buildRecentSales() {
+  Widget _buildRecentSales(DashboardViewModel vm) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -1028,31 +964,20 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 20),
           SizedBox(
             height: 300,
-            child: _recentSales.isEmpty
+            child: vm.recentSales.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.shopping_cart_outlined,
-                          size: 48,
-                          color: DarkModeUtils.getSecondaryTextColor(context),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'لا توجد منتجات مباعة حديثاً',
-                          style: TextStyle(
-                            color: DarkModeUtils.getSecondaryTextColor(context),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
+                    child: EmptyState(
+                      icon: Icons.shopping_cart_outlined,
+                      title: 'لا توجد مبيعات حديثة',
+                      message: 'ابدأ بعملية بيع لعرض أحدث المبيعات هنا',
+                      actionLabel: 'تحديث',
+                      onAction: () => context.read<DashboardViewModel>().load(),
                     ),
                   )
                 : ListView.builder(
-                    itemCount: _recentSales.length,
+                    itemCount: vm.recentSales.length,
                     itemBuilder: (context, index) {
-                      final product = _recentSales[index];
+                      final product = vm.recentSales[index];
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
@@ -1144,7 +1069,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildLowStockAlert() {
+  Widget _buildLowStockAlert(DashboardViewModel vm) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -1180,32 +1105,20 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 20),
           SizedBox(
             height: 300,
-            child: _lowStockProducts.isEmpty
+            child: vm.lowStockProducts.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline,
-                          color: Colors.green,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'المخزون آمن',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    child: EmptyState(
+                      icon: Icons.check_circle_outline,
+                      title: 'المخزون آمن',
+                      message: 'لا توجد منتجات منخفضة المخزون حالياً',
+                      actionLabel: 'تحديث',
+                      onAction: () => context.read<DashboardViewModel>().load(),
                     ),
                   )
                 : ListView.builder(
-                    itemCount: _lowStockProducts.length,
+                    itemCount: vm.lowStockProducts.length,
                     itemBuilder: (context, index) {
-                      final product = _lowStockProducts[index];
+                      final product = vm.lowStockProducts[index];
                       final isDark =
                           Theme.of(context).brightness == Brightness.dark;
                       final warn = DarkModeUtils.getWarningColor(context);

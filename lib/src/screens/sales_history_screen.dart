@@ -3,11 +3,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
+import '../services/sales_history_view_model.dart';
 import '../services/print_service.dart';
 import '../services/store_config.dart';
 import '../utils/format.dart';
 import '../utils/dark_mode_utils.dart';
 import 'package:intl/intl.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/error_display_widgets.dart' as errw;
 
 class SalesHistoryScreen extends StatefulWidget {
   const SalesHistoryScreen({super.key});
@@ -17,54 +20,28 @@ class SalesHistoryScreen extends StatefulWidget {
 }
 
 class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
-  String _query = '';
-  String _selectedType = '';
-  DateTime? _fromDate;
-  DateTime? _toDate;
-  List<Map<String, Object?>> _sales = [];
-  bool _isLoading = false;
-
   // متغيرات التحديد الجماعي
   bool _isSelectionMode = false;
   Set<int> _selectedSales = <int>{};
 
   // متغيرات الترتيب
-  bool _sortDescending =
+  final bool _sortDescending =
       true; // true = من الأحدث للأقدم، false = من الأقدم للأحدث
 
   @override
   void initState() {
     super.initState();
-    _loadSales();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SalesHistoryViewModel>().load();
+    });
   }
 
-  Future<void> _loadSales() async {
-    setState(() => _isLoading = true);
-    try {
-      final db = context.read<DatabaseService>();
-      final sales = await db.getSalesHistory(
-        from: _fromDate,
-        to: _toDate,
-        type: _selectedType.isEmpty ? null : _selectedType,
-        query: _query.isEmpty ? null : _query,
-        sortDescending: _sortDescending,
-      );
-      setState(() => _sales = sales);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطأ في تحميل المبيعات: $e'),
-          backgroundColor: DarkModeUtils.getErrorColor(context),
-        ),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
+  Future<void> _loadSales() async {}
 
   Future<void> _selectDateRange() async {
-    DateTime? tempFrom = _fromDate;
-    DateTime? tempTo = _toDate;
+    final vm = context.read<SalesHistoryViewModel>();
+    DateTime? tempFrom = vm.fromDate;
+    DateTime? tempTo = vm.toDate;
 
     await showDialog(
       context: context,
@@ -228,12 +205,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                                 tempFrom = tempTo;
                                 tempTo = tmp;
                               }
-                              setState(() {
-                                _fromDate = tempFrom;
-                                _toDate = tempTo;
-                              });
+                              vm.updateDateRange(from: tempFrom, to: tempTo);
                               Navigator.pop(context);
-                              _loadSales();
                             },
                             icon: Icon(Icons.check,
                                 color: DarkModeUtils.getSuccessColor(context)),
@@ -263,7 +236,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
   void _selectAll() {
     setState(() {
-      _selectedSales = _sales.map((sale) => sale['id'] as int).toSet();
+      final vm = context.read<SalesHistoryViewModel>();
+      _selectedSales = vm.sales.map((sale) => sale['id'] as int).toSet();
     });
   }
 
@@ -284,19 +258,17 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   }
 
   void _toggleSortOrder() {
-    setState(() {
-      _sortDescending = !_sortDescending;
-    });
-    _loadSales();
+    context.read<SalesHistoryViewModel>().toggleSort();
   }
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<SalesHistoryViewModel>();
     return Scaffold(
       appBar: AppBar(
         title: Text(
           _isSelectionMode
-              ? 'تم تحديد ${_selectedSales.length} من ${_sales.length}'
+              ? 'تم تحديد ${_selectedSales.length} من ${vm.sales.length}'
               : 'تاريخ المبيعات',
           style: TextStyle(
             color: _isSelectionMode
@@ -342,34 +314,41 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         actions: _isSelectionMode
             ? [
                 // أزرار وضع التحديد
-                if (_selectedSales.length < _sales.length)
-                  IconButton(
-                    icon: Icon(Icons.select_all,
-                        color: _isSelectionMode
-                            ? Colors.white
-                            : DarkModeUtils.getTextColor(context)),
-                    onPressed: _selectAll,
-                    tooltip: 'تحديد الكل',
-                  ),
-                if (_selectedSales.isNotEmpty)
-                  IconButton(
-                    icon: Icon(Icons.clear,
-                        color: _isSelectionMode
-                            ? Colors.white
-                            : DarkModeUtils.getTextColor(context)),
-                    onPressed: _deselectAll,
-                    tooltip: 'إلغاء التحديد',
-                  ),
-                if (_selectedSales.isNotEmpty)
-                  IconButton(
-                    icon: Icon(Icons.delete, color: Colors.white),
-                    onPressed: _confirmBulkDelete,
-                    tooltip: 'حذف المحدد',
-                  ),
-                IconButton(
-                  icon: Icon(Icons.close, color: Colors.white),
-                  onPressed: _toggleSelectionMode,
-                  tooltip: 'إلغاء وضع التحديد',
+                Builder(
+                  builder: (context) {
+                    final vm = context.watch<SalesHistoryViewModel>();
+                    return Row(children: [
+                      if (_selectedSales.length < vm.sales.length)
+                        IconButton(
+                          icon: Icon(Icons.select_all,
+                              color: _isSelectionMode
+                                  ? Colors.white
+                                  : DarkModeUtils.getTextColor(context)),
+                          onPressed: _selectAll,
+                          tooltip: 'تحديد الكل',
+                        ),
+                      if (_selectedSales.isNotEmpty)
+                        IconButton(
+                          icon: Icon(Icons.clear,
+                              color: _isSelectionMode
+                                  ? Colors.white
+                                  : DarkModeUtils.getTextColor(context)),
+                          onPressed: _deselectAll,
+                          tooltip: 'إلغاء التحديد',
+                        ),
+                      if (_selectedSales.isNotEmpty)
+                        IconButton(
+                          icon: Icon(Icons.delete, color: Colors.white),
+                          onPressed: _confirmBulkDelete,
+                          tooltip: 'حذف المحدد',
+                        ),
+                      IconButton(
+                        icon: Icon(Icons.close, color: Colors.white),
+                        onPressed: _toggleSelectionMode,
+                        tooltip: 'إلغاء وضع التحديد',
+                      ),
+                    ]);
+                  },
                 ),
               ]
             : [
@@ -389,11 +368,16 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   onPressed: _toggleSelectionMode,
                   tooltip: 'وضع التحديد',
                 ),
-                IconButton(
-                  icon: Icon(Icons.refresh,
-                      color: DarkModeUtils.getTextColor(context)),
-                  onPressed: _loadSales,
-                  tooltip: 'تحديث',
+                Builder(
+                  builder: (context) {
+                    final vm = context.watch<SalesHistoryViewModel>();
+                    return IconButton(
+                      icon: Icon(Icons.refresh,
+                          color: DarkModeUtils.getTextColor(context)),
+                      onPressed: vm.load,
+                      tooltip: 'تحديث',
+                    );
+                  },
                 ),
               ],
       ),
@@ -434,8 +418,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           isDense: true,
                         ),
                         onChanged: (value) {
-                          setState(() => _query = value);
-                          _loadSales();
+                          context
+                              .read<SalesHistoryViewModel>()
+                              .updateQuery(value);
                         },
                       ),
                     ),
@@ -484,23 +469,19 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  _fromDate != null && _toDate != null
-                                      ? '${DateFormat('MM/dd').format(_fromDate!)} - ${DateFormat('MM/dd').format(_toDate!)}'
+                                  vm.fromDate != null && vm.toDate != null
+                                      ? '${DateFormat('MM/dd').format(vm.fromDate!)} - ${DateFormat('MM/dd').format(vm.toDate!)}'
                                       : 'الفترة',
                                   style: const TextStyle(fontSize: 12),
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                              if (_fromDate != null || _toDate != null) ...[
+                              if (vm.fromDate != null || vm.toDate != null) ...[
                                 const SizedBox(width: 6),
                                 GestureDetector(
                                   onTap: () {
-                                    setState(() {
-                                      _fromDate = null;
-                                      _toDate = null;
-                                    });
-                                    _loadSales();
+                                    vm.updateDateRange(from: null, to: null);
                                   },
                                   child: Icon(Icons.close,
                                       size: 14,
@@ -520,55 +501,32 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
             ),
             // Sales List
             Expanded(
-              child: _isLoading
+              child: vm.isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : _sales.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long,
-                                size: 64,
-                                color: DarkModeUtils.getSecondaryTextColor(
-                                    context),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'لا توجد مبيعات',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(
-                                      color:
-                                          DarkModeUtils.getSecondaryTextColor(
-                                              context),
-                                    ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'لم يتم العثور على أي مبيعات تطابق المعايير المحددة',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color:
-                                          DarkModeUtils.getSecondaryTextColor(
-                                              context),
-                                    ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
+                  : vm.error != null
+                      ? errw.ErrorWidget(
+                          error: vm.error,
+                          onRetry: vm.load,
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                          itemCount: _sales.length,
-                          itemBuilder: (context, index) {
-                            final sale = _sales[index];
-                            return _buildCompactSaleCard(sale);
-                          },
-                        ),
+                      : vm.sales.isEmpty
+                          ? Center(
+                              child: EmptyState(
+                                icon: Icons.receipt_long,
+                                title: 'لا توجد مبيعات',
+                                message:
+                                    'لم يتم العثور على أي مبيعات تطابق المعايير المحددة',
+                                actionLabel: 'تحديث',
+                                onAction: vm.load,
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                              itemCount: vm.sales.length,
+                              itemBuilder: (context, index) {
+                                final sale = vm.sales[index];
+                                return _buildCompactSaleCard(sale);
+                              },
+                            ),
             ),
           ],
         ),
@@ -577,8 +535,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   }
 
   Widget _typeChip(String label, String value) {
+    final vm = context.watch<SalesHistoryViewModel>();
     final bool selected =
-        _selectedType == value || (_selectedType.isEmpty && value.isEmpty);
+        vm.type == value || (vm.type.isEmpty && value.isEmpty);
     final Color color = selected
         ? Theme.of(context).colorScheme.primary
         : DarkModeUtils.getSecondaryTextColor(context);
@@ -593,10 +552,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         fontWeight: FontWeight.w600,
       ),
       side: BorderSide(color: color.withOpacity(0.4)),
-      onSelected: (_) {
-        setState(() => _selectedType = value);
-        _loadSales();
-      },
+      onSelected: (_) =>
+          context.read<SalesHistoryViewModel>().updateType(value),
     );
   }
 
