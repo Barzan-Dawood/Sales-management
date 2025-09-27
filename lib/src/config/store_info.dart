@@ -5,13 +5,13 @@ library;
 
 class StoreInfo {
   // معلومات التطبيق
-  static const String appTitle = 'Rojsoft Manager';
+  static const String appTitle = 'تجارتي';
   static const String displayVersion = '1.0.0';
   static const String logoAssetPath = 'assets/images/poss.png';
 
   // معلومات المحل الأساسية
-  static const String shopName = 'مكتب';
-  static const String shopDescription = 'البرمجة والتطوير';
+  static const String shopName = 'تجارتي';
+  static const String shopDescription = 'نظام إدارة التجارة والمتاجر';
   static const String phone = '07866744144';
   static const String address = 'شنكال - سنجار';
 
@@ -32,18 +32,18 @@ class StoreInfo {
   static const String supportAddress = 'شنكال(سنجار) - نينوى';
 
   // معلومات قانونية
-  static const String copyright = '© 2025 نظام إدارة المكتب';
+  static const String copyright = '© 2025 تجارتي - نظام إدارة التجارة';
   static const String rightsReserved = 'جميع الحقوق محفوظة';
   static const String ownership =
       'هذا التطبيق مملوك ومطور بواسطة فريق التطوير العراقي';
 
   // رسائل التواصل الافتراضية
   static const String defaultWhatsAppMessage =
-      'مرحباً، أرغب في التواصل معكم بخصوص نظام إدارة المكتب';
-  static const String defaultEmailSubject = 'استفسار حول نظام إدارة المكتب';
+      'مرحباً، أرغب في التواصل معكم بخصوص تطبيق تجارتي';
+  static const String defaultEmailSubject = 'استفسار حول تطبيق تجارتي';
   static const String defaultEmailBody = '''مرحباً،
 
-أرغب في التواصل معكم بخصوص نظام إدارة المكتب.
+أرغب في التواصل معكم بخصوص تطبيق تجارتي.
 
 شكراً لكم''';
 

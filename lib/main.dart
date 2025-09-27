@@ -1,5 +1,3 @@
-// ignore_for_file: unused_local_variable
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -149,18 +147,6 @@ Future<void> main() async {
     assert(() {
       return true;
     }());
-
-    // تحسين رسائل الخطأ لعرضها للمستخدم عند الفشل المبكر
-    String errorMessage = 'خطأ في تهيئة قاعدة البيانات';
-    if (e.toString().contains('database is locked')) {
-      errorMessage = 'قاعدة البيانات قيد الاستخدام، يرجى إعادة تشغيل التطبيق';
-    } else if (e.toString().contains('no such table')) {
-      errorMessage = 'خطأ في هيكل قاعدة البيانات، سيتم إعادة إنشاؤها';
-    } else if (e.toString().contains('disk I/O error')) {
-      errorMessage = 'خطأ في القرص، تحقق من مساحة التخزين';
-    } else {
-      errorMessage = 'خطأ في قاعدة البيانات: ${e.toString()}';
-    }
 
     assert(() {
       return true;

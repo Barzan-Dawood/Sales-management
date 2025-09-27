@@ -194,8 +194,6 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
     );
   }
 
-  // تم الاستغناء عن عرض بيانات المستخدمين الافتراضية لصالح محرر الاعتمادات
-
   Widget _buildPermissionInfo(String role, String permissions) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

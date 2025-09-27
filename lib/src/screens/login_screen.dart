@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:rojsoft_manager/src/screens/enhanced_privacy_policy_screen.dart';
+import 'enhanced_privacy_policy_screen.dart';
 import '../services/auth/auth_provider.dart';
 import '../services/db/database_service.dart';
 import '../utils/dark_mode_utils.dart';
@@ -207,8 +207,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // removed unused: _showLoginSuccessSnack
-
   Future<void> _selectUserType(String userType) async {
     final username = await _fetchUsernameForRole(context, userType);
     if (!mounted) return;
@@ -267,18 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 fit: BoxFit.cover,
                               ),
                             ),
-                            const SizedBox(height: 5),
-                            Text(
-                              'RojSoft Manager',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
-                            ),
+
                             const SizedBox(height: 14),
                             // تمت إضافة الشعار بدلاً من الصندوق الزخرفي
                           ],
@@ -551,5 +538,4 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   /// بناء بطاقة نوع المستخدم
-  // تم الاستغناء عن البطاقات الكبيرة لصالح شرائح اختيار مدمجة
 }

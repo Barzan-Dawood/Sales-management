@@ -565,18 +565,6 @@ class _AppUsageGuideScreenState extends State<AppUsageGuideScreen> {
     );
   }
 
-  // Data model
-  // ignore: unused_element
-  List<_GuideSectionData> _filterSections(String query) {
-    if (query.isEmpty) return _allSections;
-    final q = query.toLowerCase();
-    return _allSections
-        .where((s) =>
-            s.title.toLowerCase().contains(q) ||
-            s.content.toLowerCase().contains(q))
-        .toList();
-  }
-
   Widget _buildContactCard(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
