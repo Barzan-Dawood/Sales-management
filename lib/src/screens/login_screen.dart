@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // بيانات المستخدمين الحقيقية من قاعدة البيانات
   final Map<String, String> _realUsernames = {
-    'manager': 'admin',
+    'manager': 'manager',
     'supervisor': 'supervisor',
     'employee': 'employee',
   };
@@ -80,7 +80,8 @@ class _LoginScreenState extends State<LoginScreen> {
               where: 'role = ?', whereArgs: ['manager'], limit: 1))
           .firstOrNull;
       if (manager != null) {
-        _realUsernames['manager'] = manager['username']?.toString() ?? 'admin';
+        _realUsernames['manager'] =
+            manager['username']?.toString() ?? 'manager';
       }
 
       // جلب اسم المستخدم للمشرف
@@ -122,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _selectedUserType = 'employee';
     } else {
       // التحقق من الأسماء الافتراضية كبديل
-      if (u == 'admin') {
+      if (u == 'manager') {
         _selectedUserType = 'manager';
       } else if (u == 'supervisor') {
         _selectedUserType = 'supervisor';
@@ -197,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // Fallbacks
     switch (role) {
       case 'manager':
-        return 'admin';
+        return 'manager';
       case 'supervisor':
         return 'supervisor';
       case 'employee':

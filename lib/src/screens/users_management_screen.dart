@@ -261,7 +261,7 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
         .firstOrNull;
     setState(() {
       _supervisorUsername.text = (sup?['username']?.toString() ?? 'supervisor');
-      _employeeUsername.text = (emp?['username']?.toString() ?? 'cashier');
+      _employeeUsername.text = (emp?['username']?.toString() ?? 'employee');
     });
   }
 
@@ -810,7 +810,7 @@ Future<void> _showResetPasswordsDialog(
         content: const Text(
           'هل أنت متأكد من إعادة ضبط أسماء المستخدمين وكلمات المرور لجميع المستخدمين إلى القيم الافتراضية؟\n\n'
           'سيتم إعادة تعيين إلى:\n'
-          '• المدير: admin / Admin@2025\n'
+          '• المدير: manager / Manager@2025\n'
           '• المشرف: supervisor / Supervisor@2025\n'
           '• الموظف: employee / Employee@2025',
           style: TextStyle(fontSize: 16),
@@ -859,12 +859,12 @@ Future<void> _resetAllPasswords(
     final managerId = await _getUserIdByRole(db, 'manager');
     debugPrint('معرف المدير: $managerId');
     if (managerId != null) {
-      // فض أي تعارض على اسم admin
+      // فض أي تعارض على اسم manager
       final conflict = await db.database.query(
         'users',
         columns: ['id'],
         where: 'username = ? AND id != ?',
-        whereArgs: ['admin', managerId],
+        whereArgs: ['manager', managerId],
         limit: 1,
       );
       if (conflict.isNotEmpty) {
@@ -872,7 +872,7 @@ Future<void> _resetAllPasswords(
         await db.database.update(
           'users',
           {
-            'username': 'admin_conflict_$otherId',
+            'username': 'manager_conflict_$otherId',
             'updated_at': nowIso,
           },
           where: 'id = ?',
@@ -882,8 +882,8 @@ Future<void> _resetAllPasswords(
       final result = await db.database.update(
         'users',
         {
-          'username': 'admin',
-          'password': _sha256('Admin@2025'),
+          'username': 'manager',
+          'password': _sha256('Manager@2025'),
           'updated_at': nowIso,
         },
         where: 'id = ?',
@@ -1020,7 +1020,7 @@ Future<void> _resetAllPasswords(
         SnackBar(
           content: const Text(
             'تم إعادة ضبط أسماء المستخدمين وكلمات المرور بنجاح!\n'
-            'المدير: admin / Admin@2025\n'
+            'المدير: manager / Manager@2025\n'
             'المشرف: supervisor / Supervisor@2025\n'
             'الموظف: employee / Employee@2025',
             style: TextStyle(color: Colors.white),

@@ -1068,8 +1068,8 @@ class DatabaseService {
       final defaultUsers = [
         {
           'name': 'المدير',
-          'username': 'admin',
-          'password': 'Admin@2025',
+          'username': 'manager',
+          'password': 'Manager@2025',
           'role': 'manager',
           'employee_code': 'MGR001',
           'active': 1,
@@ -1169,8 +1169,8 @@ class DatabaseService {
       final defaultUsers = [
         {
           'name': 'المدير',
-          'username': 'admin',
-          'password': 'Admin@2025',
+          'username': 'manager',
+          'password': 'Manager@2025',
           'role': 'manager',
           'employee_code': 'MGR001',
           'active': 1,
@@ -1225,8 +1225,8 @@ class DatabaseService {
     final defaultUsers = [
       {
         'name': 'المدير',
-        'username': 'manager001',
-        'password': 'Admin@2025',
+        'username': 'manager',
+        'password': 'Manager@2025',
         'role': 'manager',
         'employee_code': 'MGR001',
         'active': 1,
@@ -1269,34 +1269,28 @@ class DatabaseService {
       }
     }
 
-    // الاحتفاظ بالمستخدم الإداري القديم للتوافق
-    final existing = await db.query('users',
+    // التأكد من وجود المستخدم الموحد للتوافق مع الإصدارات القديمة
+    final existingAdmin = await db.query('users',
         where: 'username = ?', whereArgs: ['admin'], limit: 1);
-    const plain = 'admin123';
-    if (existing.isEmpty) {
-      await db.insert('users', {
-        'name': 'Administrator',
-        'username': 'admin',
-        'password': plain,
-        'role': 'manager',
-        'employee_code': 'ADM001',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      });
-    } else {
+
+    if (existingAdmin.isNotEmpty) {
+      // تحديث المستخدم القديم إلى النظام الجديد الموحد
+      final hashedPassword =
+          sha256.convert(utf8.encode('Manager@2025')).toString();
       await db.update(
           'users',
           {
-            'name': existing.first['name'] ?? 'Administrator',
-            'password': plain,
+            'name': 'المدير',
+            'username': 'manager',
+            'password': hashedPassword,
             'role': 'manager',
-            'employee_code': 'ADM001',
+            'employee_code': 'MGR001',
             'active': 1,
             'updated_at': now,
           },
           where: 'username = ?',
           whereArgs: ['admin']);
+      debugPrint('تم تحديث المستخدم القديم admin إلى manager');
     }
   }
 
@@ -4343,12 +4337,12 @@ class DatabaseService {
 
         // تشفير كلمة المرور الافتراضية
         final hashedPassword =
-            sha256.convert(utf8.encode('Admin@2025')).toString();
+            sha256.convert(utf8.encode('Manager@2025')).toString();
 
         // إعادة إنشاء المستخدم الافتراضي مع كلمة مرور مشفرة
         await txn.insert('users', {
           'name': 'مدير النظام',
-          'username': 'admin',
+          'username': 'manager',
           'password': hashedPassword,
           'role': 'manager',
           'employee_code': 'ADMIN001',
