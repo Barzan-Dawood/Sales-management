@@ -260,13 +260,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: Image.asset(
-                                'assets/images/sun.png',
-                                width: 180,
-                                height: 150,
+                                'assets/images/soft.png',
+                                width: 190,
+                                height: 220,
                                 fit: BoxFit.cover,
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 5),
                             Text(
                               'RojSoft Manager',
                               style: Theme.of(context)

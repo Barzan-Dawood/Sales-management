@@ -57,6 +57,43 @@ class _DebtsScreenState extends State<DebtsScreen>
     });
   }
 
+  // دالة للحصول على معرف منتج الدين أو إنشاؤه إذا لم يكن موجوداً
+  Future<int> _getDebtProductId(DatabaseService db) async {
+    try {
+      // البحث عن منتج الدين الموجود
+      final existingProducts = await db.database.query(
+        'products',
+        where: 'name = ? AND category_id IS NULL',
+        whereArgs: ['دين/قرض'],
+        limit: 1,
+      );
+
+      if (existingProducts.isNotEmpty) {
+        return existingProducts.first['id'] as int;
+      }
+
+      // إنشاء منتج الدين إذا لم يكن موجوداً
+      final productId = await db.database.insert('products', {
+        'name': 'دين/قرض',
+        'description': 'منتج وهمي لتمثيل الديون والقروض',
+        'price': 0.0,
+        'cost': 0.0,
+        'quantity': 999999, // كمية كبيرة جداً
+        'min_quantity': 0,
+        'barcode': 'DEBT_PRODUCT',
+        'category_id': null,
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+
+      return productId;
+    } catch (e) {
+      // في حالة الخطأ، إرجاع معرف افتراضي
+      print('خطأ في إنشاء منتج الدين: $e');
+      return 1; // معرف افتراضي
+    }
+  }
+
   Future<Map<String, dynamic>> _getCustomerDebtData(
       int customerId, DatabaseService db) async {
     try {
@@ -2895,7 +2932,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                       type: 'installment',
                       items: [
                         {
-                          'product_id': 0, // معرف وهمي للدين
+                          'product_id':
+                              await _getDebtProductId(db), // معرف منتج الدين
                           'price': totalAmount,
                           'cost': 0.0,
                           'quantity': 1,
@@ -3071,7 +3109,8 @@ class _DebtsScreenState extends State<DebtsScreen>
                       type: 'credit', // دين
                       items: [
                         {
-                          'product_id': 0, // معرف وهمي للدين
+                          'product_id':
+                              await _getDebtProductId(db), // معرف منتج الدين
                           'price': double.parse(amountController.text),
                           'cost': 0.0,
                           'quantity': 1,

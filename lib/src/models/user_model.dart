@@ -143,6 +143,7 @@ enum UserRole {
     UserPermission.receivePurchase,
     UserPermission.manageSuppliers,
     UserPermission.manageCategories,
+    UserPermission.manageCustomers,
 
     // التقارير
     UserPermission.viewReports,
@@ -163,6 +164,7 @@ enum UserRole {
     UserPermission.receivePurchase,
     UserPermission.manageSuppliers,
     UserPermission.manageCategories,
+    UserPermission.manageCustomers,
 
     // التقارير
     UserPermission.viewReports,

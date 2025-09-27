@@ -2419,9 +2419,11 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                     if (context.mounted) {
                                                                                       ScaffoldMessenger.of(context).showSnackBar(
                                                                                         SnackBar(
-                                                                                          content: Text('تم تحديث إعدادات الطباعة: ${_getPrintTypeDisplayName(result['pageFormat'] as String)}'),
+                                                                                          content: Text('تم تحديث إعدادات الطباعة'),
                                                                                           backgroundColor: Color(0xFF1976D2), // Professional Blue
                                                                                           duration: const Duration(seconds: 2),
+                                                                                          width: 300,
+                                                                                          behavior: SnackBarBehavior.floating,
                                                                                         ),
                                                                                       );
                                                                                     }
@@ -2458,10 +2460,12 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                     if (context.mounted) {
                                                                                       // عرض رسالة النجاح
                                                                                       ScaffoldMessenger.of(context).showSnackBar(
-                                                                                        const SnackBar(
+                                                                                        SnackBar(
                                                                                           content: Text('تم طباعة الفاتورة بنجاح'),
                                                                                           backgroundColor: Color(0xFF059669), // Professional Green
                                                                                           duration: Duration(seconds: 2),
+                                                                                          width: 300,
+                                                                                          behavior: SnackBarBehavior.floating,
                                                                                         ),
                                                                                       );
                                                                                     }
@@ -2469,9 +2473,11 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                     if (context.mounted) {
                                                                                       ScaffoldMessenger.of(context).showSnackBar(
                                                                                         SnackBar(
-                                                                                          content: Text('خطأ في الطباعة: ${e.toString()}'),
+                                                                                          content: Text('خطأ في الطباعة'),
                                                                                           backgroundColor: Color(0xFFDC2626), // Professional Red
                                                                                           duration: const Duration(seconds: 3),
+                                                                                          width: 300,
+                                                                                          behavior: SnackBarBehavior.floating,
                                                                                         ),
                                                                                       );
                                                                                     }
@@ -2521,10 +2527,12 @@ class _SalesScreenState extends State<SalesScreen> {
 
                                                                                     // عرض رسالة النجاح
                                                                                     ScaffoldMessenger.of(context).showSnackBar(
-                                                                                      const SnackBar(
+                                                                                      SnackBar(
                                                                                         content: Text('تم البيع بنجاح'),
                                                                                         backgroundColor: Color(0xFF059669), // Professional Green
                                                                                         duration: Duration(seconds: 2),
+                                                                                        width: 300,
+                                                                                        behavior: SnackBarBehavior.floating,
                                                                                       ),
                                                                                     );
                                                                                   }
@@ -2579,10 +2587,12 @@ class _SalesScreenState extends State<SalesScreen> {
 
                                                                               // Show success message
                                                                               ScaffoldMessenger.of(context).showSnackBar(
-                                                                                const SnackBar(
-                                                                                  content: Text('تم العودة إلى السلة - يمكنك إضافة منتجات جديدة أو تعديل الكميات'),
+                                                                                SnackBar(
+                                                                                  content: Text('تم العودة إلى السلة'),
                                                                                   backgroundColor: Color(0xFF1976D2), // Professional Blue
                                                                                   duration: Duration(seconds: 3),
+                                                                                  width: 300,
+                                                                                  behavior: SnackBarBehavior.floating,
                                                                                 ),
                                                                               );
                                                                             },
@@ -2752,19 +2762,23 @@ class _SalesScreenState extends State<SalesScreen> {
 
                                                                                   // Show success message
                                                                                   ScaffoldMessenger.of(context).showSnackBar(
-                                                                                    const SnackBar(
-                                                                                      content: Text('تم إلغاء العملية بالكامل وإرجاع جميع المنتجات إلى المخزن'),
+                                                                                    SnackBar(
+                                                                                      content: Text('تم إلغاء العملية وإرجاع المنتجات'),
                                                                                       backgroundColor: Color(0xFF059669), // Professional Green
                                                                                       duration: Duration(seconds: 3),
+                                                                                      width: 300,
+                                                                                      behavior: SnackBarBehavior.floating,
                                                                                     ),
                                                                                   );
                                                                                 } catch (e) {
                                                                                   Navigator.of(context).pop(); // Close the success dialog
                                                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                                                     SnackBar(
-                                                                                      content: Text('خطأ في إلغاء العملية: $e'),
+                                                                                      content: Text('خطأ في إلغاء العملية'),
                                                                                       backgroundColor: Color(0xFFDC2626), // Professional Red
                                                                                       duration: Duration(seconds: 3),
+                                                                                      width: 300,
+                                                                                      behavior: SnackBarBehavior.floating,
                                                                                     ),
                                                                                   );
                                                                                 }
@@ -3265,16 +3279,19 @@ class _SalesScreenState extends State<SalesScreen> {
     if (existing >= 0) {
       // Product already in cart, don't add again
       // User can adjust quantity using +/- buttons in cart
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'المنتج موجود بالفعل في السلة. استخدم أزرار الزيادة والنقصان لتعديل الكمية')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('المنتج موجود في السلة'),
+          width: 300,
+          behavior: SnackBarBehavior.floating));
       return;
     }
 
     final currentStock = (p['quantity'] as int? ?? 0);
     if (currentStock <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('المنتج غير متوفر في المخزون')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('المنتج غير متوفر'),
+          width: 300,
+          behavior: SnackBarBehavior.floating));
       return;
     }
     // Reserve one immediately
@@ -3327,22 +3344,6 @@ class _SalesScreenState extends State<SalesScreen> {
     context.read<DatabaseService>().adjustProductQuantity(productId, 1);
   }
 
-// دالة للحصول على اسم نوع الطابعة للعرض
-  String _getPrintTypeDisplayName(String printType) {
-    switch (printType) {
-      case '58':
-        return '58mm';
-      case '80':
-        return '80mm';
-      case 'A5':
-        return 'A5';
-      case 'A4':
-        return 'A4';
-      default:
-        return 'نوع الطباعة';
-    }
-  }
-
   Future<void> _printInvoice(BuildContext context) async {
     final store = context.read<StoreConfig>();
     final shopName = store.shopName;
@@ -3378,10 +3379,12 @@ class _SalesScreenState extends State<SalesScreen> {
 
     if (success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم طباعة الفاتورة بنجاح مع الإعدادات المختارة'),
+        SnackBar(
+          content: Text('تم طباعة الفاتورة بنجاح'),
           backgroundColor: Color(0xFF059669), // Professional Green
           duration: Duration(seconds: 2),
+          width: 300,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } else {}

@@ -143,16 +143,6 @@ class _AppShellState extends State<AppShell> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.asset(
-                'assets/images/sun.png',
-                height: 28,
-                width: 28,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 10),
             Text(
               store.appTitle,
               style: const TextStyle(
@@ -297,9 +287,9 @@ class _AppShellState extends State<AppShell> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.asset(
-                          'assets/images/sun.png',
-                          height: 36,
-                          width: 36,
+                          'assets/images/soft.png',
+                          height: 50,
+                          width: 50,
                           fit: BoxFit.cover,
                         ),
                       ),

@@ -18,10 +18,10 @@ class CustomersScreen extends StatefulWidget {
 
 class _CustomersScreenState extends State<CustomersScreen> {
   String _query = '';
+  bool _showOnlyWithDebt = false;
 
   @override
   Widget build(BuildContext context) {
-    final db = context.read<DatabaseService>();
     final auth = context.watch<AuthProvider>();
 
     // فحص صلاحية إدارة العملاء
@@ -74,29 +74,61 @@ class _CustomersScreenState extends State<CustomersScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: DarkModeUtils.getBorderColor(context)),
             ),
-            child: Row(children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: 'بحث بالاسم أو الهاتف',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+            child: Column(
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: 'بحث بالاسم أو الهاتف',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                      onChanged: (v) => setState(() => _query = v),
                     ),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
                   ),
-                  onChanged: (v) => setState(() => _query = v),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () => _openEditor(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('إضافة عميل'),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilterChip(
+                        label: Text(_showOnlyWithDebt
+                            ? 'العملاء المدينون فقط'
+                            : 'جميع العملاء'),
+                        selected: _showOnlyWithDebt,
+                        onSelected: (selected) {
+                          setState(() {
+                            _showOnlyWithDebt = selected;
+                          });
+                        },
+                        avatar: Icon(
+                          _showOnlyWithDebt ? Icons.warning : Icons.people,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () => _showCustomerStats(),
+                      icon: const Icon(Icons.bar_chart),
+                      tooltip: 'إحصائيات العملاء',
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.icon(
-                onPressed: () => _openEditor(),
-                icon: const Icon(Icons.add),
-                label: const Text('إضافة عميل'),
-              ),
-            ]),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           // ملاحظة توضيحية
@@ -128,7 +160,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           const SizedBox(height: 12),
           Expanded(
             child: FutureBuilder<List<Map<String, Object?>>>(
-              future: db.getCustomers(query: _query),
+              future: _getFilteredCustomers(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData)
                   return const Center(child: CircularProgressIndicator());
@@ -292,16 +324,23 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                     Formatters.currencyIQD(debt),
                                     style: TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      color: debt > 0
-                                          ? DarkModeUtils.getErrorColor(context)
-                                          : DarkModeUtils.getSuccessColor(
-                                              context),
+                                      color: _getDebtColor(debt),
                                       fontSize: 13,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
+                                      IconButton(
+                                        tooltip: 'عرض التفاصيل',
+                                        onPressed: () =>
+                                            _showCustomerDetails(c),
+                                        icon: const Icon(
+                                          Icons.visibility_outlined,
+                                          size: 18,
+                                          color: Colors.green,
+                                        ),
+                                      ),
                                       IconButton(
                                         tooltip: 'تعديل',
                                         onPressed: () =>
@@ -436,7 +475,18 @@ class _CustomersScreenState extends State<CustomersScreen> {
               onPressed: () => Navigator.pop(context, false),
               child: const Text('إلغاء')),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () {
+                if (name.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('يرجى إدخال اسم العميل'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                Navigator.pop(context, true);
+              },
               child: const Text('حفظ')),
         ],
       ),
@@ -449,6 +499,620 @@ class _CustomersScreenState extends State<CustomersScreen> {
       }, id: customer?['id'] as int?);
       if (!mounted) return;
       setState(() {});
+    }
+  }
+
+  /// الحصول على قائمة العملاء المفلترة
+  Future<List<Map<String, Object?>>> _getFilteredCustomers() async {
+    final db = context.read<DatabaseService>();
+    final customers = await db.getCustomers(query: _query);
+
+    if (_showOnlyWithDebt) {
+      return customers.where((customer) {
+        final debt = (customer['total_debt'] as num?)?.toDouble() ?? 0.0;
+        return debt > 0;
+      }).toList();
+    }
+
+    return customers;
+  }
+
+  /// عرض إحصائيات العملاء
+  Future<void> _showCustomerStats() async {
+    final db = context.read<DatabaseService>();
+    final customers = await db.getCustomers();
+
+    final totalCustomers = customers.length;
+    final customersWithDebt = customers.where((c) {
+      final debt = (c['total_debt'] as num?)?.toDouble() ?? 0.0;
+      return debt > 0;
+    }).length;
+
+    final totalDebt = customers.fold<double>(0.0, (sum, c) {
+      final debt = (c['total_debt'] as num?)?.toDouble() ?? 0.0;
+      return sum + debt;
+    });
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إحصائيات العملاء'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildStatCard(
+              'إجمالي العملاء',
+              totalCustomers.toString(),
+              Icons.people,
+              Colors.blue,
+            ),
+            const SizedBox(height: 12),
+            _buildStatCard(
+              'العملاء المدينون',
+              customersWithDebt.toString(),
+              Icons.warning,
+              Colors.orange,
+            ),
+            const SizedBox(height: 12),
+            _buildStatCard(
+              'إجمالي الديون',
+              Formatters.currencyIQD(totalDebt),
+              Icons.money_off,
+              totalDebt > 0 ? Colors.red : Colors.green,
+            ),
+            const SizedBox(height: 12),
+            _buildStatCard(
+              'العملاء غير المدينين',
+              (totalCustomers - customersWithDebt).toString(),
+              Icons.check_circle,
+              Colors.green,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// بناء بطاقة إحصائية
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: DarkModeUtils.getSecondaryTextColor(context),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: DarkModeUtils.getTextColor(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// عرض تفاصيل العميل وتاريخ المعاملات
+  Future<void> _showCustomerDetails(Map<String, Object?> customer) async {
+    final db = context.read<DatabaseService>();
+    final customerId = customer['id'] as int;
+    final customerName = customer['name']?.toString() ?? '';
+
+    // جلب بيانات العميل التفصيلية
+    final customerSales = await db.database.rawQuery('''
+      SELECT 
+        s.*,
+        GROUP_CONCAT(p.name || ' (' || si.quantity || 'x' || si.price || ')') as items_summary
+      FROM sales s
+      LEFT JOIN sale_items si ON s.id = si.sale_id
+      LEFT JOIN products p ON si.product_id = p.id
+      WHERE s.customer_id = ?
+      GROUP BY s.id
+      ORDER BY s.created_at DESC
+    ''', [customerId]);
+
+    final customerPayments = await db.database.rawQuery('''
+      SELECT * FROM payments 
+      WHERE customer_id = ?
+      ORDER BY payment_date DESC
+    ''', [customerId]);
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.8,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Icon(
+                      Icons.person,
+                      size: 32,
+                      color: DarkModeUtils.getInfoColor(context),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'تفاصيل العميل: $customerName',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: DarkModeUtils.getTextColor(context),
+                            ),
+                          ),
+                          Text(
+                            'الهاتف: ${customer['phone']?.toString() ?? 'غير محدد'}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color:
+                                  DarkModeUtils.getSecondaryTextColor(context),
+                            ),
+                          ),
+                          Text(
+                            'العنوان: ${customer['address']?.toString() ?? 'غير محدد'}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color:
+                                  DarkModeUtils.getSecondaryTextColor(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Debt Summary
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: DarkModeUtils.getCardColor(context),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: DarkModeUtils.getBorderColor(context)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildDetailCard(
+                          'إجمالي الدين',
+                          Formatters.currencyIQD(
+                              (customer['total_debt'] as num?)?.toDouble() ??
+                                  0.0),
+                          Icons.money_off,
+                          _getDebtColor(
+                              (customer['total_debt'] as num?)?.toDouble() ??
+                                  0.0),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildDetailCard(
+                          'عدد المعاملات',
+                          customerSales.length.toString(),
+                          Icons.receipt_long,
+                          Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildDetailCard(
+                          'عدد المدفوعات',
+                          customerPayments.length.toString(),
+                          Icons.payments,
+                          Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Tabs
+                Expanded(
+                  child: DefaultTabController(
+                    length: 2,
+                    child: Column(
+                      children: [
+                        TabBar(
+                          labelColor: DarkModeUtils.getTextColor(context),
+                          unselectedLabelColor:
+                              DarkModeUtils.getSecondaryTextColor(context),
+                          indicatorColor: DarkModeUtils.getInfoColor(context),
+                          tabs: const [
+                            Tab(
+                                text: 'المعاملات',
+                                icon: Icon(Icons.receipt_long)),
+                            Tab(text: 'المدفوعات', icon: Icon(Icons.payments)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              // Sales Tab
+                              _buildSalesList(customerSales),
+                              // Payments Tab
+                              _buildPaymentsList(customerPayments),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// بناء بطاقة تفصيلية
+  Widget _buildDetailCard(
+      String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: DarkModeUtils.getSecondaryTextColor(context),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: DarkModeUtils.getTextColor(context),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// بناء قائمة المعاملات
+  Widget _buildSalesList(List<Map<String, Object?>> sales) {
+    if (sales.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.receipt_long,
+              size: 64,
+              color: DarkModeUtils.getSecondaryTextColor(context),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'لا توجد معاملات',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: DarkModeUtils.getSecondaryTextColor(context),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: sales.length,
+      itemBuilder: (context, index) {
+        final sale = sales[index];
+        final total = (sale['total'] as num?)?.toDouble() ?? 0.0;
+        final type = sale['type']?.toString() ?? '';
+        final createdAt = sale['created_at']?.toString() ?? '';
+
+        Color typeColor;
+        String typeText;
+        switch (type) {
+          case 'cash':
+            typeColor = Colors.green;
+            typeText = 'نقدي';
+            break;
+          case 'credit':
+            typeColor = Colors.orange;
+            typeText = 'آجل';
+            break;
+          case 'installment':
+            typeColor = Colors.blue;
+            typeText = 'تقسيط';
+            break;
+          default:
+            typeColor = Colors.grey;
+            typeText = type;
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: DarkModeUtils.getCardColor(context),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: DarkModeUtils.getBorderColor(context)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: typeColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  Icons.receipt,
+                  color: typeColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'فاتورة #${sale['id']}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: DarkModeUtils.getTextColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'النوع: $typeText',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: typeColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (sale['items_summary'] != null)
+                      Text(
+                        sale['items_summary'].toString(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: DarkModeUtils.getSecondaryTextColor(context),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    Formatters.currencyIQD(total),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: DarkModeUtils.getTextColor(context),
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatDate(createdAt),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: DarkModeUtils.getSecondaryTextColor(context),
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// بناء قائمة المدفوعات
+  Widget _buildPaymentsList(List<Map<String, Object?>> payments) {
+    if (payments.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.payments,
+              size: 64,
+              color: DarkModeUtils.getSecondaryTextColor(context),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'لا توجد مدفوعات',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: DarkModeUtils.getSecondaryTextColor(context),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: payments.length,
+      itemBuilder: (context, index) {
+        final payment = payments[index];
+        final amount = (payment['amount'] as num?)?.toDouble() ?? 0.0;
+        final paymentDate = payment['payment_date']?.toString() ?? '';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: DarkModeUtils.getCardColor(context),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: DarkModeUtils.getBorderColor(context)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.payments,
+                  color: Colors.green,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'دفعة #${payment['id']}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: DarkModeUtils.getTextColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (payment['notes'] != null &&
+                        payment['notes'].toString().isNotEmpty)
+                      Text(
+                        payment['notes'].toString(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: DarkModeUtils.getSecondaryTextColor(context),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    Formatters.currencyIQD(amount),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatDate(paymentDate),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: DarkModeUtils.getSecondaryTextColor(context),
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// تنسيق التاريخ
+  String _formatDate(String isoDate) {
+    try {
+      final date = DateTime.parse(isoDate);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return isoDate;
+    }
+  }
+
+  /// الحصول على لون مناسب للدين
+  Color _getDebtColor(double debt) {
+    if (debt > 0) {
+      return const Color(0xFFE53E3E); // أحمر واضح
+    } else {
+      return const Color(0xFF38A169); // أخضر واضح
     }
   }
 }
