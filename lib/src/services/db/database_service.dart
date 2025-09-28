@@ -72,22 +72,12 @@ class DatabaseService {
         await _createIndexes(db);
       },
     );
-    // Enforce foreign keys and ensure indexes on every open
+    // إعدادات أساسية فقط
     await _db.execute('PRAGMA foreign_keys = ON');
     await _createIndexes(_db);
-    await _cleanupOrphanObjects(_db);
-    await _ensureAdminPlainCredentials();
-    // Ensure new tables/columns exist even if version didn't change
-    await _ensureCategorySchemaOn(_db);
-    await _ensureSaleItemsDiscountColumn(_db);
-    // Clean up any sales_old references
-    await cleanupSalesOldReferences();
 
-    // إصلاح جدول installments إذا كان يحتوي على مراجع خاطئة
-    await fixInstallmentsTable();
-
-    // تنظيف الأقساط المعلقة
-    await cleanupOrphanedInstallments();
+    // فحص وإصلاح المستخدمين الافتراضيين فقط
+    await checkAndFixDefaultUsers();
   }
 
   Future<void> reopen() async {
@@ -98,6 +88,7 @@ class DatabaseService {
     await _cleanupOrphanObjects(_db);
     await _ensureCategorySchemaOn(_db);
     await _ensureSaleItemsDiscountColumn(_db);
+    await checkAndFixDefaultUsers();
     await cleanupSalesOldReferences();
   }
 
@@ -739,31 +730,6 @@ class DatabaseService {
     }
   }
 
-  Future<void> _ensureAdminPlainCredentials() async {
-    try {
-      final users = await _db.query('users',
-          where: 'username = ?', whereArgs: ['admin'], limit: 1);
-      const desired = 'admin123';
-      if (users.isEmpty) {
-        await _db.insert('users', {
-          'name': 'Administrator',
-          'username': 'admin',
-          'password': desired,
-          'role': 'manager',
-          'active': 1,
-        });
-        return;
-      }
-      final current = (users.first['password'] ?? '').toString();
-      if (current != desired) {
-        await _db.update('users', {'password': desired},
-            where: 'id = ?', whereArgs: [users.first['id']]);
-      }
-    } catch (_) {
-      // ignore
-    }
-  }
-
   Future<void> _createIndexes(Database db) async {
     // Products
     await db.execute(
@@ -1226,7 +1192,7 @@ class DatabaseService {
       {
         'name': 'المدير',
         'username': 'manager',
-        'password': 'admin123',
+        'password': _sha256Hex('admin123'),
         'role': 'manager',
         'employee_code': 'A1',
         'active': 1,
@@ -1236,7 +1202,7 @@ class DatabaseService {
       {
         'name': 'المشرف',
         'username': 'supervisor',
-        'password': 'super123',
+        'password': _sha256Hex('super123'),
         'role': 'supervisor',
         'employee_code': 'S1',
         'active': 1,
@@ -1246,7 +1212,7 @@ class DatabaseService {
       {
         'name': 'الموظف',
         'username': 'employee',
-        'password': 'emp123',
+        'password': _sha256Hex('emp123'),
         'role': 'employee',
         'employee_code': 'C1',
         'active': 1,
@@ -1274,23 +1240,9 @@ class DatabaseService {
         where: 'username = ?', whereArgs: ['admin'], limit: 1);
 
     if (existingAdmin.isNotEmpty) {
-      // تحديث المستخدم القديم إلى النظام الجديد الموحد
-      final hashedPassword =
-          sha256.convert(utf8.encode('Manager@2025')).toString();
-      await db.update(
-          'users',
-          {
-            'name': 'المدير',
-            'username': 'manager',
-            'password': hashedPassword,
-            'role': 'manager',
-            'employee_code': 'MGR001',
-            'active': 1,
-            'updated_at': now,
-          },
-          where: 'username = ?',
-          whereArgs: ['admin']);
-      debugPrint('تم تحديث المستخدم القديم admin إلى manager');
+      // حذف المستخدم القديم "admin" لأنه يسبب تضارب
+      await db.delete('users', where: 'username = ?', whereArgs: ['admin']);
+      debugPrint('تم حذف المستخدم القديم admin لتجنب التضارب');
     }
   }
 
@@ -1859,7 +1811,7 @@ class DatabaseService {
     }).toList();
   }
 
-  // Sales and installments (integrated system)
+  // Sales and installments (simplified version)
   Future<int> createSale(
       {int? customerId,
       String? customerName,
@@ -1874,259 +1826,57 @@ class DatabaseService {
       double? downPayment,
       DateTime? firstInstallmentDate}) async {
     return _db.transaction<int>((txn) async {
-      // Defensive cleanup to neutralize legacy objects referencing sales_old
       try {
-        // Disable foreign keys temporarily for cleanup
-        await txn.execute('PRAGMA foreign_keys = OFF');
+        // حساب الإجمالي والربح
+        double total = 0;
+        double profit = 0;
+        for (final it in items) {
+          final rawPrice = (it['price'] as num).toDouble();
+          final discountPercent =
+              ((it['discount_percent'] ?? 0) as num).toDouble();
+          final price = rawPrice * (1 - (discountPercent.clamp(0, 100) / 100));
+          final cost = (it['cost'] as num).toDouble();
+          final quantity = (it['quantity'] as num).toDouble();
 
-        // Drop the sales_old table if it exists
-        await txn.execute('DROP TABLE IF EXISTS sales_old');
-
-        // إصلاح إضافي: التأكد من أن جدول sales موجود
-        final salesTableCheck = await txn.rawQuery(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='sales'");
-        if (salesTableCheck.isEmpty) {
-          // إنشاء جدول sales إذا لم يكن موجوداً
-          await txn.execute('''
-            CREATE TABLE IF NOT EXISTS sales (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              customer_id INTEGER,
-              total REAL NOT NULL,
-              profit REAL NOT NULL DEFAULT 0,
-              type TEXT NOT NULL DEFAULT 'cash',
-              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              down_payment REAL DEFAULT 0,
-              FOREIGN KEY(customer_id) REFERENCES customers(id)
-            );
-          ''');
-        }
-
-        // إصلاح جدول installments إذا كان يحتوي على مراجع خاطئة
-        try {
-          final installmentsSchema = await txn.rawQuery(
-              "SELECT sql FROM sqlite_master WHERE type='table' AND name='installments'");
-          if (installmentsSchema.isNotEmpty) {
-            final schema = installmentsSchema.first['sql']?.toString() ?? '';
-            if (schema.contains('sales_old')) {
-              // حفظ البيانات الموجودة
-              final existingData =
-                  await txn.rawQuery('SELECT * FROM installments');
-
-              // حذف الجدول القديم
-              await txn.execute('DROP TABLE installments');
-
-              // إنشاء الجدول الجديد
-              await txn.execute('''
-                CREATE TABLE installments (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  sale_id INTEGER NOT NULL,
-                  due_date TEXT NOT NULL,
-                  amount REAL NOT NULL,
-                  paid INTEGER NOT NULL DEFAULT 0,
-                  paid_at TEXT,
-                  FOREIGN KEY(sale_id) REFERENCES sales(id)
-                );
-              ''');
-
-              // استعادة البيانات
-              for (final row in existingData) {
-                await txn.insert('installments', {
-                  'id': row['id'],
-                  'sale_id': row['sale_id'],
-                  'due_date': row['due_date'],
-                  'amount': row['amount'],
-                  'paid': row['paid'],
-                  'paid_at': row['paid_at'],
-                });
-              }
-            }
-          }
-        } catch (e) {
-          // ignore
-        }
-
-        // Get all objects that reference sales_old from both main and temp schemas
-        final allObjects = await txn.rawQuery('''
-          SELECT type, name FROM sqlite_master 
-          WHERE type IN ('trigger', 'view', 'index') 
-          AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
-          UNION ALL
-          SELECT type, name FROM sqlite_temp_master 
-          WHERE type IN ('trigger', 'view', 'index') 
-          AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
-        ''');
-
-        for (final row in allObjects) {
-          final type = row['type']?.toString();
-          final name = row['name']?.toString();
-          if (type != null && name != null && name.isNotEmpty) {
-            try {
-              String dropCommand;
-              switch (type) {
-                case 'view':
-                  dropCommand = 'DROP VIEW IF EXISTS $name';
-                  break;
-                case 'index':
-                  dropCommand = 'DROP INDEX IF EXISTS $name';
-                  break;
-                case 'trigger':
-                  dropCommand = 'DROP TRIGGER IF EXISTS $name';
-                  break;
-                default:
-                  continue;
-              }
-              await txn.execute(dropCommand);
-            } catch (_) {}
+          if (price.isFinite && quantity.isFinite) {
+            final qty = quantity.toInt();
+            total += price * qty;
+            profit += (price - cost) * qty;
           }
         }
 
-        // Drop any triggers on sale_items that might reference old tables
-        final siTriggers = await txn.rawQuery(
-            "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name='sale_items'");
-        for (final row in siTriggers) {
-          final name = row['name']?.toString();
-          if (name != null && name.isNotEmpty) {
-            try {
-              await txn.execute('DROP TRIGGER IF EXISTS $name');
-            } catch (_) {}
+        // إنشاء أو العثور على العميل
+        int? ensuredCustomerId = customerId;
+        if (ensuredCustomerId == null &&
+            customerName?.trim().isNotEmpty == true) {
+          final existing = await txn.query('customers',
+              where: 'name = ? AND IFNULL(phone, "") = IFNULL(?, "")',
+              whereArgs: [customerName!.trim(), customerPhone?.trim()]);
+          if (existing.isNotEmpty) {
+            ensuredCustomerId = existing.first['id'] as int;
+          } else {
+            ensuredCustomerId = await txn.insert('customers', {
+              'name': customerName.trim(),
+              'phone': customerPhone?.trim(),
+              'address': customerAddress?.trim(),
+              'total_debt': 0,
+            });
           }
         }
 
-        // Ensure sale_items is not a VIEW
-        final siType = await txn.rawQuery(
-            "SELECT type FROM sqlite_master WHERE name='sale_items' LIMIT 1");
-        if (siType.isNotEmpty && (siType.first['type']?.toString() == 'view')) {
-          try {
-            await txn.execute('DROP VIEW IF EXISTS sale_items');
-          } catch (_) {}
-        }
+        // إنشاء البيع
+        final saleId = await txn.insert('sales', {
+          'customer_id': ensuredCustomerId,
+          'total': total,
+          'profit': profit,
+          'type': type,
+          'created_at': DateTime.now().toIso8601String(),
+          'due_date': dueDate?.toIso8601String(),
+          'down_payment': downPayment ?? 0.0,
+        });
 
-        // Re-ensure core tables exist
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS sales (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            customer_id INTEGER,
-            total REAL NOT NULL,
-            profit REAL NOT NULL DEFAULT 0,
-            type TEXT NOT NULL CHECK(type IN ('cash','installment','credit')),
-            created_at TEXT NOT NULL,
-            due_date TEXT,
-            down_payment REAL DEFAULT 0,
-            FOREIGN KEY(customer_id) REFERENCES customers(id)
-          );
-        ''');
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS sale_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sale_id INTEGER NOT NULL,
-            product_id INTEGER NOT NULL,
-            price REAL NOT NULL,
-            cost REAL NOT NULL,
-            quantity INTEGER NOT NULL,
-            FOREIGN KEY(sale_id) REFERENCES sales(id),
-            FOREIGN KEY(product_id) REFERENCES products(id)
-          );
-        ''');
-
-        // Re-enable foreign keys
-        await txn.execute('PRAGMA foreign_keys = ON');
-      } catch (e) {
-        // Ensure foreign keys are re-enabled even if cleanup fails
-        try {
-          await txn.execute('PRAGMA foreign_keys = ON');
-        } catch (_) {}
-      }
-
-      // تنظيف إضافي للتأكد من عدم وجود مراجع لـ sales_old
-      try {
-        // البحث عن أي triggers أو views تحتوي على sales_old
-        final problematicObjects = await txn.rawQuery('''
-          SELECT name, type, sql FROM sqlite_master 
-          WHERE (sql LIKE '%sales_old%' OR name LIKE '%sales_old%')
-          AND type IN ('trigger', 'view', 'index')
-        ''');
-
-        for (final obj in problematicObjects) {
-          final name = obj['name']?.toString();
-          final type = obj['type']?.toString();
-          if (name != null && name.isNotEmpty) {
-            try {
-              switch (type) {
-                case 'trigger':
-                  await txn.execute('DROP TRIGGER IF EXISTS $name');
-                  break;
-                case 'view':
-                  await txn.execute('DROP VIEW IF EXISTS $name');
-                  break;
-                case 'index':
-                  await txn.execute('DROP INDEX IF EXISTS $name');
-                  break;
-              }
-            } catch (e) {
-              // ignore
-            }
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
-
-      double total = 0;
-      double profit = 0;
-      for (final it in items) {
-        final rawPrice = (it['price'] as num).toDouble();
-        final discountPercent =
-            ((it['discount_percent'] ?? 0) as num).toDouble();
-        final price = rawPrice * (1 - (discountPercent.clamp(0, 100) / 100));
-        final cost = (it['cost'] as num).toDouble();
-        final quantity = (it['quantity'] as num).toDouble();
-
-        // فحص القيم للتأكد من أنها صحيحة
-        if (price.isNaN ||
-            price.isInfinite ||
-            quantity.isNaN ||
-            quantity.isInfinite) {
-          continue;
-        }
-
-        final qty = quantity.toInt();
-        total += price * qty;
-        profit += (price - cost) * qty;
-      }
-      int? ensuredCustomerId = customerId;
-
-      // إنشاء عميل لجميع أنواع المبيعات إذا تم إدخال اسم العميل
-      if (ensuredCustomerId == null &&
-          (customerName?.trim().isNotEmpty == true)) {
-        // Try to find by name/phone; if not found, create
-        final existing = await txn.query('customers',
-            where: 'name = ? AND IFNULL(phone, "") = IFNULL(?, "")',
-            whereArgs: [customerName!.trim(), customerPhone?.trim()]);
-        if (existing.isNotEmpty) {
-          ensuredCustomerId = existing.first['id'] as int;
-        } else {
-          ensuredCustomerId = await txn.insert('customers', {
-            'name': customerName.trim(),
-            'phone': customerPhone?.trim(),
-            'address': customerAddress?.trim(),
-            'total_debt': 0,
-          });
-        }
-      }
-
-      final saleId = await txn.insert('sales', {
-        'customer_id': ensuredCustomerId,
-        'total': total,
-        'profit': profit,
-        'type': type,
-        'created_at': DateTime.now().toIso8601String(),
-        'due_date': dueDate?.toIso8601String(),
-        'down_payment': downPayment ?? 0.0,
-      });
-
-      // إضافة عناصر البيع
-      for (final it in items) {
-        try {
+        // إضافة عناصر البيع
+        for (final it in items) {
           final rawPrice = (it['price'] as num).toDouble();
           final discountPercent =
               ((it['discount_percent'] ?? 0) as num).toDouble();
@@ -2134,6 +1884,7 @@ class DatabaseService {
               rawPrice * (1 - (discountPercent.clamp(0, 100) / 100));
           final cost = (it['cost'] as num).toDouble();
           final quantity = (it['quantity'] as num).toDouble();
+
           await txn.insert('sale_items', {
             'sale_id': saleId,
             'product_id': it['product_id'],
@@ -2142,63 +1893,37 @@ class DatabaseService {
             'quantity': quantity.toInt(),
             'discount_percent': discountPercent,
           });
+
           if (decrementStock) {
             await txn.rawUpdate(
                 'UPDATE products SET quantity = quantity - ? WHERE id = ?',
                 [it['quantity'], it['product_id']]);
           }
-        } catch (e) {
-          rethrow;
         }
-      }
 
-      // معالجة الديون والأقساط
-      if (ensuredCustomerId != null) {
-        if (type == 'credit') {
-          // دين مباشر - إضافة المبلغ كاملاً للديون
-          await txn.rawUpdate(
-              'UPDATE customers SET total_debt = IFNULL(total_debt,0) + ? WHERE id = ?',
-              [total, ensuredCustomerId]);
-        } else if (type == 'installment' &&
-            installmentCount != null &&
-            installmentCount > 0) {
-          // بيع بالأقساط
-          final downPaymentAmount = downPayment ?? 0.0;
-          final remainingAmount = total - downPaymentAmount;
-          final installmentAmount = remainingAmount / installmentCount;
+        // معالجة الديون والأقساط (مبسط)
+        if (ensuredCustomerId != null) {
+          if (type == 'credit') {
+            // دين مباشر
+            await txn.rawUpdate(
+                'UPDATE customers SET total_debt = IFNULL(total_debt,0) + ? WHERE id = ?',
+                [total, ensuredCustomerId]);
+          } else if (type == 'installment' &&
+              installmentCount != null &&
+              installmentCount > 0) {
+            // بيع بالأقساط
+            final downPaymentAmount = downPayment ?? 0.0;
+            final remainingAmount = total - downPaymentAmount;
+            final installmentAmount = remainingAmount / installmentCount;
 
-          // إضافة المبلغ المتبقي للديون
-          await txn.rawUpdate(
-              'UPDATE customers SET total_debt = IFNULL(total_debt,0) + ? WHERE id = ?',
-              [remainingAmount, ensuredCustomerId]);
+            // إضافة المبلغ المتبقي للديون
+            await txn.rawUpdate(
+                'UPDATE customers SET total_debt = IFNULL(total_debt,0) + ? WHERE id = ?',
+                [remainingAmount, ensuredCustomerId]);
 
-          // تنظيف إضافي قبل إنشاء الأقساط
-          try {
-            // البحث عن أي triggers تحتوي على sales_old
-            final problematicTriggers = await txn.rawQuery('''
-              SELECT name FROM sqlite_master 
-              WHERE type = 'trigger' 
-              AND (sql LIKE '%sales_old%' OR name LIKE '%sales_old%')
-            ''');
-
-            for (final trigger in problematicTriggers) {
-              final name = trigger['name']?.toString();
-              if (name != null && name.isNotEmpty) {
-                try {
-                  await txn.execute('DROP TRIGGER IF EXISTS $name');
-                } catch (e) {
-                  // ignore
-                }
-              }
-            }
-          } catch (e) {
-            // ignore
-          }
-
-          // إنشاء الأقساط
-          DateTime currentDate = firstInstallmentDate ?? DateTime.now();
-          for (int i = 0; i < installmentCount; i++) {
-            try {
+            // إنشاء الأقساط
+            DateTime currentDate = firstInstallmentDate ?? DateTime.now();
+            for (int i = 0; i < installmentCount; i++) {
               await txn.insert('installments', {
                 'sale_id': saleId,
                 'due_date': currentDate.toIso8601String(),
@@ -2206,43 +1931,17 @@ class DatabaseService {
                 'paid': 0,
                 'paid_at': null,
               });
-            } catch (e) {
-              // محاولة إصلاح المشكلة
-              try {
-                // التأكد من أن جدول sales موجود
-                final salesCheck = await txn.rawQuery(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name='sales'");
-                if (salesCheck.isEmpty) {
-                  throw Exception('جدول sales غير موجود');
-                }
-
-                // التأكد من أن المبيعة موجودة
-                final saleCheck = await txn
-                    .rawQuery('SELECT id FROM sales WHERE id = ?', [saleId]);
-                if (saleCheck.isEmpty) {
-                  throw Exception('المبيعة غير موجودة');
-                }
-
-                // إعادة المحاولة
-                await txn.insert('installments', {
-                  'sale_id': saleId,
-                  'due_date': currentDate.toIso8601String(),
-                  'amount': installmentAmount,
-                  'paid': 0,
-                  'paid_at': null,
-                });
-              } catch (retryError) {
-                rethrow;
-              }
+              currentDate = DateTime(
+                  currentDate.year, currentDate.month + 1, currentDate.day);
             }
-            // إضافة شهر للأقساط الشهرية
-            currentDate = DateTime(
-                currentDate.year, currentDate.month + 1, currentDate.day);
           }
         }
-      }
 
-      return saleId;
+        return saleId;
+      } catch (e) {
+        debugPrint('خطأ في إنشاء البيع: $e');
+        rethrow;
+      }
     });
   }
 
@@ -4499,6 +4198,92 @@ class DatabaseService {
       await _db.execute('VACUUM');
     } catch (e) {
       throw Exception('خطأ في ضغط قاعدة البيانات: $e');
+    }
+  }
+
+  /// فحص وإصلاح المستخدمين الافتراضيين
+  Future<void> checkAndFixDefaultUsers() async {
+    try {
+      debugPrint('بدء فحص المستخدمين الافتراضيين...');
+
+      // التحقق من وجود جدول المستخدمين
+      final tables = await _db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+
+      if (tables.isEmpty) {
+        debugPrint('جدول المستخدمين غير موجود، سيتم إنشاؤه...');
+        await _createSchema(_db);
+        return;
+      }
+
+      // إنشاء المستخدمين الافتراضيين ببساطة
+      final nowIso = DateTime.now().toIso8601String();
+      final defaultUsers = [
+        {
+          'name': 'المدير',
+          'username': 'manager',
+          'password': _sha256Hex('admin123'),
+          'role': 'manager',
+          'employee_code': 'A1',
+          'active': 1,
+          'created_at': nowIso,
+          'updated_at': nowIso,
+        },
+        {
+          'name': 'المشرف',
+          'username': 'supervisor',
+          'password': _sha256Hex('super123'),
+          'role': 'supervisor',
+          'employee_code': 'S1',
+          'active': 1,
+          'created_at': nowIso,
+          'updated_at': nowIso,
+        },
+        {
+          'name': 'الموظف',
+          'username': 'employee',
+          'password': _sha256Hex('emp123'),
+          'role': 'employee',
+          'employee_code': 'C1',
+          'active': 1,
+          'created_at': nowIso,
+          'updated_at': nowIso,
+        },
+      ];
+
+      for (final user in defaultUsers) {
+        try {
+          // محاولة إدراج أو تحديث المستخدم
+          await _db.insert('users', user);
+          debugPrint('تم إضافة مستخدم: ${user['username']}');
+        } catch (e) {
+          // إذا فشل الإدراج، جرب التحديث
+          try {
+            await _db.update(
+              'users',
+              {
+                'name': user['name'],
+                'password': user['password'],
+                'role': user['role'],
+                'employee_code': user['employee_code'],
+                'active': 1,
+                'updated_at': nowIso,
+              },
+              where: 'username = ?',
+              whereArgs: [user['username']],
+            );
+            debugPrint('تم تحديث مستخدم: ${user['username']}');
+          } catch (updateError) {
+            debugPrint(
+                'فشل في تحديث المستخدم ${user['username']}: $updateError');
+          }
+        }
+      }
+
+      debugPrint('انتهى فحص وإصلاح المستخدمين الافتراضيين');
+    } catch (e) {
+      debugPrint('خطأ في فحص وإصلاح المستخدمين الافتراضيين: $e');
+      // لا نرمي الاستثناء هنا لتجنب تعليق التطبيق
     }
   }
 }

@@ -284,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Center(
         child: SingleChildScrollView(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500),
+            constraints: const BoxConstraints(maxWidth: 800),
             child: Card(
               elevation: 8,
               color: DarkModeUtils.getCardColor(context),
@@ -307,8 +307,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderRadius: BorderRadius.circular(12),
                               child: Image.asset(
                                 'assets/images/soft.png',
-                                width: 190,
-                                height: 220,
+                                width: 220,
+                                height: 250,
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -358,7 +358,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               decoration: DarkModeUtils.createInputDecoration(
                                 context,
                                 hintText:
-                                    'اسم المستخدم (manager, supervisor, employee)',
+                                    'اسم المستخدم: manager أو supervisor أو employee',
                                 prefixIcon: Icons.person,
                               ).copyWith(
                                 filled: true,
@@ -548,48 +548,61 @@ class _LoginScreenState extends State<LoginScreen> {
     final options = const [
       (
         'manager',
-        'مدير',
+        'Manager - مدير',
         Icons.admin_panel_settings,
       ),
       (
         'supervisor',
-        'مشرف',
+        'Supervisor - مشرف',
         Icons.supervisor_account,
       ),
       (
         'employee',
-        'موظف',
+        'Employee - موظف',
         Icons.person,
       ),
     ];
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         for (final o in options)
-          ChoiceChip(
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(o.$3, size: 16),
-                const SizedBox(width: 6),
-                Text(o.$2),
-              ],
-            ),
-            selected: _selectedUserType == o.$1,
-            onSelected: (_) async {
-              await _selectUserType(o.$1);
-            },
-            selectedColor:
-                Theme.of(context).colorScheme.primary.withOpacity(0.15),
-            labelStyle: Theme.of(context).textTheme.bodySmall,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            shape: StadiumBorder(
-              side: BorderSide(
-                color: _selectedUserType == o.$1
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.outline.withOpacity(0.4),
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              child: ChoiceChip(
+                label: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(o.$3, size: 20),
+                    const SizedBox(height: 4),
+                    Text(
+                      o.$2,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                selected: _selectedUserType == o.$1,
+                onSelected: (_) async {
+                  await _selectUserType(o.$1);
+                },
+                selectedColor:
+                    Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                labelStyle: Theme.of(context).textTheme.bodySmall,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: _selectedUserType == o.$1
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withOpacity(0.4),
+                  ),
+                ),
               ),
             ),
           ),

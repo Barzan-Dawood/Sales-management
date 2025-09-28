@@ -36,7 +36,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// الحصول على اسم المستخدم الحالي
-  String get currentUserName => _currentUser?.name ?? '';
+  String get currentUserName => _currentUser?.username ?? '';
 
   /// الحصول على رمز الموظف الحالي
   String get currentEmployeeCode => _currentUser?.employeeCode ?? '';
@@ -52,15 +52,21 @@ class AuthProvider extends ChangeNotifier {
 
     final userData = await _db.findUserByCredentials(username, password);
     debugPrint('نتيجة البحث عن المستخدم: $userData');
-    if (userData == null) return false;
+    if (userData == null) {
+      debugPrint('فشل في العثور على المستخدم أو كلمة المرور غير صحيحة');
+      return false;
+    }
 
     _currentUser = UserModel.fromMap(userData);
+    debugPrint(
+        'تم تسجيل الدخول بنجاح: ${_currentUser?.username} - ${_currentUser?.name}');
     notifyListeners();
     return true;
   }
 
   /// التأكد من وجود المستخدمين الافتراضيين
   Future<void> _ensureDefaultUsersExist() async {
+    debugPrint('بدء التأكد من وجود المستخدمين الافتراضيين...');
     final nowIso = DateTime.now().toIso8601String();
     final defaultUsers = [
       {
@@ -96,6 +102,7 @@ class AuthProvider extends ChangeNotifier {
     ];
 
     for (final user in defaultUsers) {
+      debugPrint('التحقق من وجود المستخدم: ${user['username']}');
       final existing = await _db.database.query(
         'users',
         where: 'username = ?',
@@ -106,33 +113,46 @@ class AuthProvider extends ChangeNotifier {
       if (existing.isEmpty) {
         try {
           await _db.database.insert('users', user);
-          debugPrint('تم إضافة مستخدم: ${user['username']}');
+          debugPrint(
+              'تم إضافة مستخدم جديد: ${user['username']} - ${user['name']}');
         } catch (e) {
           debugPrint('خطأ في إضافة مستخدم ${user['username']}: $e');
         }
       } else {
-        // تأكيد تطبيق كلمة مرور المدير admin123 حتى إن كان موجوداً مسبقاً
-        if (user['username'] == kDefaultAdminUsername) {
-          try {
-            await _db.database.update(
-              'users',
-              {
-                'password': _sha256Hex(kDefaultAdminPassword),
-                'name': 'المدير',
-                'employee_code': 'A1',
-                'active': 1,
-                'updated_at': nowIso,
-              },
-              where: 'username = ?',
-              whereArgs: [user['username']],
-            );
-            debugPrint('تم تحديث كلمة مرور المدير إلى القيمة الافتراضية.');
-          } catch (e) {
-            debugPrint('فشل تحديث بيانات المدير: $e');
+        debugPrint('المستخدم موجود مسبقاً: ${user['username']}');
+        // تأكيد تطبيق كلمات المرور الافتراضية لجميع المستخدمين حتى إن كانوا موجودين مسبقاً
+        try {
+          String passwordToStore;
+          if (user['username'] == kDefaultAdminUsername) {
+            passwordToStore = _sha256Hex(kDefaultAdminPassword);
+          } else if (user['username'] == kDefaultSupervisorUsername) {
+            passwordToStore = _sha256Hex(kDefaultSupervisorPassword);
+          } else if (user['username'] == kDefaultEmployeeUsername) {
+            passwordToStore = _sha256Hex(kDefaultEmployeePassword);
+          } else {
+            passwordToStore = _sha256Hex(user['password'] as String);
           }
+
+          await _db.database.update(
+            'users',
+            {
+              'password': passwordToStore,
+              'name': user['name'],
+              'employee_code': user['employee_code'],
+              'active': 1,
+              'updated_at': nowIso,
+            },
+            where: 'username = ?',
+            whereArgs: [user['username']],
+          );
+          debugPrint(
+              'تم تحديث بيانات المستخدم: ${user['username']} - ${user['name']}');
+        } catch (e) {
+          debugPrint('فشل تحديث بيانات المستخدم ${user['username']}: $e');
         }
       }
     }
+    debugPrint('انتهى التأكد من وجود المستخدمين الافتراضيين');
   }
 
   void logout() {

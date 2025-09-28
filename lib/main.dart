@@ -48,142 +48,18 @@ Future<void> main() async {
 
   try {
     await databaseService.initialize();
-
-    // تنظيف إضافي لضمان إزالة أي بقايا جداول/مُشغّلات قديمة
-    try {
-      await databaseService.comprehensiveSalesOldCleanup();
-      await databaseService.cleanupAllTriggers();
-    } catch (e) {
-      assert(() {
-        // تجاهُل الخطأ هنا آمن في التطوير، الأهم عدم إيقاف التشغيل
-        return true;
-      }());
-    }
-
-    // تشغيل النسخ الاحتياطي التلقائي في الخلفية
-    try {
-      await databaseService.runAutoBackup();
-    } catch (e) {
-      assert(() {
-        return true;
-      }());
-    }
-
-    // فحص سلامة القاعدة ومحاولة الإصلاح التلقائي عند الحاجة
-    final issues = await databaseService.checkDatabaseIntegrity();
-    if (issues.isNotEmpty) {
-      assert(() {
-        return true;
-      }());
-
-      try {
-        await databaseService.forceCleanup();
-
-        // إعادة الفحص بعد التنظيف
-        final remainingIssues = await databaseService.checkDatabaseIntegrity();
-        if (remainingIssues.isEmpty) {
-          assert(() {
-            return true;
-          }());
-        } else {
-          assert(() {
-            return true;
-          }());
-          await databaseService.comprehensiveCleanup();
-
-          // فحص نهائي
-          final finalIssues = await databaseService.checkDatabaseIntegrity();
-          if (finalIssues.isEmpty) {
-            assert(() {
-              return true;
-            }());
-          } else {
-            assert(() {
-              return true;
-            }());
-            await databaseService.aggressiveCleanup();
-
-            // فحص أخير بعد أقسى تنظيف
-            final finalFinalIssues =
-                await databaseService.checkDatabaseIntegrity();
-            if (finalFinalIssues.isEmpty) {
-              assert(() {
-                return true;
-              }());
-            } else {
-              assert(() {
-                return true;
-              }());
-            }
-          }
-        }
-      } catch (e) {
-        assert(() {
-          return true;
-        }());
-        try {
-          await databaseService.comprehensiveCleanup();
-          assert(() {
-            return true;
-          }());
-        } catch (comprehensiveError) {
-          assert(() {
-            return true;
-          }());
-          try {
-            await databaseService.aggressiveCleanup();
-            assert(() {
-              return true;
-            }());
-          } catch (aggressiveError) {
-            assert(() {
-              return true;
-            }());
-          }
-        }
-      }
-    }
+    print('تم تهيئة قاعدة البيانات بنجاح');
   } catch (e) {
-    assert(() {
-      return true;
-    }());
-
-    assert(() {
-      return true;
-    }());
-
-    // محاولة تنظيف طارئة قبل إعادة رمي الاستثناء
+    print('خطأ في تهيئة قاعدة البيانات: $e');
+    // محاولة تنظيف بسيط فقط
     try {
       await databaseService.forceCleanup();
-      assert(() {
-        return true;
-      }());
+      await databaseService.initialize();
+      print('تم إصلاح قاعدة البيانات وإعادة تهيئتها');
     } catch (cleanupError) {
-      assert(() {
-        return true;
-      }());
-      try {
-        await databaseService.comprehensiveCleanup();
-        assert(() {
-          return true;
-        }());
-      } catch (comprehensiveError) {
-        assert(() {
-          return true;
-        }());
-        try {
-          await databaseService.aggressiveCleanup();
-          assert(() {
-            return true;
-          }());
-        } catch (aggressiveError) {
-          assert(() {
-            return true;
-          }());
-        }
-      }
+      print('فشل في إصلاح قاعدة البيانات: $cleanupError');
+      rethrow;
     }
-    rethrow;
   }
 
   final storeConfig = StoreConfig();

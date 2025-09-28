@@ -1588,6 +1588,24 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 try {
                   if (isEdit) {
                     await db.updateProduct(product['id'] as int, values);
+                    // عرض رسالة نجاح التعديل
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('تم حفظ التعديل بنجاح'),
+                            ],
+                          ),
+                          backgroundColor:
+                              Color(0xFF059669), // Professional Green
+                          behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
                   } else {
                     // التحقق من وجود الباركود قبل الإدراج
                     if (values['barcode'] != null) {
@@ -1608,6 +1626,24 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       }
                     }
                     await db.insertProduct(values);
+                    // عرض رسالة نجاح الإضافة
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text('تم إضافة المنتج بنجاح'),
+                            ],
+                          ),
+                          backgroundColor:
+                              Color(0xFF059669), // Professional Green
+                          behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
                   }
                   if (context.mounted) Navigator.pop(context, true);
                 } catch (e) {
