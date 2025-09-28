@@ -1064,14 +1064,14 @@ class DatabaseService {
             whereArgs: [user['id']]);
       }
 
-      // إضافة المستخدمين الجدد
+      // إضافة المستخدمين الافتراضيين
       final defaultUsers = [
         {
           'name': 'المدير',
           'username': 'manager',
-          'password': 'Manager@2025',
+          'password': 'admin123',
           'role': 'manager',
-          'employee_code': 'MGR001',
+          'employee_code': 'A1',
           'active': 1,
           'created_at': now,
           'updated_at': now,
@@ -1079,9 +1079,9 @@ class DatabaseService {
         {
           'name': 'المشرف',
           'username': 'supervisor',
-          'password': 'Supervisor@2025',
+          'password': 'super123',
           'role': 'supervisor',
-          'employee_code': 'SUP001',
+          'employee_code': 'S1',
           'active': 1,
           'created_at': now,
           'updated_at': now,
@@ -1089,9 +1089,9 @@ class DatabaseService {
         {
           'name': 'الموظف',
           'username': 'employee',
-          'password': 'Employee@2025',
+          'password': 'emp123',
           'role': 'employee',
-          'employee_code': 'EMP001',
+          'employee_code': 'C1',
           'active': 1,
           'created_at': now,
           'updated_at': now,
@@ -1164,15 +1164,15 @@ class DatabaseService {
       await db.execute('PRAGMA foreign_keys=on');
       debugPrint('تم إعادة إنشاء جدول المستخدمين بنجاح في V8');
 
-      // إضافة المستخدمين الجدد
+      // إضافة المستخدمين الافتراضيين
       final now = DateTime.now().toIso8601String();
       final defaultUsers = [
         {
           'name': 'المدير',
           'username': 'manager',
-          'password': 'Manager@2025',
+          'password': 'admin123',
           'role': 'manager',
-          'employee_code': 'MGR001',
+          'employee_code': 'A1',
           'active': 1,
           'created_at': now,
           'updated_at': now,
@@ -1180,9 +1180,9 @@ class DatabaseService {
         {
           'name': 'المشرف',
           'username': 'supervisor',
-          'password': 'Supervisor@2025',
+          'password': 'super123',
           'role': 'supervisor',
-          'employee_code': 'SUP001',
+          'employee_code': 'S1',
           'active': 1,
           'created_at': now,
           'updated_at': now,
@@ -1190,9 +1190,9 @@ class DatabaseService {
         {
           'name': 'الموظف',
           'username': 'employee',
-          'password': 'Employee@2025',
+          'password': 'emp123',
           'role': 'employee',
-          'employee_code': 'EMP001',
+          'employee_code': 'C1',
           'active': 1,
           'created_at': now,
           'updated_at': now,
@@ -1226,9 +1226,9 @@ class DatabaseService {
       {
         'name': 'المدير',
         'username': 'manager',
-        'password': 'Manager@2025',
+        'password': 'admin123',
         'role': 'manager',
-        'employee_code': 'MGR001',
+        'employee_code': 'A1',
         'active': 1,
         'created_at': now,
         'updated_at': now,
@@ -1236,19 +1236,19 @@ class DatabaseService {
       {
         'name': 'المشرف',
         'username': 'supervisor',
-        'password': 'Supervisor@2025',
+        'password': 'super123',
         'role': 'supervisor',
-        'employee_code': 'SUP001',
+        'employee_code': 'S1',
         'active': 1,
         'created_at': now,
         'updated_at': now,
       },
       {
         'name': 'الموظف',
-        'username': 'employee001',
-        'password': 'Employee@2025',
+        'username': 'employee',
+        'password': 'emp123',
         'role': 'employee',
-        'employee_code': 'EMP001',
+        'employee_code': 'C1',
         'active': 1,
         'created_at': now,
         'updated_at': now,
