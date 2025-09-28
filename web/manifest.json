@@ -1,13 +1,51 @@
 {
-    "name": "RojSoft Manager",
-    "short_name": "RojSoft Manager",
+    "name": "ROJ SYSTEM - نظام إدارة المكتب",
+    "short_name": "ROJ SYSTEM",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#2196F3",
-    "description": "RojSoft Manager - نظام إدارة المكتب",
+    "description": "نظام إدارة المكتب لخدمات الانترنت والهواتف",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "scope": "/",
+    "lang": "ar",
+    "dir": "rtl",
+    "categories": ["business", "productivity", "utilities"],
+    "screenshots": [
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "form_factor": "wide"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "المبيعات",
+            "short_name": "المبيعات",
+            "description": "إدارة المبيعات",
+            "url": "/sales",
+            "icons": [
+                {
+                    "src": "icons/Icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "العملاء",
+            "short_name": "العملاء",
+            "description": "إدارة العملاء",
+            "url": "/customers",
+            "icons": [
+                {
+                    "src": "icons/Icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",

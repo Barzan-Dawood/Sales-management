@@ -1,8 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'enhanced_privacy_policy_screen.dart';
@@ -35,6 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    // مسح أي بيانات غير صحيحة أولاً
+    _clearInvalidStoredData();
+    // تحميل البيانات الصحيحة
     _loadLastUsername();
     _loadRealUsernames();
   }
@@ -57,14 +58,60 @@ class _LoginScreenState extends State<LoginScreen> {
     _reconcileUserTypeAndUsername();
   }
 
+  /// مسح البيانات المحفوظة غير الصحيحة
+  Future<void> _clearInvalidStoredData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastUsername = prefs.getString('last_username');
+
+      if (lastUsername != null && lastUsername.isNotEmpty) {
+        final validUsernames = ['manager', 'supervisor', 'employee'];
+
+        if (!validUsernames.contains(lastUsername.toLowerCase())) {
+          // احذف القيمة غير الصحيحة
+          await prefs.remove('last_username');
+          debugPrint('تم حذف اسم المستخدم غير الصحيح: $lastUsername');
+
+          // إظهار رسالة للمستخدم
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('تم مسح اسم المستخدم غير الصحيح: $lastUsername'),
+                backgroundColor: Colors.orange,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('خطأ في مسح البيانات غير الصحيحة: $e');
+    }
+  }
+
   Future<void> _loadLastUsername() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lastUsername = prefs.getString('last_username');
+
+      // التحقق من أن اسم المستخدم المحفوظ صحيح
       if (lastUsername != null && lastUsername.isNotEmpty) {
-        _usernameController.text = lastUsername;
-        _autoSelectRoleFor(lastUsername);
-        _passwordController.clear();
+        // قائمة بأسماء المستخدمين الصحيحة
+        final validUsernames = ['manager', 'supervisor', 'employee'];
+
+        if (validUsernames.contains(lastUsername.toLowerCase())) {
+          _usernameController.text = lastUsername;
+          _autoSelectRoleFor(lastUsername);
+          _passwordController.clear();
+        } else {
+          // إذا كان اسم المستخدم غير صحيح، احذف القيمة المحفوظة
+          await prefs.remove('last_username');
+          // اترك الحقل فارغاً
+          _usernameController.clear();
+          // اختر المدير كقيمة افتراضية
+          _selectedUserType = 'manager';
+        }
       }
     } catch (_) {}
     // Ensure consistency after loading
@@ -310,7 +357,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               textInputAction: TextInputAction.next,
                               decoration: DarkModeUtils.createInputDecoration(
                                 context,
-                                hintText: 'اسم المستخدم',
+                                hintText:
+                                    'اسم المستخدم (manager, supervisor, employee)',
                                 prefixIcon: Icons.person,
                               ).copyWith(
                                 filled: true,
@@ -318,8 +366,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                     DarkModeUtils.getBackgroundColor(context)
                                         .withOpacity(0.5),
                               ),
-                              validator: (v) =>
-                                  (v == null || v.isEmpty) ? 'مطلوب' : null,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) {
+                                  return 'مطلوب';
+                                }
+                                final validUsernames = [
+                                  'manager',
+                                  'supervisor',
+                                  'employee'
+                                ];
+                                if (!validUsernames.contains(v.toLowerCase())) {
+                                  return 'اسم المستخدم غير صحيح. استخدم: manager, supervisor, أو employee';
+                                }
+                                return null;
+                              },
                             ),
                             const SizedBox(height: 16),
                             TextFormField(

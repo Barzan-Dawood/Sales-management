@@ -808,9 +808,9 @@ Future<void> _showResetPasswordsDialog(
         content: const Text(
           'هل أنت متأكد من إعادة ضبط أسماء المستخدمين وكلمات المرور لجميع المستخدمين إلى القيم الافتراضية؟\n\n'
           'سيتم إعادة تعيين إلى:\n'
-          '• المدير: manager / Manager@2025\n'
-          '• المشرف: supervisor / Supervisor@2025\n'
-          '• الموظف: employee / Employee@2025',
+          '• المدير: manager / admin123\n'
+          '• المشرف: supervisor / super123\n'
+          '• الموظف: employee / emp123',
           style: TextStyle(fontSize: 16),
         ),
         actions: [
@@ -881,7 +881,7 @@ Future<void> _resetAllPasswords(
         'users',
         {
           'username': 'manager',
-          'password': _sha256('Manager@2025'),
+          'password': _sha256('admin123'),
           'updated_at': nowIso,
         },
         where: 'id = ?',
@@ -921,7 +921,7 @@ Future<void> _resetAllPasswords(
           'users',
           {
             'username': 'supervisor',
-            'password': _sha256('Supervisor@2025'),
+            'password': _sha256('super123'),
             'updated_at': nowIso,
           },
           where: 'id = ?',
@@ -935,7 +935,7 @@ Future<void> _resetAllPasswords(
           final result = await db.database.update(
             'users',
             {
-              'password': _sha256('Supervisor@2025'),
+              'password': _sha256('super123'),
               'updated_at': nowIso,
             },
             where: 'id = ?',
@@ -979,7 +979,7 @@ Future<void> _resetAllPasswords(
           'users',
           {
             'username': 'employee',
-            'password': _sha256('Employee@2025'),
+            'password': _sha256('emp123'),
             'updated_at': nowIso,
           },
           where: 'id = ?',
@@ -993,7 +993,7 @@ Future<void> _resetAllPasswords(
           final result = await db.database.update(
             'users',
             {
-              'password': _sha256('Employee@2025'),
+              'password': _sha256('emp123'),
               'updated_at': nowIso,
             },
             where: 'id = ?',
@@ -1018,9 +1018,9 @@ Future<void> _resetAllPasswords(
         SnackBar(
           content: const Text(
             'تم إعادة ضبط أسماء المستخدمين وكلمات المرور بنجاح!\n'
-            'المدير: manager / Manager@2025\n'
-            'المشرف: supervisor / Supervisor@2025\n'
-            'الموظف: employee / Employee@2025',
+            'المدير: manager / admin123\n'
+            'المشرف: supervisor / super123\n'
+            'الموظف: employee / emp123',
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.green,

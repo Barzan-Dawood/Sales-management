@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:rojsoft_manager/src/screens/app_usage_guide_screen.dart';
-import 'package:rojsoft_manager/src/screens/database_settings_dialog.dart';
-import 'package:rojsoft_manager/src/screens/enhanced_privacy_policy_screen.dart';
+import 'package:roj_system/src/screens/app_usage_guide_screen.dart';
+import 'package:roj_system/src/screens/database_settings_dialog.dart';
+import 'package:roj_system/src/screens/enhanced_privacy_policy_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/dark_mode_utils.dart';
 import '../services/db/database_service.dart';

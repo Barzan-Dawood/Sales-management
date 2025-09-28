@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- استبعاد البيانات الحساسة من النسخ الاحتياطي السحابي -->
+        <exclude domain="database" path="app_database.db"/>
+        <exclude domain="database" path="app_database.db-wal"/>
+        <exclude domain="database" path="app_database.db-shm"/>
+        <exclude domain="sharedpref" path="auth_prefs.xml"/>
+        <exclude domain="sharedpref" path="license_prefs.xml"/>
+        
+        <!-- تضمين الإعدادات العامة -->
+        <include domain="sharedpref" path="settings_prefs.xml"/>
+        <include domain="sharedpref" path="theme_prefs.xml"/>
+    </cloud-backup>
+    
+    <device-transfer>
+        <!-- نقل البيانات بين الأجهزة -->
+        <exclude domain="database" path="app_database.db"/>
+        <exclude domain="sharedpref" path="auth_prefs.xml"/>
+        <exclude domain="sharedpref" path="license_prefs.xml"/>
+    </device-transfer>
+</data-extraction-rules>

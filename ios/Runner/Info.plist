@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>تجارتي</string>
+	<string>ROJ SYSTEM</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>تجارتي</string>
+	<string>ROJ SYSTEM</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -45,5 +45,52 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- أذونات iOS -->
+	<key>NSCameraUsageDescription</key>
+	<string>يحتاج التطبيق للوصول للكاميرا لالتقاط صور المنتجات</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يحتاج التطبيق للوصول لمكتبة الصور لاختيار صور المنتجات</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>يحتاج التطبيق للوصول للميكروفون لتسجيل الملاحظات الصوتية</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>يحتاج التطبيق للوصول للموقع لتحديد موقع المتجر</string>
+	<key>NSContactsUsageDescription</key>
+	<string>يحتاج التطبيق للوصول للجهات لاستيراد بيانات العملاء</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>يحتاج التطبيق للوصول للبلوتوث للطباعة على الطابعات</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>يحتاج التطبيق للوصول للبلوتوث للطباعة على الطابعات</string>
+	
+	<!-- إعدادات الأمان -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>barzandawood.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+			</dict>
+		</dict>
+	</dict>
+	
+	<!-- إعدادات الخصوصية -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	
+	<!-- إعدادات الأداء -->
+	<key>UIRequiresFullScreen</key>
+	<false/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 </dict>
 </plist>

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';  
-import 'package:rojsoft_manager/main.dart';
-import 'package:rojsoft_manager/src/services/db/database_service.dart';
-import 'package:rojsoft_manager/src/services/auth/auth_provider.dart';
+import 'package:roj_system/main.dart';
+import 'package:roj_system/src/services/db/database_service.dart';
+import 'package:roj_system/src/services/auth/auth_provider.dart';
 
 void main() {
   group('Sales Flow Integration Tests', () {

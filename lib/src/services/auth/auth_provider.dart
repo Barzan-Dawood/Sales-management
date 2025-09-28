@@ -5,13 +5,14 @@ import '../../models/user_model.dart';
 import 'package:crypto/crypto.dart';
 
 // Default usernames and passwords (manager can change them later from settings)
+// كلمات المرور الافتراضية: admin123, super123, emp123
 const String kDefaultAdminUsername = 'manager';
 const String kDefaultSupervisorUsername = 'supervisor';
 const String kDefaultEmployeeUsername = 'employee';
 
-const String kDefaultAdminPassword = 'Manager@2025';
-const String kDefaultSupervisorPassword = 'Supervisor@2025';
-const String kDefaultEmployeePassword = 'Employee@2025';
+const String kDefaultAdminPassword = 'admin123';
+const String kDefaultSupervisorPassword = 'super123';
+const String kDefaultEmployeePassword = 'emp123';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider(this._db);
@@ -110,7 +111,7 @@ class AuthProvider extends ChangeNotifier {
           debugPrint('خطأ في إضافة مستخدم ${user['username']}: $e');
         }
       } else {
-        // تأكيد تطبيق كلمة مرور المدير Manager@2025 حتى إن كان موجوداً مسبقاً
+        // تأكيد تطبيق كلمة مرور المدير admin123 حتى إن كان موجوداً مسبقاً
         if (user['username'] == kDefaultAdminUsername) {
           try {
             await _db.database.update(
