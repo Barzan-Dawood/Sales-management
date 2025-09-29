@@ -133,12 +133,13 @@ class AuthProvider extends ChangeNotifier {
             passwordToStore = _sha256Hex(user['password'] as String);
           }
 
+          // Only update safe fields to avoid UNIQUE constraint conflicts.
+          // Do NOT overwrite existing employee_code; it may already be used elsewhere.
           await _db.database.update(
             'users',
             {
               'password': passwordToStore,
               'name': user['name'],
-              'employee_code': user['employee_code'],
               'active': 1,
               'updated_at': nowIso,
             },

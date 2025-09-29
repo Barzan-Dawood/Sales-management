@@ -301,36 +301,42 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
                 const Spacer(),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: isVerySmall ? 12 : 16,
-                      vertical: isVerySmall ? 8 : 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(isDark ? 0.15 : 0.2),
-                    borderRadius: BorderRadius.circular(isVerySmall ? 10 : 12),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(isDark ? 0.2 : 0.3),
-                      width: 1,
+                Flexible(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: isVerySmall ? 12 : 16,
+                        vertical: isVerySmall ? 8 : 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(isDark ? 0.15 : 0.2),
+                      borderRadius:
+                          BorderRadius.circular(isVerySmall ? 10 : 12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(isDark ? 0.2 : 0.3),
+                        width: 1,
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.calendar_today_rounded,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        size: isVerySmall ? 14 : 16,
-                      ),
-                      SizedBox(width: isVerySmall ? 6 : 8),
-                      Text(
-                        DateTime.now().toString().substring(0, 10),
-                        style: TextStyle(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
                           color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: isVerySmall ? 12 : 14,
-                          fontWeight: FontWeight.w600,
+                          size: isVerySmall ? 14 : 16,
                         ),
-                      ),
-                    ],
+                        SizedBox(width: isVerySmall ? 6 : 8),
+                        Flexible(
+                          child: Text(
+                            DateTime.now().toString().substring(0, 10),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: isVerySmall ? 12 : 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -634,11 +640,14 @@ class _DashboardScreenState extends State<DashboardScreen>
               Icon(Icons.show_chart,
                   color: DarkModeUtils.getInfoColor(context), size: 24),
               const SizedBox(width: 12),
-              const Text(
-                'مبيعات الأسبوع',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              Flexible(
+                child: Text(
+                  'مبيعات الأسبوع',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -860,9 +869,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Expanded(
+                            Flexible(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     product['name']?.toString() ?? 'منتج',
@@ -1003,9 +1013,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Expanded(
+                            Flexible(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     product['name']?.toString() ?? 'منتج',
@@ -1016,31 +1027,40 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     overflow: TextOverflow.ellipsis,
                                     maxLines: 1,
                                   ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'الكمية: ${product['quantity']}',
-                                        style: TextStyle(
-                                          color: DarkModeUtils
-                                              .getSecondaryTextColor(context),
-                                          fontSize: 10,
+                                  Flexible(
+                                    child: Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            'الكمية: ${product['quantity']}',
+                                            style: TextStyle(
+                                              color: DarkModeUtils
+                                                  .getSecondaryTextColor(
+                                                      context),
+                                              fontSize: 10,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        product['created_at']
-                                                ?.toString()
-                                                .substring(0, 16) ??
-                                            '',
-                                        style: TextStyle(
-                                          color: DarkModeUtils
-                                              .getSecondaryTextColor(context),
-                                          fontSize: 10,
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            product['created_at']
+                                                    ?.toString()
+                                                    .substring(0, 16) ??
+                                                '',
+                                            style: TextStyle(
+                                              color: DarkModeUtils
+                                                  .getSecondaryTextColor(
+                                                      context),
+                                              fontSize: 10,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                          ),
                                         ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1147,9 +1167,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Expanded(
+                            Flexible(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     product['name']?.toString() ?? 'منتج',
