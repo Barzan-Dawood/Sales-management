@@ -4216,6 +4216,25 @@ class DatabaseService {
         return;
       }
 
+      // حذف المستخدمين المؤقتين (الذين لديهم _conflict_ في اسم المستخدم)
+      try {
+        final conflictUsers = await _db.query(
+          'users',
+          where: 'username LIKE ?',
+          whereArgs: ['%_conflict_%'],
+        );
+        if (conflictUsers.isNotEmpty) {
+          await _db.delete(
+            'users',
+            where: 'username LIKE ?',
+            whereArgs: ['%_conflict_%'],
+          );
+          debugPrint('تم حذف ${conflictUsers.length} مستخدم مؤقت');
+        }
+      } catch (e) {
+        debugPrint('خطأ في حذف المستخدمين المؤقتين: $e');
+      }
+
       // إنشاء المستخدمين الافتراضيين ببساطة
       final nowIso = DateTime.now().toIso8601String();
       final defaultUsers = [
@@ -4259,20 +4278,53 @@ class DatabaseService {
         } catch (e) {
           // إذا فشل الإدراج، جرب التحديث
           try {
-            await _db.update(
+            // التحقق من المستخدم الحالي أولاً
+            final existing = await _db.query(
               'users',
-              {
+              where: 'username = ?',
+              whereArgs: [user['username']],
+              limit: 1,
+            );
+
+            if (existing.isNotEmpty) {
+              final currentEmployeeCode =
+                  existing.first['employee_code']?.toString();
+              final desiredEmployeeCode = user['employee_code']?.toString();
+
+              // التحقق من وجود تضارب في employee_code
+              bool hasConflict = false;
+              if (currentEmployeeCode != desiredEmployeeCode) {
+                final conflict = await _db.query(
+                  'users',
+                  where: 'employee_code = ? AND username != ?',
+                  whereArgs: [desiredEmployeeCode, user['username']],
+                  limit: 1,
+                );
+                hasConflict = conflict.isNotEmpty;
+              }
+
+              // تحديث الحقول الآمنة فقط (لا employee_code إذا كان هناك تضارب)
+              final updateData = <String, dynamic>{
                 'name': user['name'],
                 'password': user['password'],
                 'role': user['role'],
-                'employee_code': user['employee_code'],
                 'active': 1,
                 'updated_at': nowIso,
-              },
-              where: 'username = ?',
-              whereArgs: [user['username']],
-            );
-            debugPrint('تم تحديث مستخدم: ${user['username']}');
+              };
+
+              // تحديث employee_code فقط إذا لم يكن هناك تضارب
+              if (!hasConflict && currentEmployeeCode != desiredEmployeeCode) {
+                updateData['employee_code'] = user['employee_code'];
+              }
+
+              await _db.update(
+                'users',
+                updateData,
+                where: 'username = ?',
+                whereArgs: [user['username']],
+              );
+              debugPrint('تم تحديث مستخدم: ${user['username']}');
+            }
           } catch (updateError) {
             debugPrint(
                 'فشل في تحديث المستخدم ${user['username']}: $updateError');

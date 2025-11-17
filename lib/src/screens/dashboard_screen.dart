@@ -536,15 +536,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
@@ -554,43 +555,44 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color.withOpacity(0.2),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(4),
                     border: Border.all(
                       color: color.withOpacity(0.4),
                       width: 0.5,
                     ),
                   ),
-                  child: Icon(icon, color: color, size: 14),
+                  child: Icon(icon, color: color, size: 10),
                 ),
                 const Spacer(),
                 Icon(
                   Icons.trending_up,
                   color: color.withOpacity(0.7),
-                  size: 12,
+                  size: 10,
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Flexible(
               child: Text(
                 value,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: color,
+                  height: 1.1,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(height: 1),
             Flexible(
               child: Text(
                 title,
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 8,
                   color: DarkModeUtils.getSecondaryTextColor(context),
                   fontWeight: FontWeight.w500,
+                  height: 1.1,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
