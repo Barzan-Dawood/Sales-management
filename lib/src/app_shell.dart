@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/auth/auth_provider.dart';
@@ -23,7 +24,6 @@ import 'screens/accounting_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/debts_screen.dart';
-import 'screens/tests_screen.dart';
 import 'screens/advanced_reports_screen.dart';
 import 'screens/inventory_reports_screen.dart';
 import 'screens/license_check_screen.dart';
@@ -95,7 +95,6 @@ class _AppShellState extends State<AppShell> {
       const ReportsScreen(),
       const AdvancedReportsScreen(),
       const InventoryReportsScreen(),
-      const TestsScreen(),
       const SettingsScreen(),
       const UsersManagementScreen(), // إدارة المستخدمين
     ];
@@ -129,10 +128,8 @@ class _AppShellState extends State<AppShell> {
         case 12:
           return auth.hasPermission(UserPermission.viewReports);
         case 13:
-          return true; // شاشة الاختبارات لأغراض التطوير فقط
-        case 14:
           return auth.hasPermission(UserPermission.systemSettings);
-        case 15:
+        case 14:
           return auth.hasPermission(UserPermission.manageUsers);
         default:
           return false;
@@ -581,27 +578,20 @@ class _AppShellState extends State<AppShell> {
                         index: 12,
                         isSelected: _selectedIndex == 12,
                       ),
-                    if (canAccessIndex(13))
-                      _buildNavItem(
-                        icon: Icons.science,
-                        label: 'الاختبارات',
-                        index: 13,
-                        isSelected: _selectedIndex == 13,
-                      ),
                     // إدارة المستخدمين - للمديرين فقط
-                    if (canAccessIndex(15))
+                    if (canAccessIndex(14))
                       _buildNavItem(
                         icon: Icons.people,
                         label: 'إدارة المستخدمين',
-                        index: 15,
-                        isSelected: _selectedIndex == 15,
+                        index: 14,
+                        isSelected: _selectedIndex == 14,
                       ),
-                    if (canAccessIndex(14))
+                    if (canAccessIndex(13))
                       _buildNavItem(
                         icon: Icons.settings,
                         label: AppStrings.settings,
-                        index: 14,
-                        isSelected: _selectedIndex == 14,
+                        index: 13,
+                        isSelected: _selectedIndex == 13,
                       ),
                   ],
                 ),
@@ -762,7 +752,7 @@ class _AppShellState extends State<AppShell> {
               icon: Icon(Icons.people_alt),
               label: 'العملاء',
             );
-          case 14:
+          case 13:
             return const BottomNavigationBarItem(
               icon: Icon(Icons.settings),
               label: 'الإعدادات',
@@ -935,26 +925,18 @@ class _AppShellState extends State<AppShell> {
                     ),
                   if (canAccessIndex(13))
                     _buildMobileNavItem(
-                      icon: Icons.science,
-                      label: 'الاختبارات',
+                      icon: Icons.settings,
+                      label: 'الإعدادات',
                       index: 13,
                       isSelected: _selectedIndex == 13,
                       canAccess: true,
                     ),
                   if (canAccessIndex(14))
                     _buildMobileNavItem(
-                      icon: Icons.settings,
-                      label: 'الإعدادات',
-                      index: 14,
-                      isSelected: _selectedIndex == 14,
-                      canAccess: true,
-                    ),
-                  if (canAccessIndex(15))
-                    _buildMobileNavItem(
                       icon: Icons.people,
                       label: 'إدارة المستخدمين',
-                      index: 15,
-                      isSelected: _selectedIndex == 15,
+                      index: 14,
+                      isSelected: _selectedIndex == 14,
                       canAccess: true,
                     ),
                 ],

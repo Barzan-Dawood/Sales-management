@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -38,26 +39,38 @@ Future<void> main() async {
     // للمنصات المكتبية: استخدام محرك FFI للتوافق والأداء
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    print('Main: Desktop platform - Using sqflite_common_ffi');
+    if (kDebugMode) {
+      print('Main: Desktop platform - Using sqflite_common_ffi');
+    }
   } else {
     // للمنصات المحمولة (Android/iOS): استخدام المحرك الافتراضي
-    print('Main: Mobile platform - Using default sqflite');
+    if (kDebugMode) {
+      print('Main: Mobile platform - Using default sqflite');
+    }
   }
 
   final databaseService = DatabaseService();
 
   try {
     await databaseService.initialize();
-    print('تم تهيئة قاعدة البيانات بنجاح');
+    if (kDebugMode) {
+      print('تم تهيئة قاعدة البيانات بنجاح');
+    }
   } catch (e) {
-    print('خطأ في تهيئة قاعدة البيانات: $e');
+    if (kDebugMode) {
+      print('خطأ في تهيئة قاعدة البيانات: $e');
+    }
     // محاولة تنظيف بسيط فقط
     try {
       await databaseService.forceCleanup();
       await databaseService.initialize();
-      print('تم إصلاح قاعدة البيانات وإعادة تهيئتها');
+      if (kDebugMode) {
+        print('تم إصلاح قاعدة البيانات وإعادة تهيئتها');
+      }
     } catch (cleanupError) {
-      print('فشل في إصلاح قاعدة البيانات: $cleanupError');
+      if (kDebugMode) {
+        print('فشل في إصلاح قاعدة البيانات: $cleanupError');
+      }
       rethrow;
     }
   }

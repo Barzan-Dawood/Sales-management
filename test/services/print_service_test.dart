@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:roj_system/src/services/print_service.dart';
+import 'package:tijarati/src/services/print_service.dart';
 
 void main() {
   group('PrintService Tests', () {

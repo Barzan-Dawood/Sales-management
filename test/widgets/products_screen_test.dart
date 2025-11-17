@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:roj_system/src/screens/products/products_screen.dart';
-import 'package:roj_system/src/services/db/database_service.dart';
-import 'package:roj_system/src/services/auth/auth_provider.dart';
+import 'package:tijarati/src/screens/products/products_screen.dart';
+import 'package:tijarati/src/services/db/database_service.dart';
+import 'package:tijarati/src/services/auth/auth_provider.dart';
 
 void main() {
   group('ProductsScreen Widget Tests', () {

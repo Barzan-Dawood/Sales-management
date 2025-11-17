@@ -98,7 +98,7 @@ if (kDebugMode) {
 
 #### 4. اسم التطبيق غير متسق
 **المشكلة**: 
-- في `pubspec.yaml`: `name: roj_system`
+- في `pubspec.yaml`: `name: tijarati` ✅ (تم التحديث)
 - في `store_info.dart`: `appTitle = 'تجارتي'`
 - يجب توحيد الاسم
 

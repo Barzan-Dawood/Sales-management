@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:roj_system/src/services/auth/auth_provider.dart';
-import 'package:roj_system/src/services/db/database_service.dart';
+import 'package:tijarati/src/services/auth/auth_provider.dart';
+import 'package:tijarati/src/services/db/database_service.dart';
 
 void main() {
   group('AuthProvider Unit Tests', () {

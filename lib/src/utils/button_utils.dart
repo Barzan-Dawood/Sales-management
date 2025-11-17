@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// أدوات مساعدة للأزرار والأوامر
@@ -89,7 +90,9 @@ class ButtonUtils {
       await exportFunction();
     } catch (e) {
       // معالجة الخطأ
-      debugPrint('خطأ في التصدير: $e');
+      if (kDebugMode) {
+        debugPrint('خطأ في التصدير: $e');
+      }
     }
   }
 

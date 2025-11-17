@@ -45,28 +45,38 @@ class AuthProvider extends ChangeNotifier {
   String get currentUserRole => _currentUser?.roleDisplayName ?? '';
 
   Future<bool> login(String username, String password) async {
-    debugPrint('محاولة تسجيل الدخول: $username');
+    if (kDebugMode) {
+      debugPrint('محاولة تسجيل الدخول: $username');
+    }
 
     // التأكد من وجود المستخدمين الافتراضيين
     await _ensureDefaultUsersExist();
 
     final userData = await _db.findUserByCredentials(username, password);
-    debugPrint('نتيجة البحث عن المستخدم: $userData');
+    if (kDebugMode) {
+      debugPrint('نتيجة البحث عن المستخدم: $userData');
+    }
     if (userData == null) {
-      debugPrint('فشل في العثور على المستخدم أو كلمة المرور غير صحيحة');
+      if (kDebugMode) {
+        debugPrint('فشل في العثور على المستخدم أو كلمة المرور غير صحيحة');
+      }
       return false;
     }
 
     _currentUser = UserModel.fromMap(userData);
-    debugPrint(
-        'تم تسجيل الدخول بنجاح: ${_currentUser?.username} - ${_currentUser?.name}');
+    if (kDebugMode) {
+      debugPrint(
+          'تم تسجيل الدخول بنجاح: ${_currentUser?.username} - ${_currentUser?.name}');
+    }
     notifyListeners();
     return true;
   }
 
   /// التأكد من وجود المستخدمين الافتراضيين
   Future<void> _ensureDefaultUsersExist() async {
-    debugPrint('بدء التأكد من وجود المستخدمين الافتراضيين...');
+    if (kDebugMode) {
+      debugPrint('بدء التأكد من وجود المستخدمين الافتراضيين...');
+    }
     final nowIso = DateTime.now().toIso8601String();
     final defaultUsers = [
       {
@@ -102,7 +112,9 @@ class AuthProvider extends ChangeNotifier {
     ];
 
     for (final user in defaultUsers) {
-      debugPrint('التحقق من وجود المستخدم: ${user['username']}');
+      if (kDebugMode) {
+        debugPrint('التحقق من وجود المستخدم: ${user['username']}');
+      }
       final existing = await _db.database.query(
         'users',
         where: 'username = ?',
@@ -113,13 +125,19 @@ class AuthProvider extends ChangeNotifier {
       if (existing.isEmpty) {
         try {
           await _db.database.insert('users', user);
-          debugPrint(
-              'تم إضافة مستخدم جديد: ${user['username']} - ${user['name']}');
+          if (kDebugMode) {
+            debugPrint(
+                'تم إضافة مستخدم جديد: ${user['username']} - ${user['name']}');
+          }
         } catch (e) {
-          debugPrint('خطأ في إضافة مستخدم ${user['username']}: $e');
+          if (kDebugMode) {
+            debugPrint('خطأ في إضافة مستخدم ${user['username']}: $e');
+          }
         }
       } else {
-        debugPrint('المستخدم موجود مسبقاً: ${user['username']}');
+        if (kDebugMode) {
+          debugPrint('المستخدم موجود مسبقاً: ${user['username']}');
+        }
         // تأكيد تطبيق كلمات المرور الافتراضية لجميع المستخدمين حتى إن كانوا موجودين مسبقاً
         try {
           String passwordToStore;
@@ -146,14 +164,20 @@ class AuthProvider extends ChangeNotifier {
             where: 'username = ?',
             whereArgs: [user['username']],
           );
-          debugPrint(
-              'تم تحديث بيانات المستخدم: ${user['username']} - ${user['name']}');
+          if (kDebugMode) {
+            debugPrint(
+                'تم تحديث بيانات المستخدم: ${user['username']} - ${user['name']}');
+          }
         } catch (e) {
-          debugPrint('فشل تحديث بيانات المستخدم ${user['username']}: $e');
+          if (kDebugMode) {
+            debugPrint('فشل تحديث بيانات المستخدم ${user['username']}: $e');
+          }
         }
       }
     }
-    debugPrint('انتهى التأكد من وجود المستخدمين الافتراضيين');
+    if (kDebugMode) {
+      debugPrint('انتهى التأكد من وجود المستخدمين الافتراضيين');
+    }
   }
 
   void logout() {

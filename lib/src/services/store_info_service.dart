@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/store_info.dart';
 
@@ -23,7 +24,9 @@ class StoreInfoService {
         return _cachedStoreInfo;
       }
     } catch (e) {
-      print('خطأ في قراءة معلومات المتجر: $e');
+      if (kDebugMode) {
+        debugPrint('خطأ في قراءة معلومات المتجر: $e');
+      }
     }
 
     return null;
@@ -42,7 +45,9 @@ class StoreInfoService {
 
       return success;
     } catch (e) {
-      print('خطأ في حفظ معلومات المتجر: $e');
+      if (kDebugMode) {
+        debugPrint('خطأ في حفظ معلومات المتجر: $e');
+      }
       return false;
     }
   }
@@ -67,7 +72,9 @@ class StoreInfoService {
 
       return success;
     } catch (e) {
-      print('خطأ في حذف معلومات المتجر: $e');
+      if (kDebugMode) {
+        debugPrint('خطأ في حذف معلومات المتجر: $e');
+      }
       return false;
     }
   }
@@ -135,7 +142,9 @@ class StoreInfoService {
       final storeInfo = StoreInfo.fromMap(storeInfoMap);
       return await saveStoreInfo(storeInfo);
     } catch (e) {
-      print('خطأ في استيراد معلومات المتجر: $e');
+      if (kDebugMode) {
+        debugPrint('خطأ في استيراد معلومات المتجر: $e');
+      }
       return false;
     }
   }

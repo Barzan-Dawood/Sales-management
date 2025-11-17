@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// معالج الأخطاء المحسن
@@ -21,7 +22,9 @@ class ErrorHandler {
     }
 
     // تسجيل الخطأ للتشخيص
-    debugPrint('خطأ في التطبيق: $error');
+    if (kDebugMode) {
+      debugPrint('خطأ في التطبيق: $error');
+    }
   }
 
   /// الحصول على رسالة خطأ واضحة

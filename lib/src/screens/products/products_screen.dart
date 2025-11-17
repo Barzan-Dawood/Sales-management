@@ -403,9 +403,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
               children: [
                 ...List.generate(products.length, (index) {
                   final product = products[index];
+                  final quantity = (product['quantity'] as num?)?.toInt() ?? 0;
+                  final isOutOfStock = quantity == 0;
                   return TableRow(
                     decoration: BoxDecoration(
-                      color: _getRowBackgroundColor(context, index),
+                      color:
+                          _getRowBackgroundColor(context, index, isOutOfStock),
                     ),
                     children: [
                       _buildDataCell('${index + 1}', context, isSmallScreen,
@@ -428,6 +431,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         context,
                         isSmallScreen,
                         isVerySmallScreen,
+                        textColor: isOutOfStock ? Colors.red.shade700 : null,
                       ),
                       _buildDataCell(
                         _formatCurrency(product['cost'] ?? 0),
@@ -456,9 +460,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  Color _getRowBackgroundColor(BuildContext context, int index) {
+  Color _getRowBackgroundColor(
+      BuildContext context, int index, bool isOutOfStock) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // إذا كانت الكمية 0، استخدم لون مختلف بالكامل
+    if (isOutOfStock) {
+      return isDark ? Colors.red.shade900.withOpacity(0.3) : Colors.red.shade50;
+    }
 
     // Subtle zebra striping with slight hue shift and hover-like sheen
     if (index % 2 == 0) {

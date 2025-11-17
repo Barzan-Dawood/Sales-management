@@ -479,9 +479,12 @@ class _DashboardScreenState extends State<DashboardScreen>
             _buildStatCard(
               'تنبيهات المخزون',
               '${vm.lowStockCount}',
-              Icons.warning,
-              Colors.red.shade600,
-              Colors.red.shade50,
+              vm.lowStockCount == 0 ? Icons.check_circle : Icons.warning,
+              vm.lowStockCount == 0
+                  ? Colors.green.shade600
+                  : Colors.red.shade600,
+              vm.lowStockCount == 0 ? Colors.green.shade50 : Colors.red.shade50,
+              iconSize: vm.lowStockCount == 0 ? 14 : 10,
             ),
             _buildStatCard(
               'إجمالي الديون',
@@ -511,7 +514,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildStatCard(
-      String title, String value, IconData icon, Color color, Color bgColor) {
+      String title, String value, IconData icon, Color color, Color bgColor,
+      {double iconSize = 10}) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -561,7 +565,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       width: 0.5,
                     ),
                   ),
-                  child: Icon(icon, color: color, size: 10),
+                  child: Icon(icon, color: color, size: iconSize),
                 ),
                 const Spacer(),
                 Icon(
@@ -1110,7 +1114,15 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           Row(
             children: [
-              Icon(Icons.warning, color: Colors.orange.shade600, size: 20),
+              Icon(
+                vm.lowStockProducts.isEmpty
+                    ? Icons.check_circle
+                    : Icons.warning,
+                color: vm.lowStockProducts.isEmpty
+                    ? Colors.green.shade600
+                    : Colors.orange.shade600,
+                size: vm.lowStockProducts.isEmpty ? 28 : 20,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1131,6 +1143,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ? Center(
                     child: EmptyState(
                       icon: Icons.check_circle_outline,
+                      iconColor: Colors.green.shade600,
                       title: 'المخزون آمن',
                       message: 'لا توجد منتجات منخفضة المخزون حالياً',
                       actionLabel: 'تحديث',
