@@ -103,13 +103,13 @@ class ResponsiveUtils {
     final screenSize = getScreenSize(context);
     switch (screenSize) {
       case ScreenSize.small:
-        return 200;
+        return 170;
       case ScreenSize.medium:
-        return 220;
+        return 180;
       case ScreenSize.large:
-        return 240;
+        return 190;
       case ScreenSize.extraLarge:
-        return 260;
+        return 200;
     }
   }
 

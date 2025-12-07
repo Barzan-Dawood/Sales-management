@@ -386,11 +386,19 @@ class _AppShellState extends State<AppShell> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                gradients?.sidebarStart ?? scheme.primary.withOpacity(0.08),
-                gradients?.sidebarMiddle ?? scheme.primary.withOpacity(0.12),
-                gradients?.sidebarEnd ?? scheme.primary.withOpacity(0.16),
-              ],
+              colors: isDark
+                  ? [
+                      gradients?.sidebarStart ??
+                          scheme.primary.withOpacity(0.08),
+                      gradients?.sidebarMiddle ??
+                          scheme.primary.withOpacity(0.12),
+                      gradients?.sidebarEnd ?? scheme.primary.withOpacity(0.16),
+                    ]
+                  : [
+                      scheme.surface,
+                      scheme.surfaceContainerHighest.withOpacity(0.3),
+                      scheme.surfaceContainerHighest.withOpacity(0.5),
+                    ],
             ),
             boxShadow: [
               BoxShadow(
@@ -404,32 +412,26 @@ class _AppShellState extends State<AppShell> {
             children: [
               // Header section
               Container(
-                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
                       scheme.primary,
-                      scheme.primary.withOpacity(0.8),
+                      scheme.primary.withOpacity(0.85),
                       scheme.primaryContainer,
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     stops: const [0.0, 0.6, 1.0],
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: scheme.primary.withOpacity(0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 6),
-                      spreadRadius: 1,
-                    ),
-                    BoxShadow(
-                      color: isDark
-                          ? Colors.black.withOpacity(0.2)
-                          : Colors.white.withOpacity(0.4),
+                      color: scheme.primary.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
+                      spreadRadius: 0,
                     ),
                   ],
                 ),
@@ -437,15 +439,15 @@ class _AppShellState extends State<AppShell> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                       child: Image.asset(
                         'assets/images/soft.png',
-                        height: 50,
-                        width: 50,
+                        height: 36,
+                        width: 36,
                         fit: BoxFit.cover,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,26 +457,24 @@ class _AppShellState extends State<AppShell> {
                             AppStrings.mainMenu,
                             style: TextStyle(
                               color: scheme.onPrimary,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black26,
-                                  offset: const Offset(0, 1),
-                                  blurRadius: 2,
-                                ),
-                              ],
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             AppStrings.selectSection,
                             style: TextStyle(
-                              color: scheme.onPrimary.withOpacity(0.9),
-                              fontSize: 14,
+                              color: scheme.onPrimary.withOpacity(0.85),
+                              fontSize: 11,
                               fontWeight: FontWeight.w400,
-                              letterSpacing: 0.2,
+                              letterSpacing: 0.1,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -486,7 +486,7 @@ class _AppShellState extends State<AppShell> {
               // Navigation items
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   children: [
                     _buildNavItem(
                       icon: Icons.space_dashboard,
@@ -1042,86 +1042,87 @@ class _AppShellState extends State<AppShell> {
     required int index,
     required bool isSelected,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           onTap: () => setState(() => _selectedIndex = index),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               color: isSelected
-                  ? (Theme.of(context).brightness == Brightness.dark
-                      ? DarkModeUtils.getCardColor(context).withOpacity(0.1)
-                      : DarkModeUtils.getCardColor(context).withOpacity(0.9))
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
+                  ? scheme.primary.withOpacity(isDark ? 0.25 : 0.18)
+                  : (isDark
+                      ? Colors.transparent
+                      : scheme.surfaceContainerHighest.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(10),
               border: isSelected
                   ? Border.all(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 2,
+                      color: scheme.primary.withOpacity(isDark ? 0.5 : 0.6),
+                      width: 1.5,
                     )
-                  : null,
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : null,
+                  : (isDark
+                      ? null
+                      : Border.all(
+                          color: scheme.outline.withOpacity(0.1),
+                          width: 0.5,
+                        )),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                        : DarkModeUtils.getCardColor(context).withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
+                        ? scheme.primary.withOpacity(isDark ? 0.25 : 0.2)
+                        : (isDark
+                            ? scheme.surface.withOpacity(0.5)
+                            : scheme.surfaceContainerHighest.withOpacity(0.6)),
+                    borderRadius: BorderRadius.circular(7),
                   ),
                   child: Icon(
                     icon,
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.7),
-                    size: 22,
+                        ? scheme.primary
+                        : (isDark
+                            ? scheme.onSurface.withOpacity(0.7)
+                            : scheme.onSurface.withOpacity(0.8)),
+                    size: 18,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     label,
                     style: TextStyle(
                       color: isSelected
-                          ? (Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black)
-                          : (Theme.of(context).brightness == Brightness.dark
-                              ? Colors.blue
-                              : Colors.white.withOpacity(0.9)),
-                      fontSize: 16,
+                          ? scheme.primary
+                          : (isDark
+                              ? scheme.onSurface.withOpacity(0.85)
+                              : scheme.onSurface.withOpacity(0.9)),
+                      fontSize: 13,
                       fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                      letterSpacing: 0.2,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (isSelected)
                   Container(
-                    width: 6,
-                    height: 6,
+                    width: 4,
+                    height: 4,
+                    margin: const EdgeInsets.only(left: 4),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
+                      color: scheme.primary,
                       shape: BoxShape.circle,
                     ),
                   ),
