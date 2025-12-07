@@ -834,6 +834,7 @@ class DatabaseService {
         type TEXT NOT NULL CHECK(type IN ('cash','installment','credit')),
         created_at TEXT NOT NULL,
         due_date TEXT,
+        down_payment REAL DEFAULT 0,
         FOREIGN KEY(customer_id) REFERENCES customers(id)
       );
     ''');
@@ -1338,6 +1339,29 @@ class DatabaseService {
   }
 
   Future<int> insertProduct(Map<String, Object?> values) async {
+    // التحقق من صحة البيانات
+    if (values['name'] == null ||
+        (values['name'] as String?)?.trim().isEmpty == true) {
+      throw Exception('اسم المنتج مطلوب');
+    }
+    final price = (values['price'] as num?)?.toDouble() ?? 0.0;
+    if (values['price'] == null || price < 0) {
+      throw Exception('السعر يجب أن يكون أكبر من أو يساوي صفر');
+    }
+    final quantity = (values['quantity'] as int?) ?? 0;
+    if (values['quantity'] == null || quantity < 0) {
+      throw Exception('الكمية يجب أن تكون أكبر من أو تساوي صفر');
+    }
+
+    // التحقق من الباركود إذا كان موجوداً
+    if (values['barcode'] != null &&
+        (values['barcode'] as String?)?.trim().isNotEmpty == true) {
+      final barcode = (values['barcode'] as String).trim();
+      if (await isBarcodeExists(barcode)) {
+        throw Exception('الباركود موجود بالفعل');
+      }
+    }
+
     values['created_at'] = DateTime.now().toIso8601String();
     return _db.insert('products', values,
         conflictAlgorithm: ConflictAlgorithm.abort);
@@ -1353,6 +1377,42 @@ class DatabaseService {
   }
 
   Future<int> updateProduct(int id, Map<String, Object?> values) async {
+    // التحقق من وجود المنتج
+    final product =
+        await _db.query('products', where: 'id = ?', whereArgs: [id], limit: 1);
+    if (product.isEmpty) {
+      throw Exception('المنتج غير موجود');
+    }
+
+    // التحقق من صحة البيانات
+    if (values['name'] != null &&
+        (values['name'] as String?)?.trim().isEmpty == true) {
+      throw Exception('اسم المنتج لا يمكن أن يكون فارغاً');
+    }
+    if (values['price'] != null) {
+      final price = (values['price'] as num?)?.toDouble() ?? 0.0;
+      if (price < 0) {
+        throw Exception('السعر يجب أن يكون أكبر من أو يساوي صفر');
+      }
+    }
+    if (values['quantity'] != null) {
+      final quantity = (values['quantity'] as int?) ?? 0;
+      if (quantity < 0) {
+        throw Exception('الكمية يجب أن تكون أكبر من أو تساوي صفر');
+      }
+    }
+
+    // التحقق من الباركود إذا كان موجوداً
+    if (values['barcode'] != null &&
+        (values['barcode'] as String?)?.trim().isNotEmpty == true) {
+      final barcode = (values['barcode'] as String).trim();
+      final existing = await _db.query('products',
+          where: 'barcode = ? AND id != ?', whereArgs: [barcode, id], limit: 1);
+      if (existing.isNotEmpty) {
+        throw Exception('الباركود موجود بالفعل لمنتج آخر');
+      }
+    }
+
     values['updated_at'] = DateTime.now().toIso8601String();
     return _db.update('products', values, where: 'id = ?', whereArgs: [id]);
   }
@@ -1360,6 +1420,13 @@ class DatabaseService {
   Future<int> deleteProduct(int id) async {
     return _db.transaction<int>((txn) async {
       try {
+        // التحقق من وجود المنتج
+        final product = await txn.query('products',
+            where: 'id = ?', whereArgs: [id], limit: 1);
+        if (product.isEmpty) {
+          return 0; // المنتج غير موجود
+        }
+
         // First, get all sales that have items with this product
         final salesWithProduct = await txn.rawQuery('''
           SELECT DISTINCT s.id FROM sales s
@@ -1463,8 +1530,32 @@ class DatabaseService {
   }
 
   Future<int> upsertCustomer(Map<String, Object?> values, {int? id}) async {
-    if (id == null) return _db.insert('customers', values);
-    return _db.update('customers', values, where: 'id = ?', whereArgs: [id]);
+    // التحقق من صحة البيانات
+    if (values['name'] == null ||
+        (values['name'] as String?)?.trim().isEmpty == true) {
+      throw Exception('اسم العميل مطلوب');
+    }
+
+    // التحقق من total_debt إذا كان موجوداً
+    if (values['total_debt'] != null) {
+      final totalDebt = (values['total_debt'] as num?)?.toDouble() ?? 0.0;
+      if (totalDebt < 0) {
+        throw Exception('إجمالي الدين يجب أن يكون أكبر من أو يساوي صفر');
+      }
+    }
+
+    if (id == null) {
+      // إضافة عميل جديد
+      return _db.insert('customers', values);
+    } else {
+      // تحديث عميل موجود - التحقق من وجوده
+      final customer = await _db.query('customers',
+          where: 'id = ?', whereArgs: [id], limit: 1);
+      if (customer.isEmpty) {
+        throw Exception('العميل غير موجود');
+      }
+      return _db.update('customers', values, where: 'id = ?', whereArgs: [id]);
+    }
   }
 
   Future<int> deleteCustomer(int id) async {
@@ -1827,6 +1918,40 @@ class DatabaseService {
       DateTime? firstInstallmentDate}) async {
     return _db.transaction<int>((txn) async {
       try {
+        // التحقق من أن قائمة العناصر ليست فارغة
+        if (items.isEmpty) {
+          throw Exception('لا يمكن إنشاء بيع بدون منتجات');
+        }
+
+        // التحقق من صحة البيانات والكميات المتاحة
+        for (final it in items) {
+          final productId = it['product_id'] as int?;
+          if (productId == null) {
+            throw Exception('معرف المنتج مطلوب');
+          }
+
+          // التحقق من وجود المنتج
+          final product = await txn.query('products',
+              where: 'id = ?', whereArgs: [productId], limit: 1);
+          if (product.isEmpty) {
+            throw Exception('المنتج غير موجود');
+          }
+
+          final quantity = (it['quantity'] as num?)?.toInt() ?? 0;
+          if (quantity <= 0) {
+            throw Exception('الكمية يجب أن تكون أكبر من صفر');
+          }
+
+          // التحقق من الكمية المتاحة إذا كان decrementStock مفعلاً
+          if (decrementStock) {
+            final availableQty = product.first['quantity'] as int? ?? 0;
+            if (quantity > availableQty) {
+              throw Exception(
+                  'الكمية المطلوبة ($quantity) أكبر من الكمية المتاحة ($availableQty)');
+            }
+          }
+        }
+
         // حساب الإجمالي والربح
         double total = 0;
         double profit = 0;
@@ -1838,11 +1963,16 @@ class DatabaseService {
           final cost = (it['cost'] as num).toDouble();
           final quantity = (it['quantity'] as num).toDouble();
 
-          if (price.isFinite && quantity.isFinite) {
+          if (price.isFinite && quantity.isFinite && quantity > 0) {
             final qty = quantity.toInt();
             total += price * qty;
             profit += (price - cost) * qty;
           }
+        }
+
+        // التحقق من أن الإجمالي أكبر من صفر
+        if (total <= 0) {
+          throw Exception('إجمالي البيع يجب أن يكون أكبر من صفر');
         }
 
         // إنشاء أو العثور على العميل
@@ -1895,9 +2025,21 @@ class DatabaseService {
           });
 
           if (decrementStock) {
-            await txn.rawUpdate(
-                'UPDATE products SET quantity = quantity - ? WHERE id = ?',
-                [it['quantity'], it['product_id']]);
+            final qty = (it['quantity'] as num).toInt();
+            final productId = it['product_id'] as int;
+            // التحقق من أن الكمية لن تصبح سالبة
+            final product = await txn.query('products',
+                where: 'id = ?', whereArgs: [productId], limit: 1);
+            if (product.isNotEmpty) {
+              final currentQty = product.first['quantity'] as int? ?? 0;
+              if (currentQty < qty) {
+                throw Exception(
+                    'الكمية المتاحة غير كافية للمنتج ${it['name'] ?? productId}');
+              }
+              await txn.rawUpdate(
+                  'UPDATE products SET quantity = quantity - ? WHERE id = ?',
+                  [qty, productId]);
+            }
           }
         }
 
@@ -2084,6 +2226,12 @@ class DatabaseService {
         // Get sale to adjust debts if needed
         final sale = await txn.query('sales',
             where: 'id = ?', whereArgs: [saleId], limit: 1);
+
+        if (sale.isEmpty) {
+          debugPrint('البيع غير موجود: $saleId');
+          return false;
+        }
+
         // Get sale items to restore stock
         final saleItems = await txn.query(
           'sale_items',
@@ -2093,46 +2241,60 @@ class DatabaseService {
 
         // Restore stock for each item
         for (final item in saleItems) {
-          await txn.rawUpdate(
-            'UPDATE products SET quantity = quantity + ? WHERE id = ?',
-            [item['quantity'], item['product_id']],
-          );
+          try {
+            await txn.rawUpdate(
+              'UPDATE products SET quantity = quantity + ? WHERE id = ?',
+              [item['quantity'], item['product_id']],
+            );
+          } catch (e) {
+            debugPrint('خطأ في إرجاع المخزون للمنتج ${item['product_id']}: $e');
+            // نتابع حتى لو فشل إرجاع المخزون
+          }
         }
 
         // Delete sale items
-        await txn.delete(
-          'sale_items',
-          where: 'sale_id = ?',
-          whereArgs: [saleId],
-        );
+        try {
+          await txn
+              .execute('DELETE FROM sale_items WHERE sale_id = ?', [saleId]);
+        } catch (e) {
+          debugPrint('خطأ في حذف sale_items: $e');
+          rethrow;
+        }
 
         // Delete any related installments
-        await txn.delete(
-          'installments',
-          where: 'sale_id = ?',
-          whereArgs: [saleId],
-        );
+        try {
+          await txn
+              .execute('DELETE FROM installments WHERE sale_id = ?', [saleId]);
+        } catch (e) {
+          debugPrint('خطأ في حذف installments: $e');
+          // نتابع حتى لو فشل حذف الأقساط
+        }
 
         // Delete the sale
-        final deletedRows = await txn.delete(
-          'sales',
-          where: 'id = ?',
-          whereArgs: [saleId],
+        final deletedRows = await txn.rawDelete(
+          'DELETE FROM sales WHERE id = ?',
+          [saleId],
         );
 
         // Adjust customer debt if the deleted sale was credit
         if (deletedRows > 0 && sale.isNotEmpty) {
           final s = sale.first;
           if (s['type'] == 'credit' && s['customer_id'] != null) {
-            await txn.rawUpdate(
-              'UPDATE customers SET total_debt = MAX(IFNULL(total_debt,0) - ?, 0) WHERE id = ?',
-              [(s['total'] as num).toDouble(), s['customer_id']],
-            );
+            try {
+              await txn.rawUpdate(
+                'UPDATE customers SET total_debt = MAX(IFNULL(total_debt,0) - ?, 0) WHERE id = ?',
+                [(s['total'] as num).toDouble(), s['customer_id']],
+              );
+            } catch (e) {
+              debugPrint('خطأ في تعديل دين العميل: $e');
+              // لا نرمي الخطأ هنا لأن الحذف تم بنجاح
+            }
           }
         }
 
         return deletedRows > 0;
       } catch (e) {
+        debugPrint('خطأ في حذف البيع $saleId: $e');
         return false;
       }
     });
@@ -3796,43 +3958,100 @@ class DatabaseService {
   /// حذف جميع البيانات من قاعدة البيانات (نسخة محدثة)
   Future<void> deleteAllDataNew() async {
     try {
-      // نفّذ الحذف داخل معاملة واحدة مع تعطيل المفاتيح الخارجية مؤقتاً
-      await _db.transaction((txn) async {
-        // تعطيل المفاتيح الخارجية أولاً
-        await txn.execute('PRAGMA foreign_keys = OFF');
+      // تعطيل المفاتيح الخارجية خارج transaction
+      await _db.execute('PRAGMA foreign_keys = OFF');
 
+      // نفّذ الحذف داخل معاملة واحدة
+      await _db.transaction((txn) async {
         // حذف الجداول بالترتيب الصحيح لتجنب مشاكل المفاتيح الخارجية
         // أولاً: حذف الجداول الفرعية
-        await txn.delete('installments');
-        await txn.delete('sale_items');
-        await txn.delete('payments');
-        await txn.delete('expenses');
+        try {
+          await txn.execute('DELETE FROM installments');
+        } catch (e) {
+          debugPrint('خطأ في حذف installments: $e');
+        }
+
+        try {
+          await txn.execute('DELETE FROM sale_items');
+        } catch (e) {
+          debugPrint('خطأ في حذف sale_items: $e');
+        }
+
+        try {
+          await txn.execute('DELETE FROM payments');
+        } catch (e) {
+          debugPrint('خطأ في حذف payments: $e');
+        }
+
+        try {
+          await txn.execute('DELETE FROM expenses');
+        } catch (e) {
+          debugPrint('خطأ في حذف expenses: $e');
+        }
 
         // ثانياً: حذف الجداول الرئيسية
-        await txn.delete('sales');
-        await txn.delete('products');
-        await txn.delete('categories');
-        await txn.delete('customers');
-        await txn.delete('suppliers');
+        try {
+          await txn.execute('DELETE FROM sales');
+        } catch (e) {
+          debugPrint('خطأ في حذف sales: $e');
+        }
+
+        try {
+          await txn.execute('DELETE FROM products');
+        } catch (e) {
+          debugPrint('خطأ في حذف products: $e');
+        }
+
+        try {
+          await txn.execute('DELETE FROM categories');
+        } catch (e) {
+          debugPrint('خطأ في حذف categories: $e');
+        }
+
+        try {
+          await txn.execute('DELETE FROM customers');
+        } catch (e) {
+          debugPrint('خطأ في حذف customers: $e');
+        }
+
+        try {
+          await txn.execute('DELETE FROM suppliers');
+        } catch (e) {
+          debugPrint('خطأ في حذف suppliers: $e');
+        }
 
         // ثالثاً: حذف المستخدمين عدا المدير
-        await txn.delete('users', where: 'username != ?', whereArgs: ['admin']);
+        try {
+          await txn.execute('DELETE FROM users WHERE username != ?', ['admin']);
+        } catch (e) {
+          debugPrint('خطأ في حذف users: $e');
+        }
 
         // إعادة تعيين AUTO_INCREMENT
-        await txn.execute('DELETE FROM sqlite_sequence');
-
-        // إعادة تفعيل المفاتيح الخارجية
-        await txn.execute('PRAGMA foreign_keys = ON');
+        try {
+          await txn.execute('DELETE FROM sqlite_sequence');
+        } catch (e) {
+          debugPrint('خطأ في حذف sqlite_sequence: $e');
+        }
       });
 
-      // إعادة إنشاء البيانات الأساسية خارج المعاملة لتجنب أي تعارض مع txn
-      await _seedData(_db);
+      // إعادة تفعيل المفاتيح الخارجية
+      await _db.execute('PRAGMA foreign_keys = ON');
+
+      // إعادة إنشاء البيانات الأساسية
+      try {
+        await _seedData(_db);
+      } catch (e) {
+        debugPrint('خطأ في إعادة إنشاء البيانات الأساسية: $e');
+        // لا نرمي الخطأ هنا لأن الحذف تم بنجاح
+      }
     } catch (e) {
       // إعادة تفعيل المفاتيح الخارجية في حالة الخطأ
       try {
         await _db.execute('PRAGMA foreign_keys = ON');
       } catch (_) {}
 
+      debugPrint('خطأ في حذف جميع البيانات: $e');
       throw Exception('خطأ في حذف جميع البيانات: $e');
     }
   }
@@ -3840,33 +4059,57 @@ class DatabaseService {
   /// حذف المنتجات والأقسام فقط
   Future<void> deleteProductsAndCategories() async {
     try {
-      await _db.transaction((txn) async {
-        // تعطيل المفاتيح الخارجية مؤقتاً
-        await txn.execute('PRAGMA foreign_keys = OFF');
+      // تعطيل المفاتيح الخارجية خارج transaction
+      await _db.execute('PRAGMA foreign_keys = OFF');
 
+      // نفّذ الحذف داخل معاملة واحدة
+      await _db.transaction((txn) async {
         // حذف sale_items أولاً (لأنها مرتبطة بالمنتجات)
-        final saleItemsDeleted = await txn.delete('sale_items');
+        try {
+          await txn.execute('DELETE FROM sale_items');
+          debugPrint('تم حذف sale_items بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في حذف sale_items: $e');
+          // نتابع حتى لو فشل حذف sale_items
+        }
 
         // حذف المنتجات
-        final productsDeleted = await txn.delete('products');
+        try {
+          await txn.execute('DELETE FROM products');
+          debugPrint('تم حذف products بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في حذف products: $e');
+          rethrow; // نرمي الخطأ هنا لأن حذف المنتجات مهم
+        }
 
         // حذف الأقسام
-        final categoriesDeleted = await txn.delete('categories');
+        try {
+          await txn.execute('DELETE FROM categories');
+          debugPrint('تم حذف categories بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في حذف categories: $e');
+          // نتابع حتى لو فشل حذف categories
+        }
 
         // إعادة تعيين AUTO_INCREMENT للمنتجات والأقسام
-        await txn.execute(
-            'DELETE FROM sqlite_sequence WHERE name IN ("products", "categories", "sale_items")');
-
-        // لا يتم إنشاء أي قسم جديد - حذف كامل فقط
-
-        // إعادة تفعيل المفاتيح الخارجية
-        await txn.execute('PRAGMA foreign_keys = ON');
+        try {
+          await txn.execute(
+              'DELETE FROM sqlite_sequence WHERE name IN ("products", "categories", "sale_items")');
+          debugPrint('تم إعادة تعيين sqlite_sequence بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في إعادة تعيين sqlite_sequence: $e');
+          // لا نرمي الخطأ هنا لأن هذا ليس حرجاً
+        }
       });
+
+      // إعادة تفعيل المفاتيح الخارجية
+      await _db.execute('PRAGMA foreign_keys = ON');
     } catch (e) {
       // التأكد من إعادة تفعيل المفاتيح الخارجية حتى في حالة الخطأ
       try {
         await _db.execute('PRAGMA foreign_keys = ON');
       } catch (_) {}
+      debugPrint('خطأ في حذف المنتجات والأقسام: $e');
       throw Exception('خطأ في حذف المنتجات والأقسام: $e');
     }
   }
@@ -3926,21 +4169,55 @@ class DatabaseService {
   /// حذف المبيعات فقط
   Future<void> deleteSalesOnly() async {
     try {
+      // تعطيل المفاتيح الخارجية خارج transaction
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      // نفّذ الحذف داخل معاملة واحدة
       await _db.transaction((txn) async {
         // حذف الأقساط أولاً (لأنها مرتبطة بالمبيعات)
-        await txn.delete('installments');
+        try {
+          await txn.execute('DELETE FROM installments');
+          debugPrint('تم حذف installments بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في حذف installments: $e');
+        }
 
         // حذف سجلات المبيعات
-        await txn.delete('sale_items');
+        try {
+          await txn.execute('DELETE FROM sale_items');
+          debugPrint('تم حذف sale_items بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في حذف sale_items: $e');
+        }
 
         // حذف المبيعات
-        await txn.delete('sales');
+        try {
+          await txn.execute('DELETE FROM sales');
+          debugPrint('تم حذف sales بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في حذف sales: $e');
+          rethrow; // نرمي الخطأ هنا لأن حذف المبيعات مهم
+        }
 
         // إعادة تعيين AUTO_INCREMENT
-        await txn.execute(
-            'DELETE FROM sqlite_sequence WHERE name IN ("sales", "sale_items", "installments")');
+        try {
+          await txn.execute(
+              'DELETE FROM sqlite_sequence WHERE name IN ("sales", "sale_items", "installments")');
+          debugPrint('تم إعادة تعيين sqlite_sequence بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في إعادة تعيين sqlite_sequence: $e');
+          // لا نرمي الخطأ هنا لأن هذا ليس حرجاً
+        }
       });
+
+      // إعادة تفعيل المفاتيح الخارجية
+      await _db.execute('PRAGMA foreign_keys = ON');
     } catch (e) {
+      // التأكد من إعادة تفعيل المفاتيح الخارجية حتى في حالة الخطأ
+      try {
+        await _db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+      debugPrint('خطأ في حذف المبيعات: $e');
       throw Exception('خطأ في حذف المبيعات: $e');
     }
   }
@@ -4077,22 +4354,43 @@ class DatabaseService {
   /// حذف المنتجات فقط (مع حذف سجلات sale_items المرتبطة)
   Future<void> deleteProductsOnly() async {
     try {
-      await _db.transaction((txn) async {
-        await txn.execute('PRAGMA foreign_keys = OFF');
+      // تعطيل المفاتيح الخارجية خارج transaction
+      await _db.execute('PRAGMA foreign_keys = OFF');
 
+      // نفّذ الحذف داخل معاملة واحدة
+      await _db.transaction((txn) async {
         // حذف عناصر المبيعات المرتبطة بالمنتجات
-        await txn.delete('sale_items');
+        try {
+          await txn.execute('DELETE FROM sale_items');
+        } catch (e) {
+          debugPrint('خطأ في حذف sale_items: $e');
+        }
 
         // حذف المنتجات فقط
-        await txn.delete('products');
+        try {
+          await txn.execute('DELETE FROM products');
+        } catch (e) {
+          debugPrint('خطأ في حذف products: $e');
+          rethrow;
+        }
 
         // إعادة تعيين AUTO_INCREMENT
-        await txn.execute(
-            'DELETE FROM sqlite_sequence WHERE name IN ("products", "sale_items")');
-
-        await txn.execute('PRAGMA foreign_keys = ON');
+        try {
+          await txn.execute(
+              'DELETE FROM sqlite_sequence WHERE name IN ("products", "sale_items")');
+        } catch (e) {
+          debugPrint('خطأ في إعادة تعيين sqlite_sequence: $e');
+        }
       });
+
+      // إعادة تفعيل المفاتيح الخارجية
+      await _db.execute('PRAGMA foreign_keys = ON');
     } catch (e) {
+      // التأكد من إعادة تفعيل المفاتيح الخارجية حتى في حالة الخطأ
+      try {
+        await _db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+      debugPrint('خطأ في حذف المنتجات: $e');
       throw Exception('خطأ في حذف المنتجات: $e');
     }
   }
@@ -4152,31 +4450,67 @@ class DatabaseService {
   Future<void> deleteSalesBefore(DateTime cutoff) async {
     try {
       final cutoffIso = cutoff.toIso8601String();
+
+      // تعطيل المفاتيح الخارجية خارج transaction
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      // نفّذ الحذف داخل معاملة واحدة
       await _db.transaction((txn) async {
         // حذف الأقساط المرتبطة بمبيعات قديمة
-        await txn.execute('''
-          DELETE FROM installments
-          WHERE sale_id IN (
-            SELECT id FROM sales WHERE created_at < ?
-          )
-        ''', [cutoffIso]);
+        try {
+          await txn.execute('''
+            DELETE FROM installments
+            WHERE sale_id IN (
+              SELECT id FROM sales WHERE created_at < ?
+            )
+          ''', [cutoffIso]);
+          debugPrint('تم حذف installments القديمة بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في حذف installments: $e');
+        }
 
         // حذف عناصر المبيعات للمبيعات القديمة
-        await txn.execute('''
-          DELETE FROM sale_items
-          WHERE sale_id IN (
-            SELECT id FROM sales WHERE created_at < ?
-          )
-        ''', [cutoffIso]);
+        try {
+          await txn.execute('''
+            DELETE FROM sale_items
+            WHERE sale_id IN (
+              SELECT id FROM sales WHERE created_at < ?
+            )
+          ''', [cutoffIso]);
+          debugPrint('تم حذف sale_items القديمة بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في حذف sale_items: $e');
+        }
 
         // حذف المبيعات القديمة
-        await txn
-            .delete('sales', where: 'created_at < ?', whereArgs: [cutoffIso]);
+        try {
+          await txn
+              .execute('DELETE FROM sales WHERE created_at < ?', [cutoffIso]);
+          debugPrint('تم حذف sales القديمة بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في حذف sales: $e');
+          rethrow; // نرمي الخطأ هنا لأن حذف المبيعات مهم
+        }
 
-        await txn.execute(
-            'DELETE FROM sqlite_sequence WHERE name IN ("sales", "sale_items", "installments")');
+        // إعادة تعيين AUTO_INCREMENT
+        try {
+          await txn.execute(
+              'DELETE FROM sqlite_sequence WHERE name IN ("sales", "sale_items", "installments")');
+          debugPrint('تم إعادة تعيين sqlite_sequence بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في إعادة تعيين sqlite_sequence: $e');
+          // لا نرمي الخطأ هنا لأن هذا ليس حرجاً
+        }
       });
+
+      // إعادة تفعيل المفاتيح الخارجية
+      await _db.execute('PRAGMA foreign_keys = ON');
     } catch (e) {
+      // التأكد من إعادة تفعيل المفاتيح الخارجية حتى في حالة الخطأ
+      try {
+        await _db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+      debugPrint('خطأ في حذف المبيعات القديمة: $e');
       throw Exception('خطأ في حذف المبيعات القديمة: $e');
     }
   }
