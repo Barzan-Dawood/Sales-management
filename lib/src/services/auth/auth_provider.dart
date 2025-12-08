@@ -68,6 +68,25 @@ class AuthProvider extends ChangeNotifier {
       debugPrint(
           'تم تسجيل الدخول بنجاح: ${_currentUser?.username} - ${_currentUser?.name}');
     }
+
+    // تسجيل حدث تسجيل الدخول
+    try {
+      await _db.logEvent(
+        eventType: 'login',
+        entityType: 'user',
+        entityId: _currentUser?.id,
+        userId: _currentUser?.id,
+        username: _currentUser?.username,
+        description:
+            'تسجيل دخول المستخدم: ${_currentUser?.name} (${_currentUser?.username})',
+        details: 'الدور: ${_currentUser?.roleDisplayName}',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('خطأ في تسجيل حدث تسجيل الدخول: $e');
+      }
+    }
+
     notifyListeners();
     return true;
   }
@@ -180,7 +199,27 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  void logout() {
+  void logout() async {
+    // تسجيل حدث تسجيل الخروج قبل مسح المستخدم
+    if (_currentUser != null) {
+      try {
+        await _db.logEvent(
+          eventType: 'logout',
+          entityType: 'user',
+          entityId: _currentUser?.id,
+          userId: _currentUser?.id,
+          username: _currentUser?.username,
+          description:
+              'تسجيل خروج المستخدم: ${_currentUser?.name} (${_currentUser?.username})',
+          details: 'الدور: ${_currentUser?.roleDisplayName}',
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('خطأ في تسجيل حدث تسجيل الخروج: $e');
+        }
+      }
+    }
+
     _currentUser = null;
     notifyListeners();
   }

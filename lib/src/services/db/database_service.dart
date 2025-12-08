@@ -12,7 +12,7 @@ import 'package:crypto/crypto.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
-  static const int _dbVersion = 9;
+  static const int _dbVersion = 10;
 
   late Database _db;
   late String _dbPath;
@@ -69,14 +69,25 @@ class DatabaseService {
         if (oldVersion < 9) {
           await _migrateToV9(db);
         }
+        if (oldVersion < 10) {
+          await _migrateToV10(db);
+        }
         // Ensure no legacy triggers/views remain that reference old temp tables
         await _cleanupOrphanObjects(db);
         await _ensureCategorySchemaOn(db);
         await _createIndexes(db);
       },
+      onOpen: (db) async {
+        // التحقق من وجود جدول event_log عند فتح قاعدة البيانات
+        await _ensureEventLogTable(db);
+      },
     );
     // إعدادات أساسية فقط
     await _db.execute('PRAGMA foreign_keys = ON');
+
+    // التحقق من وجود جدول event_log وإنشاؤه إذا لم يكن موجوداً
+    await _ensureEventLogTable(_db);
+
     await _createIndexes(_db);
 
     // فحص وإصلاح المستخدمين الافتراضيين فقط
@@ -87,6 +98,10 @@ class DatabaseService {
     await _db.close();
     _db = await openDatabase(_dbPath, version: _dbVersion);
     await _db.execute('PRAGMA foreign_keys = ON');
+
+    // التحقق من وجود جدول event_log وإنشاؤه إذا لم يكن موجوداً
+    await _ensureEventLogTable(_db);
+
     await _createIndexes(_db);
     await _cleanupOrphanObjects(_db);
     await _ensureCategorySchemaOn(_db);
@@ -107,6 +122,49 @@ class DatabaseService {
       }
     } catch (e) {
       // ignore
+    }
+  }
+
+  /// Ensure event_log table exists
+  Future<void> _ensureEventLogTable(DatabaseExecutor db) async {
+    try {
+      // التحقق من وجود الجدول
+      final tables = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='event_log'");
+
+      if (tables.isEmpty) {
+        debugPrint('جدول event_log غير موجود، جاري إنشاؤه...');
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS event_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER,
+            user_id INTEGER,
+            username TEXT,
+            description TEXT NOT NULL,
+            details TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+          );
+        ''');
+
+        // إنشاء الفهارس
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at)');
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_event_log_event_type ON event_log(event_type)');
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_event_log_entity_type ON event_log(entity_type)');
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
+
+        debugPrint('تم إنشاء جدول event_log بنجاح');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('خطأ في التحقق من/إنشاء جدول event_log: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
@@ -773,6 +831,16 @@ class DatabaseService {
         'CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)');
     await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)');
+
+    // Event Log
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_event_log_event_type ON event_log(event_type)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_event_log_entity_type ON event_log(entity_type)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
   }
 
   Future<void> _createSchema(Database db) async {
@@ -906,6 +974,21 @@ class DatabaseService {
         notes TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY(customer_id) REFERENCES customers(id)
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE event_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER,
+        user_id INTEGER,
+        username TEXT,
+        description TEXT NOT NULL,
+        details TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(user_id) REFERENCES users(id)
       );
     ''');
   }
@@ -1269,6 +1352,38 @@ class DatabaseService {
     }
   }
 
+  Future<void> _migrateToV10(Database db) async {
+    // إضافة جدول event_log لتسجيل جميع العمليات
+    try {
+      debugPrint('بدء Migration V10 - إضافة جدول event_log...');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS event_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          event_type TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          entity_id INTEGER,
+          user_id INTEGER,
+          username TEXT,
+          description TEXT NOT NULL,
+          details TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY(user_id) REFERENCES users(id)
+        );
+      ''');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_event_log_event_type ON event_log(event_type)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_event_log_entity_type ON event_log(entity_type)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
+      debugPrint('انتهى Migration V10 بنجاح');
+    } catch (e) {
+      debugPrint('خطأ في Migration V10: $e');
+    }
+  }
+
   Future<void> _seedData(Database db) async {
     final now = DateTime.now().toIso8601String();
     debugPrint('بدء إنشاء البيانات الافتراضية...');
@@ -1423,7 +1538,8 @@ class DatabaseService {
         orderBy: 'id DESC');
   }
 
-  Future<int> insertProduct(Map<String, Object?> values) async {
+  Future<int> insertProduct(Map<String, Object?> values,
+      {int? userId, String? username}) async {
     // التحقق من صحة البيانات
     if (values['name'] == null ||
         (values['name'] as String?)?.trim().isEmpty == true) {
@@ -1448,8 +1564,28 @@ class DatabaseService {
     }
 
     values['created_at'] = DateTime.now().toIso8601String();
-    return _db.insert('products', values,
+    final productId = await _db.insert('products', values,
         conflictAlgorithm: ConflictAlgorithm.abort);
+
+    // تسجيل حدث إضافة المنتج
+    try {
+      final name = values['name'] as String? ?? '';
+      final price = (values['price'] as num?)?.toDouble() ?? 0.0;
+      final quantity = (values['quantity'] as int?) ?? 0;
+      await logEvent(
+        eventType: 'create',
+        entityType: 'product',
+        entityId: productId,
+        userId: userId,
+        username: username,
+        description: 'إضافة منتج جديد: $name',
+        details: 'السعر: ${price.toStringAsFixed(2)}\nالكمية: $quantity',
+      );
+    } catch (e) {
+      debugPrint('خطأ في تسجيل حدث إضافة المنتج: $e');
+    }
+
+    return productId;
   }
 
   /// التحقق من وجود باركود في قاعدة البيانات
@@ -1461,7 +1597,8 @@ class DatabaseService {
     return (result.first['count'] as int) > 0;
   }
 
-  Future<int> updateProduct(int id, Map<String, Object?> values) async {
+  Future<int> updateProduct(int id, Map<String, Object?> values,
+      {int? userId, String? username}) async {
     // التحقق من وجود المنتج
     final product =
         await _db.query('products', where: 'id = ?', whereArgs: [id], limit: 1);
@@ -1498,11 +1635,121 @@ class DatabaseService {
       }
     }
 
+    // الحصول على البيانات القديمة قبل التحديث
+    final oldProduct = product.first;
+    final oldQuantity = oldProduct['quantity'] as int? ?? 0;
+    final oldPrice = (oldProduct['price'] as num?)?.toDouble() ?? 0.0;
+    final oldCost = (oldProduct['cost'] as num?)?.toDouble() ?? 0.0;
+    final oldName = oldProduct['name'] as String? ?? '';
+    final oldBarcode = oldProduct['barcode'] as String? ?? '';
+    final oldCategoryId = oldProduct['category_id'] as int?;
+    final oldMinQuantity = oldProduct['min_quantity'] as int? ?? 1;
+
     values['updated_at'] = DateTime.now().toIso8601String();
-    return _db.update('products', values, where: 'id = ?', whereArgs: [id]);
+    final updatedRows =
+        await _db.update('products', values, where: 'id = ?', whereArgs: [id]);
+
+    // تسجيل حدث تحديث المنتج
+    if (updatedRows > 0) {
+      try {
+        final newName = values['name'] as String? ?? oldName;
+        final newPrice = (values['price'] as num?)?.toDouble() ?? oldPrice;
+        final newQuantity = (values['quantity'] as int? ?? oldQuantity);
+        final newCost = (values['cost'] as num?)?.toDouble() ?? oldCost;
+        final newBarcode = values['barcode'] as String? ?? oldBarcode;
+        final newCategoryId = values['category_id'] as int? ?? oldCategoryId;
+        final newMinQuantity = values['min_quantity'] as int? ?? oldMinQuantity;
+
+        final changes = <String>[];
+
+        // تتبع التغييرات
+        bool hasQuantityChange = false;
+        bool hasPriceChange = false;
+        bool hasOtherChanges = false;
+
+        if (values['name'] != null && oldName != newName) {
+          changes.add('الاسم القديم: $oldName\nالاسم الجديد: $newName');
+          hasOtherChanges = true;
+        }
+
+        if (values['price'] != null && oldPrice != newPrice) {
+          changes.add(
+              'السعر القديم: ${oldPrice.toStringAsFixed(2)}\nالسعر الجديد: ${newPrice.toStringAsFixed(2)}');
+          hasPriceChange = true;
+        }
+
+        if (values['cost'] != null && oldCost != newCost) {
+          changes.add(
+              'التكلفة القديمة: ${oldCost.toStringAsFixed(2)}\nالتكلفة الجديدة: ${newCost.toStringAsFixed(2)}');
+          hasOtherChanges = true;
+        }
+
+        if (values['quantity'] != null && oldQuantity != newQuantity) {
+          changes.add(
+              'الكمية القديمة: $oldQuantity\nالكمية الجديدة: $newQuantity');
+          hasQuantityChange = true;
+        }
+
+        if (values['barcode'] != null && oldBarcode != newBarcode) {
+          changes.add(
+              'الباركود القديم: ${oldBarcode.isEmpty ? 'لا يوجد' : oldBarcode}\nالباركود الجديد: ${newBarcode.isEmpty ? 'لا يوجد' : newBarcode}');
+          hasOtherChanges = true;
+        }
+
+        if (values['category_id'] != null && oldCategoryId != newCategoryId) {
+          changes.add(
+              'القسم القديم: ${oldCategoryId ?? 'غير محدد'}\nالقسم الجديد: ${newCategoryId ?? 'غير محدد'}');
+          hasOtherChanges = true;
+        }
+
+        if (values['min_quantity'] != null &&
+            oldMinQuantity != newMinQuantity) {
+          changes.add(
+              'الحد الأدنى للكمية القديم: $oldMinQuantity\nالحد الأدنى للكمية الجديد: $newMinQuantity');
+          hasOtherChanges = true;
+        }
+
+        // بناء الوصف والتفاصيل
+        String description;
+        String eventType;
+
+        if (hasQuantityChange && !hasOtherChanges && !hasPriceChange) {
+          // تغيير الكمية فقط
+          description = 'تغيير كمية المنتج: $newName';
+          eventType = 'quantity_change';
+        } else if (hasPriceChange && !hasOtherChanges && !hasQuantityChange) {
+          // تغيير السعر فقط
+          description = 'تغيير سعر المنتج: $newName';
+          eventType =
+              'update'; // يمكن استخدام 'price_change' إذا أردت نوع حدث منفصل
+        } else {
+          // تغييرات متعددة
+          description = 'تحديث منتج: $newName';
+          eventType = 'update';
+        }
+
+        final details =
+            changes.isEmpty ? 'لا توجد تغييرات' : changes.join('\n\n');
+
+        // تسجيل الحدث
+        await logEvent(
+          eventType: eventType,
+          entityType: 'product',
+          entityId: id,
+          userId: userId,
+          username: username,
+          description: description,
+          details: details,
+        );
+      } catch (e) {
+        debugPrint('خطأ في تسجيل حدث تحديث المنتج: $e');
+      }
+    }
+
+    return updatedRows;
   }
 
-  Future<int> deleteProduct(int id) async {
+  Future<int> deleteProduct(int id, {int? userId, String? username}) async {
     return _db.transaction<int>((txn) async {
       try {
         // التحقق من وجود المنتج
@@ -1542,8 +1789,32 @@ class DatabaseService {
           }
         }
 
+        // الحصول على بيانات المنتج قبل الحذف
+        final productName = product.first['name'] as String? ?? '';
+
         // Then delete the product
-        return await txn.delete('products', where: 'id = ?', whereArgs: [id]);
+        final deletedRows =
+            await txn.delete('products', where: 'id = ?', whereArgs: [id]);
+
+        // تسجيل حدث حذف المنتج
+        if (deletedRows > 0) {
+          try {
+            await logEvent(
+              eventType: 'delete',
+              entityType: 'product',
+              entityId: id,
+              userId: userId,
+              username: username,
+              description: 'حذف منتج: $productName',
+              details: 'تم حذف المنتج رقم $id',
+              transaction: txn,
+            );
+          } catch (e) {
+            debugPrint('خطأ في تسجيل حدث حذف المنتج: $e');
+          }
+        }
+
+        return deletedRows;
       } catch (e) {
         rethrow;
       }
@@ -1981,7 +2252,10 @@ class DatabaseService {
       // إضافة معاملات الأقساط
       int? installmentCount,
       double? downPayment,
-      DateTime? firstInstallmentDate}) async {
+      DateTime? firstInstallmentDate,
+      // Event logging parameters
+      int? userId,
+      String? username}) async {
     return _db.transaction<int>((txn) async {
       try {
         // التحقق من أن قائمة العناصر ليست فارغة
@@ -2107,6 +2381,29 @@ class DatabaseService {
                   [qty, productId]);
             }
           }
+        }
+
+        // تسجيل حدث البيع
+        try {
+          final itemsCount = items.length;
+          final itemsSummary =
+              items.take(3).map((it) => it['name'] ?? 'منتج').join(', ');
+          final description =
+              'إنشاء بيع جديد - النوع: ${type == 'cash' ? 'نقدي' : type == 'credit' ? 'دين' : 'أقساط'} - الإجمالي: ${total.toStringAsFixed(2)}';
+          final details =
+              'عدد المنتجات: $itemsCount\nالمنتجات: $itemsSummary${itemsCount > 3 ? '...' : ''}\nالعميل: ${customerName ?? 'غير محدد'}';
+          await logEvent(
+            eventType: 'sale',
+            entityType: 'sale',
+            entityId: saleId,
+            userId: userId,
+            username: username,
+            description: description,
+            details: details,
+            transaction: txn,
+          );
+        } catch (e) {
+          debugPrint('خطأ في تسجيل حدث البيع: $e');
         }
 
         // معالجة الديون والأقساط (مبسط)
@@ -2293,7 +2590,7 @@ class DatabaseService {
     return result.isNotEmpty ? result.first : null;
   }
 
-  Future<bool> deleteSale(int saleId) async {
+  Future<bool> deleteSale(int saleId, {int? userId, String? username}) async {
     return await _db.transaction<bool>((txn) async {
       try {
         // Get sale to adjust debts if needed
@@ -2348,6 +2645,27 @@ class DatabaseService {
           'DELETE FROM sales WHERE id = ?',
           [saleId],
         );
+
+        // تسجيل حدث حذف البيع
+        if (deletedRows > 0) {
+          try {
+            final saleData = sale.first;
+            final total = (saleData['total'] as num).toDouble();
+            final type = saleData['type'] as String? ?? '';
+            await logEvent(
+              eventType: 'delete',
+              entityType: 'sale',
+              entityId: saleId,
+              userId: userId,
+              username: username,
+              description:
+                  'حذف بيع - النوع: ${type == 'cash' ? 'نقدي' : type == 'credit' ? 'دين' : 'أقساط'} - الإجمالي: ${total.toStringAsFixed(2)}',
+              details: 'تم حذف البيع رقم $saleId',
+            );
+          } catch (e) {
+            debugPrint('خطأ في تسجيل حدث حذف البيع: $e');
+          }
+        }
 
         // Adjust customer debt if the deleted sale was credit
         if (deletedRows > 0 && sale.isNotEmpty) {
@@ -5452,6 +5770,189 @@ class DatabaseService {
       return result;
     } catch (e) {
       throw Exception('خطأ في حساب مؤشرات الأداء: $e');
+    }
+  }
+
+  // Event Log Methods
+  Future<int> logEvent({
+    required String eventType,
+    required String entityType,
+    int? entityId,
+    int? userId,
+    String? username,
+    required String description,
+    String? details,
+    DatabaseExecutor? transaction,
+  }) async {
+    try {
+      // استخدام transaction إذا كان متوفراً، وإلا استخدام _db
+      final db = transaction ?? _db;
+
+      // التحقق من وجود الجدول قبل الإدراج (فقط إذا لم يكن transaction)
+      if (transaction == null) {
+        await _ensureEventLogTable(_db);
+      }
+
+      return await db.insert('event_log', {
+        'event_type': eventType,
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'user_id': userId,
+        'username': username,
+        'description': description,
+        'details': details,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('خطأ في تسجيل الحدث: $e');
+      return 0;
+    }
+  }
+
+  Future<List<Map<String, Object?>>> getEventLogs({
+    String? eventType,
+    String? entityType,
+    int? userId,
+    DateTime? fromDate,
+    DateTime? toDate,
+    int? limit,
+    int? offset,
+  }) async {
+    try {
+      // التحقق من وجود الجدول قبل الاستعلام
+      await _ensureEventLogTable(_db);
+
+      final conditions = <String>[];
+      final args = <Object?>[];
+
+      if (eventType != null && eventType.isNotEmpty) {
+        conditions.add('e.event_type = ?');
+        args.add(eventType);
+      }
+
+      if (entityType != null && entityType.isNotEmpty) {
+        conditions.add('e.entity_type = ?');
+        args.add(entityType);
+      }
+
+      if (userId != null) {
+        conditions.add('e.user_id = ?');
+        args.add(userId);
+      }
+
+      if (fromDate != null) {
+        conditions.add('e.created_at >= ?');
+        args.add(fromDate.toIso8601String());
+      }
+
+      if (toDate != null) {
+        conditions.add('e.created_at <= ?');
+        args.add(toDate.toIso8601String());
+      }
+
+      final whereClause =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+
+      var query = '''
+        SELECT 
+          e.*,
+          COALESCE(u.name, e.username) as user_name,
+          u.role as user_role
+        FROM event_log e
+        LEFT JOIN users u ON e.user_id = u.id
+        $whereClause 
+        ORDER BY e.created_at DESC
+      ''';
+      if (limit != null) {
+        query += ' LIMIT $limit';
+        if (offset != null) {
+          query += ' OFFSET $offset';
+        }
+      }
+
+      final result = await _db.rawQuery(query, args);
+      return result;
+    } catch (e, stackTrace) {
+      debugPrint('خطأ في جلب سجل الأحداث: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // التحقق من وجود الجدول
+      try {
+        await _db.rawQuery(
+            'SELECT name FROM sqlite_master WHERE type="table" AND name="event_log"');
+      } catch (_) {
+        debugPrint('جدول event_log غير موجود');
+      }
+      rethrow;
+    }
+  }
+
+  Future<int> getEventLogCount({
+    String? eventType,
+    String? entityType,
+    int? userId,
+    DateTime? fromDate,
+    DateTime? toDate,
+  }) async {
+    final conditions = <String>[];
+    final args = <Object?>[];
+
+    if (eventType != null && eventType.isNotEmpty) {
+      conditions.add('event_type = ?');
+      args.add(eventType);
+    }
+
+    if (entityType != null && entityType.isNotEmpty) {
+      conditions.add('entity_type = ?');
+      args.add(entityType);
+    }
+
+    if (userId != null) {
+      conditions.add('user_id = ?');
+      args.add(userId);
+    }
+
+    if (fromDate != null) {
+      conditions.add('created_at >= ?');
+      args.add(fromDate.toIso8601String());
+    }
+
+    if (toDate != null) {
+      conditions.add('created_at <= ?');
+      args.add(toDate.toIso8601String());
+    }
+
+    final whereClause =
+        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+
+    final result = await _db.rawQuery(
+        'SELECT COUNT(*) as count FROM event_log $whereClause', args);
+    return result.first['count'] as int;
+  }
+
+  Future<bool> deleteEventLog(int eventId) async {
+    try {
+      final deletedRows =
+          await _db.delete('event_log', where: 'id = ?', whereArgs: [eventId]);
+      return deletedRows > 0;
+    } catch (e) {
+      debugPrint('خطأ في حذف الحدث: $e');
+      return false;
+    }
+  }
+
+  Future<bool> clearEventLogs({DateTime? beforeDate}) async {
+    try {
+      if (beforeDate != null) {
+        final deletedRows = await _db.delete('event_log',
+            where: 'created_at < ?', whereArgs: [beforeDate.toIso8601String()]);
+        return deletedRows >= 0;
+      } else {
+        final deletedRows = await _db.delete('event_log');
+        return deletedRows >= 0;
+      }
+    } catch (e) {
+      debugPrint('خطأ في مسح سجل الأحداث: $e');
+      return false;
     }
   }
 
