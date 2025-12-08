@@ -5146,4 +5146,377 @@ class DatabaseService {
       // لا نرمي الاستثناء هنا لتجنب تعليق التطبيق
     }
   }
+
+  // ==================== دوال التحليل والتحليلات ====================
+
+  /// تحليل المبيعات: أكثر المنتجات مبيعاً
+  Future<List<Map<String, dynamic>>> getTopSellingProducts({
+    DateTime? from,
+    DateTime? to,
+    int limit = 10,
+  }) async {
+    try {
+      final where = <String>[];
+      final args = <Object?>[];
+
+      if (from != null && to != null) {
+        where.add('s.created_at BETWEEN ? AND ?');
+        args.addAll([from.toIso8601String(), to.toIso8601String()]);
+      }
+
+      final whereClause =
+          where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : '';
+
+      return await _db.rawQuery('''
+        SELECT 
+          p.id,
+          p.name,
+          p.barcode,
+          p.price,
+          p.cost,
+          SUM(si.quantity) as total_quantity_sold,
+          SUM(si.price * si.quantity) as total_revenue,
+          SUM((si.price - si.cost) * si.quantity) as total_profit,
+          COUNT(DISTINCT s.id) as sales_count
+        FROM products p
+        JOIN sale_items si ON p.id = si.product_id
+        JOIN sales s ON si.sale_id = s.id
+        $whereClause
+        GROUP BY p.id, p.name, p.barcode, p.price, p.cost
+        ORDER BY total_quantity_sold DESC
+        LIMIT ?
+      ''', [...args, limit]);
+    } catch (e) {
+      throw Exception('خطأ في جلب أكثر المنتجات مبيعاً: $e');
+    }
+  }
+
+  /// تحليل المبيعات: أقل المنتجات مبيعاً
+  Future<List<Map<String, dynamic>>> getLeastSellingProducts({
+    DateTime? from,
+    DateTime? to,
+    int limit = 10,
+  }) async {
+    try {
+      final where = <String>[];
+      final args = <Object?>[];
+
+      if (from != null && to != null) {
+        where.add('s.created_at BETWEEN ? AND ?');
+        args.addAll([from.toIso8601String(), to.toIso8601String()]);
+      }
+
+      final whereClause =
+          where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : '';
+
+      return await _db.rawQuery('''
+        SELECT 
+          p.id,
+          p.name,
+          p.barcode,
+          p.price,
+          p.cost,
+          p.quantity as current_stock,
+          COALESCE(SUM(si.quantity), 0) as total_quantity_sold,
+          COALESCE(SUM(si.price * si.quantity), 0) as total_revenue,
+          COALESCE(SUM((si.price - si.cost) * si.quantity), 0) as total_profit,
+          COALESCE(COUNT(DISTINCT s.id), 0) as sales_count
+        FROM products p
+        LEFT JOIN sale_items si ON p.id = si.product_id
+        LEFT JOIN sales s ON si.sale_id = s.id $whereClause
+        GROUP BY p.id, p.name, p.barcode, p.price, p.cost, p.quantity
+        ORDER BY total_quantity_sold ASC, p.name ASC
+        LIMIT ?
+      ''', [...args, limit]);
+    } catch (e) {
+      throw Exception('خطأ في جلب أقل المنتجات مبيعاً: $e');
+    }
+  }
+
+  /// تحليل العملاء: أفضل العملاء
+  Future<List<Map<String, dynamic>>> getTopCustomers({
+    DateTime? from,
+    DateTime? to,
+    int limit = 10,
+  }) async {
+    try {
+      final where = <String>[];
+      final args = <Object?>[];
+
+      if (from != null && to != null) {
+        where.add('s.created_at BETWEEN ? AND ?');
+        args.addAll([from.toIso8601String(), to.toIso8601String()]);
+      }
+
+      final whereClause =
+          where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : '';
+
+      return await _db.rawQuery('''
+        SELECT 
+          c.id,
+          c.name,
+          c.phone,
+          c.total_debt,
+          COUNT(DISTINCT s.id) as total_purchases,
+          COALESCE(SUM(s.total), 0) as total_spent,
+          COALESCE(SUM(s.profit), 0) as total_profit_generated,
+          MAX(s.created_at) as last_purchase_date
+        FROM customers c
+        LEFT JOIN sales s ON c.id = s.customer_id $whereClause
+        GROUP BY c.id, c.name, c.phone, c.total_debt
+        HAVING total_spent > 0
+        ORDER BY total_spent DESC
+        LIMIT ?
+      ''', [...args, limit]);
+    } catch (e) {
+      throw Exception('خطأ في جلب أفضل العملاء: $e');
+    }
+  }
+
+  /// تحليل العملاء: العملاء المتأخرين في الدفع
+  Future<List<Map<String, dynamic>>> getOverdueCustomers({
+    int? daysOverdue,
+  }) async {
+    try {
+      final cutoffDate = daysOverdue != null
+          ? DateTime.now().subtract(Duration(days: daysOverdue))
+          : DateTime.now();
+
+      return await _db.rawQuery('''
+        SELECT 
+          c.id,
+          c.name,
+          c.phone,
+          c.total_debt,
+          COUNT(DISTINCT s.id) as overdue_sales_count,
+          SUM(s.total) as overdue_amount,
+          MIN(s.due_date) as oldest_due_date,
+          julianday('now') - julianday(MIN(s.due_date)) as days_overdue
+        FROM customers c
+        JOIN sales s ON c.id = s.customer_id
+        WHERE s.type IN ('credit', 'installment')
+          AND s.due_date IS NOT NULL
+          AND s.due_date < ?
+          AND c.total_debt > 0
+        GROUP BY c.id, c.name, c.phone, c.total_debt
+        ORDER BY days_overdue DESC, overdue_amount DESC
+      ''', [cutoffDate.toIso8601String()]);
+    } catch (e) {
+      throw Exception('خطأ في جلب العملاء المتأخرين: $e');
+    }
+  }
+
+  /// التنبؤ بالطلب: توقع المنتجات التي قد تنفد
+  Future<List<Map<String, dynamic>>> getProductsAtRisk({
+    int daysAhead = 30,
+    double riskThreshold = 0.5,
+  }) async {
+    try {
+      final cutoffDate = DateTime.now().subtract(Duration(days: daysAhead));
+
+      return await _db.rawQuery('''
+        SELECT 
+          p.id,
+          p.name,
+          p.barcode,
+          p.quantity as current_stock,
+          p.min_quantity,
+          p.price,
+          p.cost,
+          COALESCE(SUM(si.quantity), 0) as sold_last_period,
+          COALESCE(AVG(si.quantity), 0) as avg_daily_sales,
+          CASE 
+            WHEN p.quantity = 0 THEN 1.0
+            WHEN p.quantity <= p.min_quantity THEN 0.9
+            WHEN COALESCE(AVG(si.quantity), 0) > 0 AND p.quantity / NULLIF(AVG(si.quantity), 0) < 7 THEN 0.8
+            WHEN COALESCE(AVG(si.quantity), 0) > 0 AND p.quantity / NULLIF(AVG(si.quantity), 0) < 14 THEN 0.6
+            ELSE 0.3
+          END as risk_score
+        FROM products p
+        LEFT JOIN sale_items si ON p.id = si.product_id
+        LEFT JOIN sales s ON si.sale_id = s.id 
+          AND s.created_at >= ?
+        GROUP BY p.id, p.name, p.barcode, p.quantity, p.min_quantity, p.price, p.cost
+        HAVING risk_score >= ?
+        ORDER BY risk_score DESC, current_stock ASC
+      ''', [cutoffDate.toIso8601String(), riskThreshold]);
+    } catch (e) {
+      throw Exception('خطأ في التنبؤ بالمنتجات المعرضة للخطر: $e');
+    }
+  }
+
+  /// مؤشرات الأداء (KPIs) للمبيعات والأرباح
+  Future<Map<String, dynamic>> getSalesKPIs({
+    DateTime? from,
+    DateTime? to,
+    DateTime? previousFrom,
+    DateTime? previousTo,
+  }) async {
+    try {
+      final where = <String>[];
+      final args = <Object?>[];
+
+      if (from != null && to != null) {
+        where.add('s.created_at BETWEEN ? AND ?');
+        args.addAll([from.toIso8601String(), to.toIso8601String()]);
+      }
+
+      final whereClause =
+          where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : '';
+
+      // KPIs للفترة الحالية
+      final currentKPIs = await _db.rawQuery('''
+        SELECT 
+          COUNT(DISTINCT s.id) as total_sales,
+          COUNT(DISTINCT s.customer_id) as unique_customers,
+          COUNT(DISTINCT si.product_id) as unique_products_sold,
+          COALESCE(SUM(s.total), 0) as total_revenue,
+          COALESCE(SUM(s.profit), 0) as total_profit,
+          COALESCE(AVG(s.total), 0) as avg_sale_amount,
+          COALESCE(SUM(CASE WHEN s.type = 'cash' THEN s.total ELSE 0 END), 0) as cash_sales,
+          COALESCE(SUM(CASE WHEN s.type = 'credit' THEN s.total ELSE 0 END), 0) as credit_sales,
+          COALESCE(SUM(CASE WHEN s.type = 'installment' THEN s.total ELSE 0 END), 0) as installment_sales
+        FROM sales s
+        LEFT JOIN sale_items si ON s.id = si.sale_id
+        $whereClause
+      ''', args);
+
+      final kpis = currentKPIs.first;
+
+      // حساب معدل الربح
+      final totalRevenue = (kpis['total_revenue'] as num?)?.toDouble() ?? 0.0;
+      final totalProfit = (kpis['total_profit'] as num?)?.toDouble() ?? 0.0;
+      final profitMargin =
+          totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0.0;
+
+      Map<String, dynamic> result = {
+        'current_period': {
+          'total_sales': kpis['total_sales'] as int? ?? 0,
+          'unique_customers': kpis['unique_customers'] as int? ?? 0,
+          'unique_products_sold': kpis['unique_products_sold'] as int? ?? 0,
+          'total_revenue': totalRevenue,
+          'total_profit': totalProfit,
+          'profit_margin': profitMargin,
+          'avg_sale_amount':
+              (kpis['avg_sale_amount'] as num?)?.toDouble() ?? 0.0,
+          'cash_sales': (kpis['cash_sales'] as num?)?.toDouble() ?? 0.0,
+          'credit_sales': (kpis['credit_sales'] as num?)?.toDouble() ?? 0.0,
+          'installment_sales':
+              (kpis['installment_sales'] as num?)?.toDouble() ?? 0.0,
+        },
+      };
+
+      // مقارنة مع الفترة السابقة إذا كانت متوفرة
+      if (previousFrom != null && previousTo != null) {
+        final prevWhere = <String>[];
+        final prevArgs = <Object?>[];
+
+        prevWhere.add('s.created_at BETWEEN ? AND ?');
+        prevArgs.addAll(
+            [previousFrom.toIso8601String(), previousTo.toIso8601String()]);
+
+        final prevWhereClause = 'WHERE ${prevWhere.join(' AND ')}';
+
+        final previousKPIs = await _db.rawQuery('''
+          SELECT 
+            COUNT(DISTINCT s.id) as total_sales,
+            COALESCE(SUM(s.total), 0) as total_revenue,
+            COALESCE(SUM(s.profit), 0) as total_profit
+          FROM sales s
+          $prevWhereClause
+        ''', prevArgs);
+
+        final prevKpis = previousKPIs.first;
+        final prevRevenue =
+            (prevKpis['total_revenue'] as num?)?.toDouble() ?? 0.0;
+        final prevProfit =
+            (prevKpis['total_profit'] as num?)?.toDouble() ?? 0.0;
+
+        result['previous_period'] = {
+          'total_sales': prevKpis['total_sales'] as int? ?? 0,
+          'total_revenue': prevRevenue,
+          'total_profit': prevProfit,
+        };
+
+        // حساب التغييرات
+        result['changes'] = {
+          'sales_change': prevRevenue > 0
+              ? ((totalRevenue - prevRevenue) / prevRevenue) * 100
+              : 0.0,
+          'profit_change': prevProfit > 0
+              ? ((totalProfit - prevProfit) / prevProfit) * 100
+              : 0.0,
+        };
+      }
+
+      return result;
+    } catch (e) {
+      throw Exception('خطأ في حساب مؤشرات الأداء: $e');
+    }
+  }
+
+  /// مقارنات زمنية: مقارنة المبيعات بين الفترات
+  Future<List<Map<String, dynamic>>> getSalesComparison({
+    required DateTime period1Start,
+    required DateTime period1End,
+    required DateTime period2Start,
+    required DateTime period2End,
+  }) async {
+    try {
+      return await _db.rawQuery('''
+        SELECT 
+          'period1' as period,
+          COUNT(DISTINCT s.id) as total_sales,
+          COUNT(DISTINCT s.customer_id) as unique_customers,
+          COALESCE(SUM(s.total), 0) as total_revenue,
+          COALESCE(SUM(s.profit), 0) as total_profit,
+          COALESCE(AVG(s.total), 0) as avg_sale_amount
+        FROM sales s
+        WHERE s.created_at BETWEEN ? AND ?
+        
+        UNION ALL
+        
+        SELECT 
+          'period2' as period,
+          COUNT(DISTINCT s.id) as total_sales,
+          COUNT(DISTINCT s.customer_id) as unique_customers,
+          COALESCE(SUM(s.total), 0) as total_revenue,
+          COALESCE(SUM(s.profit), 0) as total_profit,
+          COALESCE(AVG(s.total), 0) as avg_sale_amount
+        FROM sales s
+        WHERE s.created_at BETWEEN ? AND ?
+      ''', [
+        period1Start.toIso8601String(),
+        period1End.toIso8601String(),
+        period2Start.toIso8601String(),
+        period2End.toIso8601String(),
+      ]);
+    } catch (e) {
+      throw Exception('خطأ في مقارنة المبيعات: $e');
+    }
+  }
+
+  /// تحليل المبيعات الشهرية للرسوم البيانية
+  Future<List<Map<String, dynamic>>> getMonthlySalesTrend({
+    int months = 12,
+  }) async {
+    try {
+      final startDate = DateTime.now().subtract(Duration(days: months * 30));
+
+      return await _db.rawQuery('''
+        SELECT 
+          strftime('%Y-%m', s.created_at) as month,
+          COUNT(DISTINCT s.id) as sales_count,
+          COALESCE(SUM(s.total), 0) as total_revenue,
+          COALESCE(SUM(s.profit), 0) as total_profit,
+          COUNT(DISTINCT s.customer_id) as unique_customers
+        FROM sales s
+        WHERE s.created_at >= ?
+        GROUP BY strftime('%Y-%m', s.created_at)
+        ORDER BY month ASC
+      ''', [startDate.toIso8601String()]);
+    } catch (e) {
+      throw Exception('خطأ في جلب اتجاه المبيعات الشهرية: $e');
+    }
+  }
 }

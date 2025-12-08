@@ -30,6 +30,7 @@ import 'screens/license_check_screen.dart';
 import 'screens/users_management_screen.dart';
 import 'screens/expenses_screen.dart';
 import 'screens/financial_transactions_screen.dart';
+import 'screens/analytics_screen.dart';
 import 'models/user_model.dart';
 
 class AppShell extends StatefulWidget {
@@ -97,6 +98,7 @@ class _AppShellState extends State<AppShell> {
       const FinancialTransactionsScreen(), // سجل المعاملات المالية
       const DebtsScreen(), // الديون
       const ReportsScreen(),
+      const AnalyticsScreen(), // التحليلات
       const AdvancedReportsScreen(),
       const InventoryReportsScreen(),
       const SettingsScreen(),
@@ -133,13 +135,15 @@ class _AppShellState extends State<AppShell> {
         case 12:
           return auth.hasPermission(UserPermission.viewReports); // التقارير
         case 13:
+          return auth.hasPermission(UserPermission.viewReports); // التحليلات
+        case 14:
           return auth.hasPermission(
               UserPermission.viewProfitCosts); // التقارير المالية
-        case 14:
-          return auth.hasPermission(UserPermission.viewReports); // تقارير الجرد
         case 15:
-          return auth.hasPermission(UserPermission.systemSettings);
+          return auth.hasPermission(UserPermission.viewReports); // تقارير الجرد
         case 16:
+          return auth.hasPermission(UserPermission.systemSettings);
+        case 17:
           return auth.hasPermission(UserPermission.manageUsers);
         default:
           return false;
@@ -590,10 +594,17 @@ class _AppShellState extends State<AppShell> {
                       ),
                     if (canAccessIndex(13))
                       _buildNavItem(
-                        icon: Icons.account_balance_wallet,
-                        label: 'التقارير المالية',
+                        icon: Icons.analytics,
+                        label: 'التحليلات',
                         index: 13,
                         isSelected: _selectedIndex == 13,
+                      ),
+                    if (canAccessIndex(14))
+                      _buildNavItem(
+                        icon: Icons.account_balance_wallet,
+                        label: 'التقارير المالية',
+                        index: 14,
+                        isSelected: _selectedIndex == 14,
                       ),
                     if (canAccessIndex(14))
                       _buildNavItem(
@@ -949,34 +960,42 @@ class _AppShellState extends State<AppShell> {
                     ),
                   if (canAccessIndex(13))
                     _buildMobileNavItem(
-                      icon: Icons.account_balance_wallet,
-                      label: 'التقارير المالية',
+                      icon: Icons.analytics,
+                      label: 'التحليلات',
                       index: 13,
                       isSelected: _selectedIndex == 13,
                       canAccess: true,
                     ),
                   if (canAccessIndex(14))
                     _buildMobileNavItem(
-                      icon: Icons.inventory_2,
-                      label: 'تقارير الجرد',
+                      icon: Icons.account_balance_wallet,
+                      label: 'التقارير المالية',
                       index: 14,
                       isSelected: _selectedIndex == 14,
                       canAccess: true,
                     ),
                   if (canAccessIndex(15))
                     _buildMobileNavItem(
-                      icon: Icons.settings,
-                      label: 'الإعدادات',
+                      icon: Icons.inventory_2,
+                      label: 'تقارير الجرد',
                       index: 15,
                       isSelected: _selectedIndex == 15,
                       canAccess: true,
                     ),
                   if (canAccessIndex(16))
                     _buildMobileNavItem(
-                      icon: Icons.people,
-                      label: 'إدارة المستخدمين',
+                      icon: Icons.settings,
+                      label: 'الإعدادات',
                       index: 16,
                       isSelected: _selectedIndex == 16,
+                      canAccess: true,
+                    ),
+                  if (canAccessIndex(17))
+                    _buildMobileNavItem(
+                      icon: Icons.people,
+                      label: 'إدارة المستخدمين',
+                      index: 17,
+                      isSelected: _selectedIndex == 17,
                       canAccess: true,
                     ),
                 ],
