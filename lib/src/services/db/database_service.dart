@@ -4839,6 +4839,133 @@ class DatabaseService {
     }
   }
 
+  /// الحصول على جميع المعاملات المالية (مبيعات، مصروفات، مدفوعات)
+  Future<List<Map<String, dynamic>>> getAllFinancialTransactions({
+    DateTime? from,
+    DateTime? to,
+    String? transactionType,
+  }) async {
+    try {
+      final transactions = <Map<String, dynamic>>[];
+
+      // إضافة المبيعات
+      if (transactionType == null || transactionType == 'sales') {
+        final where = <String>[];
+        final args = <Object?>[];
+
+        if (from != null && to != null) {
+          where.add('s.created_at BETWEEN ? AND ?');
+          args.addAll([from.toIso8601String(), to.toIso8601String()]);
+        }
+
+        final sales = await _db.rawQuery('''
+          SELECT 
+            s.id,
+            s.created_at as transaction_date,
+            s.total as amount,
+            s.profit,
+            s.type,
+            c.name as customer_name,
+            'sale' as transaction_type,
+            'مبيعات' as transaction_type_label,
+            CASE 
+              WHEN s.type = 'cash' THEN 'نقدي'
+              WHEN s.type = 'credit' THEN 'آجل'
+              WHEN s.type = 'installment' THEN 'أقساط'
+              ELSE s.type
+            END as type_label
+          FROM sales s
+          LEFT JOIN customers c ON c.id = s.customer_id
+          ${where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : ''}
+          ORDER BY s.created_at DESC
+        ''', args);
+
+        transactions.addAll(sales.map((s) => {
+              ...s,
+              'amount': (s['amount'] as num?)?.toDouble() ?? 0.0,
+              'profit': (s['profit'] as num?)?.toDouble() ?? 0.0,
+            }));
+      }
+
+      // إضافة المصروفات
+      if (transactionType == null || transactionType == 'expenses') {
+        final where = <String>[];
+        final args = <Object?>[];
+
+        if (from != null && to != null) {
+          where.add('e.expense_date BETWEEN ? AND ?');
+          args.addAll([from.toIso8601String(), to.toIso8601String()]);
+        }
+
+        final expenses = await _db.rawQuery('''
+          SELECT 
+            e.id,
+            e.expense_date as transaction_date,
+            e.amount,
+            e.title,
+            e.category,
+            e.description,
+            NULL as profit,
+            'expense' as transaction_type,
+            'مصروفات' as transaction_type_label,
+            e.category as type_label
+          FROM expenses e
+          ${where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : ''}
+          ORDER BY e.expense_date DESC
+        ''', args);
+
+        transactions.addAll(expenses.map((e) => {
+              ...e,
+              'amount': (e['amount'] as num?)?.toDouble() ?? 0.0,
+            }));
+      }
+
+      // إضافة المدفوعات
+      if (transactionType == null || transactionType == 'payments') {
+        final where = <String>[];
+        final args = <Object?>[];
+
+        if (from != null && to != null) {
+          where.add('p.payment_date BETWEEN ? AND ?');
+          args.addAll([from.toIso8601String(), to.toIso8601String()]);
+        }
+
+        final payments = await _db.rawQuery('''
+          SELECT 
+            p.id,
+            p.payment_date as transaction_date,
+            p.amount,
+            p.notes as description,
+            c.name as customer_name,
+            NULL as profit,
+            'payment' as transaction_type,
+            'مدفوعات' as transaction_type_label,
+            'دفعة' as type_label
+          FROM payments p
+          JOIN customers c ON c.id = p.customer_id
+          ${where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : ''}
+          ORDER BY p.payment_date DESC
+        ''', args);
+
+        transactions.addAll(payments.map((p) => {
+              ...p,
+              'amount': (p['amount'] as num?)?.toDouble() ?? 0.0,
+            }));
+      }
+
+      // ترتيب جميع المعاملات حسب التاريخ
+      transactions.sort((a, b) {
+        final dateA = a['transaction_date']?.toString() ?? '';
+        final dateB = b['transaction_date']?.toString() ?? '';
+        return dateB.compareTo(dateA); // الأحدث أولاً
+      });
+
+      return transactions;
+    } catch (e) {
+      throw Exception('خطأ في جلب المعاملات المالية: $e');
+    }
+  }
+
   /// الحصول على إحصائيات المصروفات حسب النوع
   Future<Map<String, double>> getExpensesByCategory({
     DateTime? from,

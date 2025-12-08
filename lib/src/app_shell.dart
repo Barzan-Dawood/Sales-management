@@ -29,6 +29,7 @@ import 'screens/inventory_reports_screen.dart';
 import 'screens/license_check_screen.dart';
 import 'screens/users_management_screen.dart';
 import 'screens/expenses_screen.dart';
+import 'screens/financial_transactions_screen.dart';
 import 'models/user_model.dart';
 
 class AppShell extends StatefulWidget {
@@ -93,6 +94,7 @@ class _AppShellState extends State<AppShell> {
       const SuppliersScreen(),
       const AccountingScreen(),
       const ExpensesScreen(), // المصروفات
+      const FinancialTransactionsScreen(), // سجل المعاملات المالية
       const DebtsScreen(), // الديون
       const ReportsScreen(),
       const AdvancedReportsScreen(),
@@ -124,17 +126,20 @@ class _AppShellState extends State<AppShell> {
         case 9:
           return auth.hasPermission(UserPermission.viewReports); // المصروفات
         case 10:
-          return auth.hasPermission(UserPermission.viewReports); // الديون
+          return auth.hasPermission(
+              UserPermission.viewReports); // سجل المعاملات المالية
         case 11:
-          return auth.hasPermission(UserPermission.viewReports); // التقارير
+          return auth.hasPermission(UserPermission.viewReports); // الديون
         case 12:
+          return auth.hasPermission(UserPermission.viewReports); // التقارير
+        case 13:
           return auth.hasPermission(
               UserPermission.viewProfitCosts); // التقارير المالية
-        case 13:
-          return auth.hasPermission(UserPermission.viewReports); // تقارير الجرد
         case 14:
-          return auth.hasPermission(UserPermission.systemSettings);
+          return auth.hasPermission(UserPermission.viewReports); // تقارير الجرد
         case 15:
+          return auth.hasPermission(UserPermission.systemSettings);
+        case 16:
           return auth.hasPermission(UserPermission.manageUsers);
         default:
           return false;
@@ -564,46 +569,53 @@ class _AppShellState extends State<AppShell> {
                       ),
                     if (canAccessIndex(10))
                       _buildNavItem(
-                        icon: Icons.payments,
-                        label: AppStrings.debts,
+                        icon: Icons.account_balance_wallet,
+                        label: 'سجل المعاملات المالية',
                         index: 10,
                         isSelected: _selectedIndex == 10,
                       ),
                     if (canAccessIndex(11))
                       _buildNavItem(
-                        icon: Icons.bar_chart,
-                        label: AppStrings.reports,
+                        icon: Icons.payments,
+                        label: AppStrings.debts,
                         index: 11,
                         isSelected: _selectedIndex == 11,
                       ),
                     if (canAccessIndex(12))
                       _buildNavItem(
-                        icon: Icons.account_balance_wallet,
-                        label: 'التقارير المالية',
+                        icon: Icons.bar_chart,
+                        label: AppStrings.reports,
                         index: 12,
                         isSelected: _selectedIndex == 12,
                       ),
                     if (canAccessIndex(13))
                       _buildNavItem(
-                        icon: Icons.inventory_2,
-                        label: 'تقارير الجرد',
+                        icon: Icons.account_balance_wallet,
+                        label: 'التقارير المالية',
                         index: 13,
                         isSelected: _selectedIndex == 13,
                       ),
+                    if (canAccessIndex(14))
+                      _buildNavItem(
+                        icon: Icons.inventory_2,
+                        label: 'تقارير الجرد',
+                        index: 14,
+                        isSelected: _selectedIndex == 14,
+                      ),
                     // إدارة المستخدمين - للمديرين فقط
-                    if (canAccessIndex(15))
+                    if (canAccessIndex(16))
                       _buildNavItem(
                         icon: Icons.people,
                         label: 'إدارة المستخدمين',
-                        index: 15,
-                        isSelected: _selectedIndex == 15,
+                        index: 16,
+                        isSelected: _selectedIndex == 16,
                       ),
-                    if (canAccessIndex(14))
+                    if (canAccessIndex(15))
                       _buildNavItem(
                         icon: Icons.settings,
                         label: AppStrings.settings,
-                        index: 14,
-                        isSelected: _selectedIndex == 14,
+                        index: 15,
+                        isSelected: _selectedIndex == 15,
                       ),
                   ],
                 ),
@@ -913,50 +925,58 @@ class _AppShellState extends State<AppShell> {
                     ),
                   if (canAccessIndex(10))
                     _buildMobileNavItem(
-                      icon: Icons.payments,
-                      label: 'الديون',
+                      icon: Icons.account_balance_wallet,
+                      label: 'سجل المعاملات المالية',
                       index: 10,
                       isSelected: _selectedIndex == 10,
                       canAccess: true,
                     ),
                   if (canAccessIndex(11))
                     _buildMobileNavItem(
-                      icon: Icons.bar_chart,
-                      label: 'التقارير',
+                      icon: Icons.payments,
+                      label: 'الديون',
                       index: 11,
                       isSelected: _selectedIndex == 11,
                       canAccess: true,
                     ),
                   if (canAccessIndex(12))
                     _buildMobileNavItem(
-                      icon: Icons.account_balance_wallet,
-                      label: 'التقارير المالية',
+                      icon: Icons.bar_chart,
+                      label: 'التقارير',
                       index: 12,
                       isSelected: _selectedIndex == 12,
                       canAccess: true,
                     ),
                   if (canAccessIndex(13))
                     _buildMobileNavItem(
-                      icon: Icons.inventory_2,
-                      label: 'تقارير الجرد',
-                      index: 13,
-                      isSelected: _selectedIndex == 13,
-                      canAccess: true,
-                    ),
-                  if (canAccessIndex(13))
-                    _buildMobileNavItem(
-                      icon: Icons.settings,
-                      label: 'الإعدادات',
+                      icon: Icons.account_balance_wallet,
+                      label: 'التقارير المالية',
                       index: 13,
                       isSelected: _selectedIndex == 13,
                       canAccess: true,
                     ),
                   if (canAccessIndex(14))
                     _buildMobileNavItem(
-                      icon: Icons.people,
-                      label: 'إدارة المستخدمين',
+                      icon: Icons.inventory_2,
+                      label: 'تقارير الجرد',
                       index: 14,
                       isSelected: _selectedIndex == 14,
+                      canAccess: true,
+                    ),
+                  if (canAccessIndex(15))
+                    _buildMobileNavItem(
+                      icon: Icons.settings,
+                      label: 'الإعدادات',
+                      index: 15,
+                      isSelected: _selectedIndex == 15,
+                      canAccess: true,
+                    ),
+                  if (canAccessIndex(16))
+                    _buildMobileNavItem(
+                      icon: Icons.people,
+                      label: 'إدارة المستخدمين',
+                      index: 16,
+                      isSelected: _selectedIndex == 16,
                       canAccess: true,
                     ),
                 ],
