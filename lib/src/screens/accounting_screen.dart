@@ -105,7 +105,7 @@ class _AccountingScreenState extends State<AccountingScreen> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: FutureBuilder<List<Map<String, Object?>>>(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
                 future: db.getExpenses(from: _range?.start, to: _range?.end),
                 builder: (context, snap) {
                   if (!snap.hasData)
@@ -708,7 +708,11 @@ class _AccountingScreenState extends State<AccountingScreen> {
     );
     if (ok == true) {
       final amount = double.tryParse(_amount.text) ?? 0;
-      await db.addExpense(_title.text.trim(), amount);
+      await db.createExpense(
+        title: _title.text.trim(),
+        amount: amount,
+        category: 'عام', // نوع افتراضي
+      );
       if (!mounted) return;
       setState(() {});
     }
@@ -732,7 +736,7 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 200,
-      height: 120,
+      height: 130,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -756,41 +760,53 @@ class _StatCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   icon,
                   color: color,
-                  size: 24,
+                  size: 18,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
+                const SizedBox(width: 6),
+                Flexible(
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: color.withOpacity(0.8),
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const Spacer(),
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
+            const SizedBox(height: 6),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.right,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              textAlign: TextAlign.right,
             ),
           ],
         ),

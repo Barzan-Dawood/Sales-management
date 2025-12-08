@@ -12,7 +12,7 @@ import 'package:crypto/crypto.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
-  static const int _dbVersion = 8;
+  static const int _dbVersion = 9;
 
   late Database _db;
   late String _dbPath;
@@ -65,6 +65,9 @@ class DatabaseService {
         }
         if (oldVersion < 8) {
           await _migrateToV8(db);
+        }
+        if (oldVersion < 9) {
+          await _migrateToV9(db);
         }
         // Ensure no legacy triggers/views remain that reference old temp tables
         await _cleanupOrphanObjects(db);
@@ -764,6 +767,12 @@ class DatabaseService {
         'CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id)');
     await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date)');
+
+    // Expenses
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)');
   }
 
   Future<void> _createSchema(Database db) async {
@@ -870,7 +879,11 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         amount REAL NOT NULL,
-        created_at TEXT NOT NULL
+        category TEXT NOT NULL DEFAULT 'عام',
+        description TEXT,
+        expense_date TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT
       );
     ''');
 
@@ -1181,6 +1194,78 @@ class DatabaseService {
       debugPrint('انتهى Migration V8 بنجاح');
     } catch (e) {
       debugPrint('خطأ في Migration V8: $e');
+    }
+  }
+
+  Future<void> _migrateToV9(Database db) async {
+    // تحديث جدول المصروفات لإضافة حقول جديدة
+    try {
+      debugPrint('بدء Migration V9 - تحديث جدول المصروفات...');
+
+      // التحقق من وجود الأعمدة الجديدة
+      final cols = await db.rawQuery("PRAGMA table_info('expenses')");
+      final columnNames = cols.map((c) => c['name']?.toString() ?? '').toList();
+
+      // إضافة الأعمدة الجديدة إذا لم تكن موجودة
+      if (!columnNames.contains('category')) {
+        await db.execute(
+            'ALTER TABLE expenses ADD COLUMN category TEXT NOT NULL DEFAULT \'عام\'');
+        debugPrint('تم إضافة عمود category');
+      }
+
+      if (!columnNames.contains('description')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN description TEXT');
+        debugPrint('تم إضافة عمود description');
+      }
+
+      if (!columnNames.contains('expense_date')) {
+        // إضافة عمود expense_date واستخدام created_at كقيمة افتراضية
+        await db.execute('ALTER TABLE expenses ADD COLUMN expense_date TEXT');
+        // نسخ created_at إلى expense_date للبيانات الموجودة
+        await db.execute(
+            'UPDATE expenses SET expense_date = created_at WHERE expense_date IS NULL');
+        // جعل الحقل NOT NULL بعد نسخ البيانات
+        await db.execute('''
+          CREATE TABLE expenses_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            amount REAL NOT NULL,
+            category TEXT NOT NULL DEFAULT 'عام',
+            description TEXT,
+            expense_date TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+          );
+        ''');
+        await db.execute('''
+          INSERT INTO expenses_new (id, title, amount, category, description, expense_date, created_at, updated_at)
+          SELECT id, title, amount, COALESCE(category, 'عام'), description, COALESCE(expense_date, created_at), created_at, COALESCE(updated_at, created_at)
+          FROM expenses;
+        ''');
+        await db.execute('DROP TABLE expenses');
+        await db.execute('ALTER TABLE expenses_new RENAME TO expenses');
+        // تحديث columnNames بعد إعادة إنشاء الجدول
+        final newCols = await db.rawQuery("PRAGMA table_info('expenses')");
+        final newColumnNames =
+            newCols.map((c) => c['name']?.toString() ?? '').toList();
+        columnNames.clear();
+        columnNames.addAll(newColumnNames);
+        debugPrint('تم إضافة عمود expense_date');
+      }
+
+      // التحقق مرة أخرى من updated_at بعد إعادة إنشاء الجدول
+      if (!columnNames.contains('updated_at')) {
+        try {
+          await db.execute('ALTER TABLE expenses ADD COLUMN updated_at TEXT');
+          debugPrint('تم إضافة عمود updated_at');
+        } catch (e) {
+          debugPrint('عمود updated_at موجود بالفعل أو خطأ: $e');
+        }
+      }
+
+      debugPrint('انتهى Migration V9 بنجاح');
+    } catch (e) {
+      debugPrint('خطأ في Migration V9: $e');
     }
   }
 
@@ -1706,27 +1791,8 @@ class DatabaseService {
   Future<int> deleteSupplier(int id) =>
       _db.delete('suppliers', where: 'id = ?', whereArgs: [id]);
 
-  // Expenses
-  Future<List<Map<String, Object?>>> getExpenses(
-      {DateTime? from, DateTime? to}) async {
-    if (from == null || to == null)
-      return _db.query('expenses', orderBy: 'created_at DESC');
-    return _db.query('expenses',
-        where: 'created_at BETWEEN ? AND ?',
-        whereArgs: [from.toIso8601String(), to.toIso8601String()],
-        orderBy: 'created_at DESC');
-  }
-
-  Future<int> addExpense(String title, double amount) async {
-    return _db.insert('expenses', {
-      'title': title,
-      'amount': amount,
-      'created_at': DateTime.now().toIso8601String(),
-    });
-  }
-
-  Future<int> deleteExpense(int id) =>
-      _db.delete('expenses', where: 'id = ?', whereArgs: [id]);
+  // Expenses - تم نقل الدوال إلى قسم "دوال إدارة المصروفات" أدناه
+  // الدوال القديمة تم استبدالها بدوال محسنة مع دعم الفئات والوصف
 
   // إدارة الأقساط
   Future<List<Map<String, Object?>>> getInstallments({
@@ -2131,12 +2197,19 @@ class DatabaseService {
     final sales = await _db.rawQuery(
         'SELECT IFNULL(SUM(total),0) t, IFNULL(SUM(profit),0) p FROM sales s $where',
         args);
+    // استخدام expense_date بدلاً من created_at للمصروفات
+    final expensesWhere = (from != null && to != null)
+        ? 'WHERE expense_date BETWEEN ? AND ?'
+        : '';
+    final expensesArgs = (from != null && to != null)
+        ? [from.toIso8601String(), to.toIso8601String()]
+        : <Object?>[];
     final expenses = await _db.rawQuery(
-        'SELECT IFNULL(SUM(amount),0) e FROM expenses ${where.isEmpty ? '' : 'WHERE created_at BETWEEN ? AND ?'}',
-        args);
-    final totalSales = (sales.first['t'] as num).toDouble();
-    final totalProfit = (sales.first['p'] as num).toDouble();
-    final totalExpenses = (expenses.first['e'] as num).toDouble();
+        'SELECT IFNULL(SUM(amount),0) e FROM expenses $expensesWhere',
+        expensesArgs);
+    final totalSales = (sales.first['t'] as num?)?.toDouble() ?? 0.0;
+    final totalProfit = (sales.first['p'] as num?)?.toDouble() ?? 0.0;
+    final totalExpenses = (expenses.first['e'] as num?)?.toDouble() ?? 0.0;
     return {
       'sales': totalSales,
       'profit': totalProfit,
@@ -4532,6 +4605,280 @@ class DatabaseService {
       await _db.execute('VACUUM');
     } catch (e) {
       throw Exception('خطأ في ضغط قاعدة البيانات: $e');
+    }
+  }
+
+  // ==================== دوال إدارة المصروفات ====================
+
+  /// إضافة مصروف جديد
+  Future<int> createExpense({
+    required String title,
+    required double amount,
+    required String category,
+    String? description,
+    DateTime? expenseDate,
+  }) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      final expenseDateStr = (expenseDate ?? DateTime.now()).toIso8601String();
+
+      final id = await _db.insert('expenses', {
+        'title': title,
+        'amount': amount,
+        'category': category,
+        'description': description,
+        'expense_date': expenseDateStr,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      return id;
+    } catch (e) {
+      throw Exception('خطأ في إضافة المصروف: $e');
+    }
+  }
+
+  /// تحديث مصروف موجود
+  Future<void> updateExpense({
+    required int id,
+    required String title,
+    required double amount,
+    required String category,
+    String? description,
+    DateTime? expenseDate,
+  }) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      final expenseDateStr = (expenseDate ?? DateTime.now()).toIso8601String();
+
+      await _db.update(
+        'expenses',
+        {
+          'title': title,
+          'amount': amount,
+          'category': category,
+          'description': description,
+          'expense_date': expenseDateStr,
+          'updated_at': now,
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      throw Exception('خطأ في تحديث المصروف: $e');
+    }
+  }
+
+  /// حذف مصروف
+  Future<void> deleteExpense(int id) async {
+    try {
+      await _db.delete(
+        'expenses',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      throw Exception('خطأ في حذف المصروف: $e');
+    }
+  }
+
+  /// الحصول على جميع المصروفات
+  Future<List<Map<String, dynamic>>> getExpenses({
+    DateTime? from,
+    DateTime? to,
+    String? category,
+  }) async {
+    try {
+      final where = <String>[];
+      final whereArgs = <Object?>[];
+
+      if (from != null) {
+        where.add('expense_date >= ?');
+        whereArgs.add(from.toIso8601String());
+      }
+
+      if (to != null) {
+        where.add('expense_date <= ?');
+        whereArgs.add(to.toIso8601String());
+      }
+
+      if (category != null && category.isNotEmpty) {
+        where.add('category = ?');
+        whereArgs.add(category);
+      }
+
+      final whereClause =
+          where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : '';
+
+      return await _db.rawQuery('''
+        SELECT * FROM expenses
+        $whereClause
+        ORDER BY expense_date DESC, created_at DESC
+      ''', whereArgs);
+    } catch (e) {
+      throw Exception('خطأ في جلب المصروفات: $e');
+    }
+  }
+
+  /// الحصول على مصروف واحد
+  Future<Map<String, dynamic>?> getExpense(int id) async {
+    try {
+      final result = await _db.query(
+        'expenses',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+
+      return result.isEmpty ? null : result.first;
+    } catch (e) {
+      throw Exception('خطأ في جلب المصروف: $e');
+    }
+  }
+
+  /// الحصول على إجمالي المصروفات
+  Future<double> getTotalExpenses({
+    DateTime? from,
+    DateTime? to,
+    String? category,
+  }) async {
+    try {
+      final where = <String>[];
+      final whereArgs = <Object?>[];
+
+      if (from != null) {
+        where.add('expense_date >= ?');
+        whereArgs.add(from.toIso8601String());
+      }
+
+      if (to != null) {
+        where.add('expense_date <= ?');
+        whereArgs.add(to.toIso8601String());
+      }
+
+      if (category != null && category.isNotEmpty) {
+        where.add('category = ?');
+        whereArgs.add(category);
+      }
+
+      final whereClause =
+          where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : '';
+
+      final result = await _db.rawQuery('''
+        SELECT COALESCE(SUM(amount), 0) as total FROM expenses
+        $whereClause
+      ''', whereArgs);
+
+      return (result.first['total'] as num?)?.toDouble() ?? 0.0;
+    } catch (e) {
+      throw Exception('خطأ في حساب إجمالي المصروفات: $e');
+    }
+  }
+
+  /// الحصول على قائمة أنواع المصروفات
+  Future<List<String>> getExpenseCategories() async {
+    try {
+      final result = await _db.rawQuery('''
+        SELECT DISTINCT category FROM expenses
+        WHERE category IS NOT NULL AND category != ''
+        ORDER BY category
+      ''');
+
+      return result.map((row) => row['category']?.toString() ?? '').toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// حذف نوع مصروف (تحديث جميع المصروفات التي تستخدمه إلى "عام")
+  Future<int> deleteExpenseCategory(String category) async {
+    try {
+      if (category == 'عام') {
+        throw Exception('لا يمكن حذف النوع الافتراضي "عام"');
+      }
+
+      // التحقق من وجود مصروفات تستخدم هذا النوع
+      final countResult = await _db.rawQuery('''
+        SELECT COUNT(*) as count FROM expenses
+        WHERE category = ?
+      ''', [category]);
+
+      final count = (countResult.first['count'] as num?)?.toInt() ?? 0;
+
+      if (count > 0) {
+        // تحديث جميع المصروفات التي تستخدم هذا النوع إلى "عام"
+        final updated = await _db.update(
+          'expenses',
+          {
+            'category': 'عام',
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          where: 'category = ?',
+          whereArgs: [category],
+        );
+        return updated;
+      }
+
+      return 0;
+    } catch (e) {
+      throw Exception('خطأ في حذف نوع المصروف: $e');
+    }
+  }
+
+  /// الحصول على عدد المصروفات لنوع معين
+  Future<int> getExpenseCountByCategory(String category) async {
+    try {
+      final result = await _db.rawQuery('''
+        SELECT COUNT(*) as count FROM expenses
+        WHERE category = ?
+      ''', [category]);
+
+      return (result.first['count'] as num?)?.toInt() ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// الحصول على إحصائيات المصروفات حسب النوع
+  Future<Map<String, double>> getExpensesByCategory({
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    try {
+      final where = <String>[];
+      final whereArgs = <Object?>[];
+
+      if (from != null) {
+        where.add('expense_date >= ?');
+        whereArgs.add(from.toIso8601String());
+      }
+
+      if (to != null) {
+        where.add('expense_date <= ?');
+        whereArgs.add(to.toIso8601String());
+      }
+
+      final whereClause =
+          where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : '';
+
+      final result = await _db.rawQuery('''
+        SELECT category, SUM(amount) as total
+        FROM expenses
+        $whereClause
+        GROUP BY category
+        ORDER BY total DESC
+      ''', whereArgs);
+
+      final map = <String, double>{};
+      for (final row in result) {
+        final category = row['category']?.toString() ?? 'عام';
+        final total = (row['total'] as num?)?.toDouble() ?? 0.0;
+        map[category] = total;
+      }
+
+      return map;
+    } catch (e) {
+      throw Exception('خطأ في جلب إحصائيات المصروفات: $e');
     }
   }
 
