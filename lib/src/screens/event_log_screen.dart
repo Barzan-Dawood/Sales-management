@@ -282,7 +282,7 @@ class _EventLogScreenState extends State<EventLogScreen> {
         children: [
           // Summary Cards
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: scheme.surfaceContainerHighest.withOpacity(0.3),
               border: Border(
@@ -302,7 +302,7 @@ class _EventLogScreenState extends State<EventLogScreen> {
                     Colors.blue,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildSummaryCard(
                     'اليوم',
@@ -319,7 +319,7 @@ class _EventLogScreenState extends State<EventLogScreen> {
                     Colors.green,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildSummaryCard(
                     'هذا الأسبوع',
@@ -352,7 +352,7 @@ class _EventLogScreenState extends State<EventLogScreen> {
                     onRefresh: () => _loadEvents(reset: true),
                     child: ListView.builder(
                       controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(10),
                       itemCount: _events.length + (_hasMore ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index >= _events.length) {
@@ -379,10 +379,10 @@ class _EventLogScreenState extends State<EventLogScreen> {
       String label, String value, IconData icon, Color color) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: DarkModeUtils.getBorderColor(context),
           width: 1,
@@ -390,8 +390,8 @@ class _EventLogScreenState extends State<EventLogScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -401,22 +401,22 @@ class _EventLogScreenState extends State<EventLogScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, color: color, size: 20),
+              Icon(icon, color: color, size: 16),
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
@@ -467,44 +467,44 @@ class _EventLogScreenState extends State<EventLogScreen> {
     final color = _eventTypeColors[eventType] ?? scheme.primary;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: color.withOpacity(0.3),
-          width: 1.5,
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           onTap: details != null
               ? () =>
                   _showEventDetails(event, description, details, date, userName)
               : null,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: Icon(icon, color: color, size: 18),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,22 +515,22 @@ class _EventLogScreenState extends State<EventLogScreen> {
                             child: Text(
                               description,
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                                horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
                               color: color.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(5),
                             ),
                             child: Text(
                               _getEventTypeLabel(eventType),
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 9,
                                 fontWeight: FontWeight.w600,
                                 color: color,
                               ),
@@ -538,47 +538,47 @@ class _EventLogScreenState extends State<EventLogScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
                           Icon(Icons.person,
-                              size: 14,
+                              size: 12,
                               color: scheme.onSurface.withOpacity(0.6)),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
                           Text(
                             userName,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 11,
                               color: scheme.onSurface.withOpacity(0.7),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 10),
                           Icon(Icons.category,
-                              size: 14,
+                              size: 12,
                               color: scheme.onSurface.withOpacity(0.6)),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
                           Text(
                             _getEntityTypeLabel(entityType),
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 11,
                               color: scheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Row(
                         children: [
                           Icon(Icons.access_time,
-                              size: 14,
+                              size: 12,
                               color: scheme.onSurface.withOpacity(0.6)),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
                           Text(
                             date != null
                                 ? DateFormat('yyyy/MM/dd HH:mm').format(date)
                                 : createdAt,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 10,
                               color: scheme.onSurface.withOpacity(0.6),
                             ),
                           ),
@@ -590,13 +590,16 @@ class _EventLogScreenState extends State<EventLogScreen> {
                 if (details != null)
                   Icon(
                     Icons.chevron_left,
+                    size: 18,
                     color: scheme.onSurface.withOpacity(0.4),
                   ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20),
+                  icon: const Icon(Icons.delete_outline, size: 16),
                   color: Colors.red.withOpacity(0.7),
                   tooltip: 'حذف الحدث',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                   onPressed: () => _showDeleteEventDialog(event['id'] as int),
                 ),
               ],
@@ -647,8 +650,8 @@ class _EventLogScreenState extends State<EventLogScreen> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Container(
-            padding: const EdgeInsets.all(24),
-            width: 500,
+            padding: const EdgeInsets.all(20),
+            width: 450,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,7 +662,7 @@ class _EventLogScreenState extends State<EventLogScreen> {
                     const Text(
                       'تفاصيل الحدث',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -669,7 +672,7 @@ class _EventLogScreenState extends State<EventLogScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 _buildDetailRow('الوصف', description),
                 _buildDetailRow('المستخدم', userName),
                 if (date != null)
@@ -681,17 +684,17 @@ class _EventLogScreenState extends State<EventLogScreen> {
                     _getEntityTypeLabel(event['entity_type'] as String? ?? '')),
                 if (event['entity_id'] != null)
                   _buildDetailRow('معرف الكيان', '${event['entity_id']}'),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 const Text(
                   'التفاصيل الإضافية:',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: Theme.of(context)
                         .colorScheme
@@ -701,10 +704,10 @@ class _EventLogScreenState extends State<EventLogScreen> {
                   ),
                   child: Text(
                     details,
-                    style: const TextStyle(fontSize: 13),
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton(
@@ -722,16 +725,17 @@ class _EventLogScreenState extends State<EventLogScreen> {
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 100,
             child: Text(
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
+                fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
@@ -739,7 +743,7 @@ class _EventLogScreenState extends State<EventLogScreen> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 12),
             ),
           ),
         ],

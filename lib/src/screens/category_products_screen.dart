@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:barcode_widget/barcode_widget.dart';
-
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
 
