@@ -270,7 +270,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ),
               children: [
                 _buildHeaderCell(
-                    'المعرف', context, isSmallScreen, isVerySmallScreen),
+                    'التسلسل', context, isSmallScreen, isVerySmallScreen),
                 _buildHeaderCell(
                     'الاسم', context, isSmallScreen, isVerySmallScreen),
                 _buildHeaderCell(
@@ -294,8 +294,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget _buildHeaderCell(String title, BuildContext context,
       bool isSmallScreen, bool isVerySmallScreen) {
     return Container(
-      height: isVerySmallScreen ? 50 : 60,
-      padding: EdgeInsets.all(isVerySmallScreen ? 8 : 16),
+      height: isVerySmallScreen ? 50 : 65,
+      padding: EdgeInsets.symmetric(
+        horizontal: isVerySmallScreen ? 8 : 12,
+        vertical: isVerySmallScreen ? 8 : 16,
+      ),
       child: Center(
         child: Text(
           title,
@@ -303,12 +306,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
             color: Theme.of(context).colorScheme.onPrimary,
             fontWeight: FontWeight.w700,
             fontSize: isVerySmallScreen
-                ? 12
+                ? 11
                 : isSmallScreen
-                    ? 14
-                    : 16,
+                    ? 13
+                    : 15,
           ),
           textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.visible,
         ),
       ),
     );
@@ -488,8 +493,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
       bool isVerySmallScreen,
       {int maxLines = 1, Color? textColor}) {
     return Container(
-      height: isVerySmallScreen ? 60 : 80,
-      padding: EdgeInsets.all(isVerySmallScreen ? 8 : 16),
+      height: isVerySmallScreen ? 60 : 85,
+      padding: EdgeInsets.symmetric(
+        horizontal: isVerySmallScreen ? 8 : 12,
+        vertical: isVerySmallScreen ? 8 : 16,
+      ),
       child: Center(
         child: Text(
           text,

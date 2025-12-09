@@ -120,13 +120,13 @@ class ResponsiveUtils {
     final screenWidth = MediaQuery.of(context).size.width;
 
     // Calculate minimum widths for better readability
-    const double minIdWidth = 60;
-    const double minNameWidth = 120;
-    const double minBarcodeWidth = 100;
-    const double minQuantityWidth = 80;
-    const double minCostWidth = 90;
-    const double minPriceWidth = 90;
-    const double minActionsWidth = 140;
+    const double minIdWidth = 100; // عمود التسلسل
+    const double minNameWidth = 180; // عمود المنتجات (الاسم)
+    const double minBarcodeWidth = 120;
+    const double minQuantityWidth = 100;
+    const double minCostWidth = 110;
+    const double minPriceWidth = 110;
+    const double minActionsWidth = 160;
 
     switch (screenSize) {
       case ScreenSize.small:
@@ -144,13 +144,13 @@ class ResponsiveUtils {
         // For medium screens, balance between minimum and proportional widths
         final double availableWidth = screenWidth - 200; // Account for padding
         final double nameWidth =
-            (availableWidth * 0.25).clamp(minNameWidth, 180.0);
+            (availableWidth * 0.28).clamp(minNameWidth, 240.0);
         final double barcodeWidth =
-            (availableWidth * 0.20).clamp(minBarcodeWidth, 150.0);
+            (availableWidth * 0.20).clamp(minBarcodeWidth, 170.0);
         final double costPriceWidth =
-            (availableWidth * 0.15).clamp(minCostWidth, 120.0);
+            (availableWidth * 0.15).clamp(minCostWidth, 130.0);
         final double actionsWidth =
-            (availableWidth * 0.20).clamp(minActionsWidth, 160.0);
+            (availableWidth * 0.20).clamp(minActionsWidth, 180.0);
 
         return {
           0: FixedColumnWidth(minIdWidth), // المعرف
@@ -165,13 +165,13 @@ class ResponsiveUtils {
         // For large screens, use proportional widths with better distribution
         final double availableWidth = screenWidth - 300; // Account for padding
         final double nameWidth =
-            (availableWidth * 0.22).clamp(minNameWidth, 200.0);
+            (availableWidth * 0.25).clamp(minNameWidth, 260.0);
         final double barcodeWidth =
-            (availableWidth * 0.18).clamp(minBarcodeWidth, 180.0);
+            (availableWidth * 0.18).clamp(minBarcodeWidth, 200.0);
         final double costPriceWidth =
-            (availableWidth * 0.16).clamp(minCostWidth, 140.0);
+            (availableWidth * 0.16).clamp(minCostWidth, 150.0);
         final double actionsWidth =
-            (availableWidth * 0.16).clamp(minActionsWidth, 180.0);
+            (availableWidth * 0.16).clamp(minActionsWidth, 200.0);
 
         return {
           0: FixedColumnWidth(minIdWidth), // المعرف
@@ -186,13 +186,13 @@ class ResponsiveUtils {
         // For extra large screens, use optimal proportional widths
         final double availableWidth = screenWidth - 400; // Account for padding
         final double nameWidth =
-            (availableWidth * 0.20).clamp(minNameWidth, 250.0);
+            (availableWidth * 0.22).clamp(minNameWidth, 320.0);
         final double barcodeWidth =
-            (availableWidth * 0.18).clamp(minBarcodeWidth, 200.0);
+            (availableWidth * 0.18).clamp(minBarcodeWidth, 220.0);
         final double costPriceWidth =
-            (availableWidth * 0.14).clamp(minCostWidth, 160.0);
+            (availableWidth * 0.14).clamp(minCostWidth, 170.0);
         final double actionsWidth =
-            (availableWidth * 0.16).clamp(minActionsWidth, 200.0);
+            (availableWidth * 0.16).clamp(minActionsWidth, 220.0);
 
         return {
           0: FixedColumnWidth(minIdWidth), // المعرف
