@@ -9,6 +9,7 @@ import '../services/auth/auth_provider.dart';
 import '../models/user_model.dart';
 import '../utils/format.dart';
 import '../utils/dark_mode_utils.dart';
+import '../utils/export.dart';
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
@@ -22,6 +23,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   String? _selectedCategory;
   DateTime? _fromDate;
   DateTime? _toDate;
+  String? _selectedPeriodName;
   List<String> _categories = [
     'إيجار',
     'رواتب',
@@ -165,28 +167,81 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         icon: const Icon(Icons.category),
                         label: const Text('إدارة الأنواع'),
                       ),
-                      const SizedBox(width: 8),
+                      const Spacer(),
                       OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _fromDate = null;
+                            _toDate = null;
+                            _selectedPeriodName = null;
+                          });
+                        },
+                        icon: const Icon(Icons.all_inclusive),
+                        label: const Text('عرض الكل'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
                         onPressed: () => _showDateRangePicker(),
                         icon: const Icon(Icons.date_range),
                         label: Text(_getDateRangeLabel()),
                       ),
                       const SizedBox(width: 8),
-                      if (_fromDate != null || _toDate != null)
-                        IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _fromDate = null;
-                              _toDate = null;
-                            });
-                          },
-                          icon: const Icon(Icons.clear),
-                          tooltip: 'مسح الفلترة',
-                        ),
+                      IconButton(
+                        onPressed: () async {
+                          await _exportFinancialSummary(context);
+                        },
+                        tooltip: 'تصدير ملخص التحليل المالي PDF',
+                        icon: const Icon(Icons.picture_as_pdf),
+                      ),
                     ],
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 12),
+            // بطاقات التحليل المالي
+            FutureBuilder<Map<String, double>>(
+              future: context.read<DatabaseService>().profitAndLoss(
+                    from: _fromDate,
+                    to: _toDate,
+                  ),
+              builder: (context, snap) {
+                final data = snap.data ??
+                    {'sales': 0, 'profit': 0, 'expenses': 0, 'net': 0};
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    _StatCard(
+                      title: 'المبيعات',
+                      value: Formatters.currencyIQD(data['sales'] ?? 0),
+                      color: Colors.blue,
+                      icon: Icons.shopping_cart_rounded,
+                    ),
+                    _StatCard(
+                      title: 'الربح الإجمالي',
+                      value: Formatters.currencyIQD(data['profit'] ?? 0),
+                      color: Colors.green,
+                      icon: Icons.trending_up_rounded,
+                    ),
+                    _StatCard(
+                      title: 'المصاريف',
+                      value: Formatters.currencyIQD(data['expenses'] ?? 0),
+                      color: Colors.orange,
+                      icon: Icons.receipt_long_rounded,
+                    ),
+                    _StatCard(
+                      title: 'الربح الصافي',
+                      value: Formatters.currencyIQD(data['net'] ?? 0),
+                      color: (data['net'] ?? 0) >= 0 ? Colors.teal : Colors.red,
+                      icon: (data['net'] ?? 0) >= 0
+                          ? Icons.account_balance_wallet_rounded
+                          : Icons.warning_rounded,
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 12),
             // قائمة المصروفات
@@ -266,9 +321,24 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'إجمالي المصروفات:',
-                              style: Theme.of(context).textTheme.titleMedium,
+                            Row(
+                              children: [
+                                Text(
+                                  'إجمالي المصروفات:',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: () async {
+                                    await _exportExpensesList(
+                                        context, filteredExpenses);
+                                  },
+                                  tooltip: 'تصدير قائمة المصروفات PDF',
+                                  icon: const Icon(Icons.picture_as_pdf),
+                                  iconSize: 20,
+                                ),
+                              ],
                             ),
                             Text(
                               Formatters.currencyIQD(total),
@@ -314,8 +384,17 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   }
 
   String _getDateRangeLabel() {
+    if (_fromDate == null && _toDate == null) {
+      return 'الفترة: آخر 30 يوم';
+    }
+
     if (_fromDate != null && _toDate != null) {
-      return '${DateFormat('yyyy-MM-dd').format(_fromDate!)} - ${DateFormat('yyyy-MM-dd').format(_toDate!)}';
+      final dateRange =
+          '${DateFormat('yyyy-MM-dd').format(_fromDate!)} - ${DateFormat('yyyy-MM-dd').format(_toDate!)}';
+      if (_selectedPeriodName != null) {
+        return 'الفترة: $dateRange ($_selectedPeriodName)';
+      }
+      return 'الفترة: $dateRange';
     } else if (_fromDate != null) {
       return 'من ${DateFormat('yyyy-MM-dd').format(_fromDate!)}';
     } else if (_toDate != null) {
@@ -324,10 +403,62 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     return 'اختر الفترة';
   }
 
+  String? _determinePeriodName(DateTime start, DateTime end) {
+    final now = DateTime.now();
+
+    // التحقق من اليوم
+    final todayStart = DateTime(now.year, now.month, now.day);
+    if (_isSameDay(start, todayStart) && _isSameDay(end, todayStart)) {
+      return 'اليوم';
+    }
+
+    // التحقق من الأسبوع (من 7 أيام مضت إلى اليوم)
+    final weekStart = now.subtract(const Duration(days: 7));
+    if (_isSameDay(start, weekStart) && _isSameDay(end, now)) {
+      return 'أسبوع';
+    }
+
+    // التحقق من الشهر (من 30 يوم مضى إلى اليوم)
+    final monthStart = now.subtract(const Duration(days: 30));
+    if (_isSameDay(start, monthStart) && _isSameDay(end, now)) {
+      return 'شهر';
+    }
+
+    // التحقق من 3 أشهر (من 90 يوم مضى إلى اليوم)
+    final threeMonthsStart = now.subtract(const Duration(days: 90));
+    if (_isSameDay(start, threeMonthsStart) && _isSameDay(end, now)) {
+      return '3 أشهر';
+    }
+
+    // التحقق من 6 أشهر (من 180 يوم مضى إلى اليوم)
+    final sixMonthsStart = now.subtract(const Duration(days: 180));
+    if (_isSameDay(start, sixMonthsStart) && _isSameDay(end, now)) {
+      return '6 أشهر';
+    }
+
+    // التحقق من السنة (من 365 يوم مضى إلى اليوم)
+    final yearStart = now.subtract(const Duration(days: 365));
+    if (_isSameDay(start, yearStart) && _isSameDay(end, now)) {
+      return 'سنة';
+    }
+
+    return null; // فترة مخصصة
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
   Future<void> _showDateRangePicker() async {
     final now = DateTime.now();
-    DateTime? startDate = _fromDate;
-    DateTime? endDate = _toDate;
+    final initialStart = _fromDate ?? now.subtract(const Duration(days: 30));
+    final initialEnd = _toDate ?? now;
+
+    DateTime? startDate = initialStart;
+    DateTime? endDate = initialEnd;
+    String? selectedQuickButton = _selectedPeriodName;
 
     final result = await showDialog<DateTimeRange?>(
       context: context,
@@ -335,225 +466,252 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         builder: (context, setDialogState) => Directionality(
           textDirection: ui.TextDirection.rtl,
           child: AlertDialog(
-            title: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.filter_alt, color: Colors.orange, size: 20),
-                const SizedBox(width: 8),
-                const Text('فلترة المصروفات', style: TextStyle(fontSize: 18)),
-              ],
+            title: const Text(
+              'اختيار الفترة',
+              textAlign: TextAlign.right,
             ),
             content: SizedBox(
-              width: 350,
+              width: 400,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  // Start Date
+                  ListTile(
+                    leading:
+                        Icon(Icons.calendar_today, color: Colors.blue.shade600),
+                    title: const Text('تاريخ البداية'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          startDate.toString().substring(0, 10),
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        if (selectedQuickButton != null) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .primaryColor
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .primaryColor
+                                    .withOpacity(0.3),
+                              ),
+                            ),
+                            child: Text(
+                              'فترة: $selectedQuickButton',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: startDate,
+                        firstDate: DateTime(now.year - 5),
+                        lastDate: endDate ?? DateTime(now.year + 1),
+                        builder: (context, child) {
+                          return Directionality(
+                            textDirection: ui.TextDirection.rtl,
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          startDate = picked;
+                          selectedQuickButton =
+                              null; // إلغاء الاختيار السريع عند التعديل اليدوي
+                        });
+                      }
+                    },
+                  ),
+                  const Divider(),
+                  // End Date
+                  ListTile(
+                    leading: Icon(Icons.calendar_today,
+                        color: Colors.green.shade600),
+                    title: const Text('تاريخ النهاية'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          endDate.toString().substring(0, 10),
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        if (selectedQuickButton != null) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .primaryColor
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .primaryColor
+                                    .withOpacity(0.3),
+                              ),
+                            ),
+                            child: Text(
+                              'فترة: $selectedQuickButton',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: endDate,
+                        firstDate: startDate ?? DateTime(now.year - 5),
+                        lastDate: DateTime(now.year + 1),
+                        builder: (context, child) {
+                          return Directionality(
+                            textDirection: ui.TextDirection.rtl,
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          endDate = picked;
+                          selectedQuickButton =
+                              null; // إلغاء الاختيار السريع عند التعديل اليدوي
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   // Quick selection buttons
                   Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       _QuickDateButton(
                         label: 'اليوم',
+                        isSelected: selectedQuickButton == 'اليوم',
                         onTap: () {
                           setDialogState(() {
-                            startDate = DateTime(now.year, now.month, now.day);
-                            endDate = DateTime(now.year, now.month, now.day);
+                            selectedQuickButton = 'اليوم';
                           });
                         },
                       ),
                       _QuickDateButton(
-                        label: 'هذا الأسبوع',
+                        label: 'أسبوع',
+                        isSelected: selectedQuickButton == 'أسبوع',
                         onTap: () {
-                          final weekStart =
-                              now.subtract(Duration(days: now.weekday - 1));
                           setDialogState(() {
-                            startDate = DateTime(
-                                weekStart.year, weekStart.month, weekStart.day);
-                            endDate = DateTime(now.year, now.month, now.day);
+                            selectedQuickButton = 'أسبوع';
                           });
                         },
                       ),
                       _QuickDateButton(
-                        label: 'هذا الشهر',
+                        label: 'شهر',
+                        isSelected: selectedQuickButton == 'شهر',
                         onTap: () {
                           setDialogState(() {
-                            startDate = DateTime(now.year, now.month, 1);
-                            endDate = DateTime(now.year, now.month + 1, 0);
+                            selectedQuickButton = 'شهر';
                           });
                         },
                       ),
                       _QuickDateButton(
-                        label: 'آخر 30 يوم',
+                        label: '3 أشهر',
+                        isSelected: selectedQuickButton == '3 أشهر',
                         onTap: () {
                           setDialogState(() {
-                            startDate = now.subtract(const Duration(days: 30));
-                            endDate = now;
+                            selectedQuickButton = '3 أشهر';
+                          });
+                        },
+                      ),
+                      _QuickDateButton(
+                        label: '6 أشهر',
+                        isSelected: selectedQuickButton == '6 أشهر',
+                        onTap: () {
+                          setDialogState(() {
+                            selectedQuickButton = '6 أشهر';
+                          });
+                        },
+                      ),
+                      _QuickDateButton(
+                        label: 'سنة',
+                        isSelected: selectedQuickButton == 'سنة',
+                        onTap: () {
+                          setDialogState(() {
+                            selectedQuickButton = 'سنة';
                           });
                         },
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  // Start Date
-                  InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: startDate ?? now,
-                        firstDate: DateTime(2020),
-                        lastDate: endDate ?? now,
-                        builder: (context, child) {
-                          return Directionality(
-                            textDirection: ui.TextDirection.rtl,
-                            child: child!,
-                          );
-                        },
-                      );
-                      if (picked != null) {
-                        setDialogState(() => startDate = picked);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border:
-                            Border.all(color: Colors.orange.withOpacity(0.3)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today,
-                              size: 18, color: Colors.orange),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'من تاريخ',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.color,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  startDate != null
-                                      ? DateFormat('yyyy-MM-dd')
-                                          .format(startDate!)
-                                      : 'اختر التاريخ',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // End Date
-                  InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: endDate ?? now,
-                        firstDate: startDate ?? DateTime(2020),
-                        lastDate: now,
-                        builder: (context, child) {
-                          return Directionality(
-                            textDirection: ui.TextDirection.rtl,
-                            child: child!,
-                          );
-                        },
-                      );
-                      if (picked != null) {
-                        setDialogState(() => endDate = picked);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border:
-                            Border.all(color: Colors.orange.withOpacity(0.3)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today,
-                              size: 18, color: Colors.orange),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'إلى تاريخ',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.color,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  endDate != null
-                                      ? DateFormat('yyyy-MM-dd')
-                                          .format(endDate!)
-                                      : 'اختر التاريخ',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
             actions: [
-              TextButton(
+              FilledButton(
                 onPressed: () {
-                  setDialogState(() {
-                    startDate = null;
-                    endDate = null;
-                  });
+                  DateTime finalStart = startDate!;
+                  DateTime finalEnd = endDate!;
+
+                  // تطبيق الفترة السريعة المختارة
+                  if (selectedQuickButton != null) {
+                    final now = DateTime.now();
+                    switch (selectedQuickButton) {
+                      case 'اليوم':
+                        finalStart = DateTime(now.year, now.month, now.day);
+                        finalEnd =
+                            DateTime(now.year, now.month, now.day, 23, 59, 59);
+                        break;
+                      case 'أسبوع':
+                        finalStart = now.subtract(const Duration(days: 7));
+                        finalEnd = now;
+                        break;
+                      case 'شهر':
+                        finalStart = now.subtract(const Duration(days: 30));
+                        finalEnd = now;
+                        break;
+                      case '3 أشهر':
+                        finalStart = now.subtract(const Duration(days: 90));
+                        finalEnd = now;
+                        break;
+                      case '6 أشهر':
+                        finalStart = now.subtract(const Duration(days: 180));
+                        finalEnd = now;
+                        break;
+                      case 'سنة':
+                        finalStart = now.subtract(const Duration(days: 365));
+                        finalEnd = now;
+                        break;
+                    }
+                  }
+
+                  Navigator.pop(
+                      context, DateTimeRange(start: finalStart, end: finalEnd));
                 },
-                child: const Text('مسح'),
+                child: const Text('تطبيق'),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('إلغاء'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  Navigator.pop(
-                    context,
-                    startDate != null && endDate != null
-                        ? DateTimeRange(start: startDate!, end: endDate!)
-                        : null,
-                  );
-                },
-                style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-                child: const Text('تطبيق'),
               ),
             ],
           ),
@@ -565,6 +723,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       setState(() {
         _fromDate = result.start;
         _toDate = result.end;
+        // تحديد اسم الفترة بناءً على النطاق المحدد
+        _selectedPeriodName = _determinePeriodName(result.start, result.end);
       });
     }
   }
@@ -619,6 +779,85 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           );
         }
       }
+    }
+  }
+
+  Future<void> _exportFinancialSummary(BuildContext context) async {
+    try {
+      final db = context.read<DatabaseService>();
+      final data = await db.profitAndLoss(from: _fromDate, to: _toDate);
+      final periodLabel = _getDateRangeLabel();
+      final rows = <List<String>>[
+        ['البند', 'القيمة'],
+        ['المبيعات', Formatters.currencyIQD(data['sales'] ?? 0)],
+        ['الربح الإجمالي', Formatters.currencyIQD(data['profit'] ?? 0)],
+        ['المصاريف', Formatters.currencyIQD(data['expenses'] ?? 0)],
+        ['الربح الصافي', Formatters.currencyIQD(data['net'] ?? 0)],
+      ];
+      final saved = await PdfExporter.exportSimpleTable(
+        filename: 'expenses_financial_summary.pdf',
+        title:
+            'ملخص التحليل المالي - المصروفات${periodLabel != 'اختر الفترة' ? ' ($periodLabel)' : ''}',
+        rows: rows,
+      );
+      if (!mounted) return;
+      if (saved != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم حفظ التقرير في: $saved')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل تصدير ملخص التحليل المالي: $e')),
+      );
+    }
+  }
+
+  Future<void> _exportExpensesList(
+      BuildContext context, List<Map<String, dynamic>> items) async {
+    try {
+      final periodLabel = _getDateRangeLabel();
+      final headers = ['العنوان', 'النوع', 'المبلغ', 'التاريخ', 'الوصف'];
+      final rows = items.map((e) {
+        final expenseDate = e['expense_date']?.toString() ?? '';
+        String dateStr = '';
+        if (expenseDate.isNotEmpty) {
+          try {
+            final date = DateTime.parse(expenseDate);
+            dateStr = DateFormat('yyyy-MM-dd').format(date);
+          } catch (_) {
+            dateStr = expenseDate.length >= 10
+                ? expenseDate.substring(0, 10)
+                : expenseDate;
+          }
+        }
+        return [
+          (e['title'] ?? '').toString(),
+          (e['category'] ?? 'عام').toString(),
+          Formatters.currencyIQD((e['amount'] as num?)?.toDouble() ?? 0),
+          dateStr,
+          (e['description'] ?? '').toString(),
+        ];
+      }).toList();
+      final saved = await PdfExporter.exportDataTable(
+        filename: 'expenses_list.pdf',
+        title:
+            'قائمة المصروفات${periodLabel != 'اختر الفترة' ? ' ($periodLabel)' : ''}',
+        headers: headers,
+        rows: rows,
+      );
+      if (!mounted) return;
+      if (saved != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم حفظ التقرير في: $saved')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل تصدير قائمة المصروفات: $e')),
+      );
     }
   }
 
@@ -1958,33 +2197,141 @@ class _ExpenseEditorDialogState extends State<_ExpenseEditorDialog> {
 }
 
 class _QuickDateButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
   const _QuickDateButton({
     required this.label,
     required this.onTap,
+    this.isSelected = false,
   });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+    return FilledButton(
+      onPressed: onTap,
+      style: FilledButton.styleFrom(
+        backgroundColor: isSelected
+            ? Theme.of(context).primaryColor
+            : Theme.of(context).colorScheme.surface,
+        foregroundColor: isSelected
+            ? Theme.of(context).colorScheme.onPrimary
+            : Theme.of(context).colorScheme.onSurface,
+        side: BorderSide(
+          color: isSelected
+              ? Theme.of(context).primaryColor
+              : Theme.of(context).colorScheme.outline,
+          width: 1,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.orange.shade700,
-            fontWeight: FontWeight.w600,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.color,
+    required this.icon,
+  });
+
+  final String title;
+  final String value;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 200,
+      height: 130,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.1),
+            color.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  color: color,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: color.withOpacity(0.8),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.right,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

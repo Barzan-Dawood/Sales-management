@@ -1149,6 +1149,16 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   }
 
   Future<void> _showBarcode(String code) async {
+    // Sanitize barcode to only include ASCII characters for CODE 128
+    // CODE 128 only supports ASCII characters (0-127)
+    String sanitizedCode = code.replaceAll(RegExp(r'[^\x00-\x7F]'), '');
+    bool hasNonAscii = sanitizedCode.length != code.length;
+
+    // If barcode is empty after sanitization, use a placeholder
+    if (sanitizedCode.isEmpty && code.isNotEmpty) {
+      sanitizedCode = 'INVALID';
+    }
+
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1176,6 +1186,32 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (code.isNotEmpty) ...[
+                if (hasNonAscii)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.orange.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.orange.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'الباركود يحتوي على أحرف غير مدعومة. تم إزالتها للعرض.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.orange.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -1203,13 +1239,41 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                     children: [
                       BarcodeWidget(
                         barcode: Barcode.code128(),
-                        data: code,
+                        data: sanitizedCode.isNotEmpty
+                            ? sanitizedCode
+                            : 'INVALID',
                         width: 300,
                         height: 120,
                         color: Colors.black,
                         backgroundColor:
                             Color(0xFFFFFFFF), // Professional White
                         drawText: false,
+                        errorBuilder: (context, error) => Container(
+                          width: 300,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade300),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline,
+                                    color: Colors.red.shade700, size: 32),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'خطأ في الترميز',
+                                  style: TextStyle(
+                                    color: Colors.red.shade700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Container(
@@ -1246,6 +1310,18 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                           textAlign: TextAlign.center,
                         ),
                       ),
+                      if (hasNonAscii && sanitizedCode != 'INVALID')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'الباركود المرمّز: $sanitizedCode',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

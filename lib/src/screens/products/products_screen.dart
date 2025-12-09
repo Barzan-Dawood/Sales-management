@@ -1285,6 +1285,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   Future<void> _showBarcode(BuildContext context, String barcode) async {
+    // Sanitize barcode to only include ASCII characters for CODE 128
+    // CODE 128 only supports ASCII characters (0-127)
+    String sanitizedBarcode = barcode.replaceAll(RegExp(r'[^\x00-\x7F]'), '');
+    bool hasNonAscii = sanitizedBarcode.length != barcode.length;
+
+    // If barcode is empty after sanitization, use a placeholder
+    if (sanitizedBarcode.isEmpty) {
+      sanitizedBarcode = 'INVALID';
+    }
+
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -1298,6 +1308,32 @@ class _ProductsScreenState extends State<ProductsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (hasNonAscii)
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'الباركود يحتوي على أحرف غير مدعومة. تم إزالتها للعرض.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -1307,9 +1343,35 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ),
               child: BarcodeWidget(
                 barcode: Barcode.code128(),
-                data: barcode,
+                data: sanitizedBarcode,
                 width: 200,
                 height: 100,
+                errorBuilder: (context, error) => Container(
+                  width: 200,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade300),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline,
+                            color: Colors.red.shade700, size: 32),
+                        const SizedBox(height: 8),
+                        Text(
+                          'خطأ في الترميز',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -1321,6 +1383,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            if (hasNonAscii && sanitizedBarcode != 'INVALID')
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'الباركود المرمّز: $sanitizedBarcode',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
           ],
         ),
         actions: [

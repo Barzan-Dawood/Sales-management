@@ -293,11 +293,11 @@ class _EventLogScreenState extends State<EventLogScreen> {
               ),
             ),
             child: Row(
-              children: [
+              children: [  
                 Expanded(
                   child: _buildSummaryCard(
                     'إجمالي الأحداث',
-                    '${_events.length}',
+                    '${_events.length}',      
                     Icons.event_note,
                     Colors.blue,
                   ),
