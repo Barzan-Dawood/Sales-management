@@ -134,20 +134,42 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       final name = p['name']?.toString() ?? '';
                       final quantity = p['quantity']?.toString() ?? '0';
                       final minQuantity = p['min_quantity']?.toString() ?? '0';
+                      final productId = p['id'] as int?;
                       return ListTile(
                         leading: CircleAvatar(
-                          child: Text(
-                              name.isNotEmpty ? name.characters.first : '?'),
+                          child: Text(name.isNotEmpty ? name[0] : '?'),
                         ),
                         title: Text(name, textAlign: TextAlign.right),
                         subtitle: Text(
                             'الكمية: $quantity | الحد الأدنى: $minQuantity',
                             textAlign: TextAlign.right),
-                        trailing: _StatusChip(
-                            label: 'منخفض',
-                            color: Theme.of(context).colorScheme.errorContainer,
-                            textColor:
-                                Theme.of(context).colorScheme.onErrorContainer),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _StatusChip(
+                                label: 'منخفض',
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .errorContainer,
+                                textColor: Theme.of(context)
+                                    .colorScheme
+                                    .onErrorContainer),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_outline),
+                              color: Theme.of(context).colorScheme.primary,
+                              tooltip: 'زيادة الكمية',
+                              onPressed: productId != null
+                                  ? () => _showAddQuantityDialog(
+                                      context,
+                                      db,
+                                      productId,
+                                      name,
+                                      int.tryParse(quantity) ?? 0)
+                                  : null,
+                            ),
+                          ],
+                        ),
                       );
                     },
                   );
@@ -226,19 +248,36 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     itemBuilder: (context, i) {
                       final p = items[i];
                       final name = p['name']?.toString() ?? '';
+                      final productId = p['id'] as int?;
                       return ListTile(
                         leading: const CircleAvatar(
                             child: Icon(Icons.report_gmailerrorred_outlined)),
                         title: Text(name, textAlign: TextAlign.right),
                         subtitle:
                             const Text('الكمية: 0', textAlign: TextAlign.right),
-                        trailing: _StatusChip(
-                            label: 'نفاد',
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
-                            textColor:
-                                Theme.of(context).colorScheme.onSurfaceVariant),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _StatusChip(
+                                label: 'نفاد',
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                                textColor: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_outline),
+                              color: Theme.of(context).colorScheme.primary,
+                              tooltip: 'زيادة الكمية',
+                              onPressed: productId != null
+                                  ? () => _showAddQuantityDialog(
+                                      context, db, productId, name, 0)
+                                  : null,
+                            ),
+                          ],
+                        ),
                       );
                     },
                   );
@@ -253,6 +292,98 @@ class _InventoryScreenState extends State<InventoryScreen> {
 }
 
 extension on _InventoryScreenState {
+  Future<void> _showAddQuantityDialog(BuildContext context, DatabaseService db,
+      int productId, String productName, int currentQuantity) async {
+    final quantityController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('زيادة الكمية'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('المنتج: $productName'),
+                const SizedBox(height: 8),
+                Text('الكمية الحالية: $currentQuantity'),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: quantityController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(signed: false),
+                  decoration: const InputDecoration(
+                    labelText: 'الكمية المضافة',
+                    hintText: 'أدخل الكمية المراد إضافتها',
+                    prefixIcon: Icon(Icons.add_shopping_cart),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'الكمية مطلوبة';
+                    }
+                    final qty = int.tryParse(value.trim());
+                    if (qty == null || qty <= 0) {
+                      return 'الكمية يجب أن تكون رقماً صحيحاً أكبر من صفر';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.of(context).pop(true);
+                }
+              },
+              child: const Text('إضافة'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true && quantityController.text.isNotEmpty) {
+      try {
+        final quantityToAdd = int.parse(quantityController.text.trim());
+        final newQuantity = currentQuantity + quantityToAdd;
+
+        await db.updateProduct(productId, {'quantity': newQuantity});
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'تم إضافة $quantityToAdd إلى الكمية. الكمية الجديدة: $newQuantity'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // تحديث القائمة
+        _refresh();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحديث الكمية: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _exportInventory(DatabaseService db) async {
     try {
       // اجلب كل القوائم مرة واحدة

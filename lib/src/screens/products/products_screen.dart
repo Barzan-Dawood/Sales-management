@@ -424,6 +424,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         isSmallScreen,
                         isVerySmallScreen,
                         maxLines: isVerySmallScreen ? 1 : 2,
+                        showTooltip: true,
                       ),
                       _buildBarcodeCell(
                         product['barcode']?.toString() ?? '',
@@ -491,7 +492,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Widget _buildDataCell(String text, BuildContext context, bool isSmallScreen,
       bool isVerySmallScreen,
-      {int maxLines = 1, Color? textColor}) {
+      {int maxLines = 1, Color? textColor, bool showTooltip = false}) {
+    final textWidget = Text(
+      text,
+      style: TextStyle(
+        fontWeight: FontWeight.w500,
+        fontSize: isVerySmallScreen
+            ? 10
+            : isSmallScreen
+                ? 12
+                : 14,
+        color: textColor ?? Theme.of(context).colorScheme.onSurface,
+      ),
+      textAlign: TextAlign.center,
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+    );
+
     return Container(
       height: isVerySmallScreen ? 60 : 85,
       padding: EdgeInsets.symmetric(
@@ -499,21 +516,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
         vertical: isVerySmallScreen ? 8 : 16,
       ),
       child: Center(
-        child: Text(
-          text,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: isVerySmallScreen
-                ? 10
-                : isSmallScreen
-                    ? 12
-                    : 14,
-            color: textColor ?? Theme.of(context).colorScheme.onSurface,
-          ),
-          textAlign: TextAlign.center,
-          maxLines: maxLines,
-          overflow: TextOverflow.ellipsis,
-        ),
+        child: showTooltip
+            ? Tooltip(
+                message: text,
+                child: textWidget,
+              )
+            : textWidget,
       ),
     );
   }
