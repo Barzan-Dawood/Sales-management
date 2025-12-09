@@ -12,6 +12,7 @@ import 'src/services/theme_provider.dart';
 import 'src/services/license/license_provider.dart';
 import 'src/services/dashboard_view_model.dart';
 import 'src/services/sales_history_view_model.dart';
+import 'src/services/auto_backup_service.dart';
 import 'src/utils/app_themes.dart';
 
 /// نقطة الدخول للتطبيق
@@ -77,6 +78,10 @@ Future<void> main() async {
 
   final storeConfig = StoreConfig();
   await storeConfig.initialize();
+
+  // تهيئة خدمة النسخ الاحتياطي التلقائي
+  final autoBackupService = AutoBackupService();
+  await autoBackupService.initialize(databaseService);
 
   // إعداد مزودي الحالة وتشغيل التطبيق
   runApp(MultiProvider(

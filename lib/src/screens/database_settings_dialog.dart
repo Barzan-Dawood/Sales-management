@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/db/database_service.dart';
+import '../services/auto_backup_service.dart';
 import '../utils/dark_mode_utils.dart';
 
 class DatabaseSettingsDialog extends StatefulWidget {
@@ -532,13 +533,14 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    initialValue: _autoBackupFrequency,
+                    value: _autoBackupFrequency,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       contentPadding:
                           EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     items: const [
+                      DropdownMenuItem(value: 'hourly', child: Text('كل ساعة')),
                       DropdownMenuItem(value: 'daily', child: Text('يومي')),
                       DropdownMenuItem(value: 'weekly', child: Text('أسبوعي')),
                       DropdownMenuItem(value: 'monthly', child: Text('شهري')),
@@ -548,6 +550,94 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                         _autoBackupFrequency = value!;
                       });
                       _saveSettings();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // معلومات آخر نسخة احتياطية
+                  FutureBuilder<Map<String, dynamic>>(
+                    future: AutoBackupService().getLastBackupInfo(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final info = snapshot.data!;
+                        final lastBackupDate =
+                            info['lastBackupDate'] as DateTime?;
+                        final status = info['status'] as String;
+                        final message = info['message'] as String;
+
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: status == 'success'
+                                ? Colors.green.withOpacity(0.1)
+                                : status == 'error'
+                                    ? Colors.red.withOpacity(0.1)
+                                    : Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: status == 'success'
+                                  ? Colors.green
+                                  : status == 'error'
+                                      ? Colors.red
+                                      : Colors.grey,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    status == 'success'
+                                        ? Icons.check_circle
+                                        : status == 'error'
+                                            ? Icons.error
+                                            : Icons.info,
+                                    size: 16,
+                                    color: status == 'success'
+                                        ? Colors.green
+                                        : status == 'error'
+                                            ? Colors.red
+                                            : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'آخر نسخة احتياطية:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              if (lastBackupDate != null)
+                                Text(
+                                  'التاريخ: ${lastBackupDate.toString().substring(0, 19)}',
+                                  style: TextStyle(fontSize: 11),
+                                )
+                              else
+                                Text(
+                                  'لم يتم إنشاء نسخة احتياطية بعد',
+                                  style: TextStyle(fontSize: 11),
+                                ),
+                              if (message.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  message,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: status == 'error'
+                                        ? Colors.red
+                                        : Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
                     },
                   ),
                 ],
@@ -1053,6 +1143,9 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('auto_backup_enabled', _autoBackupEnabled);
     await prefs.setString('auto_backup_frequency', _autoBackupFrequency);
+
+    // إعادة تشغيل خدمة النسخ التلقائي مع الإعدادات الجديدة
+    await AutoBackupService().restart();
   }
 
   void _showSnackBar(String message, Color color) {
