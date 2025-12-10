@@ -9,10 +9,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
+import '../../models/user_model.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
-  static const int _dbVersion = 10;
+  static const int _dbVersion = 12;
 
   late Database _db;
   late String _dbPath;
@@ -72,21 +73,33 @@ class DatabaseService {
         if (oldVersion < 10) {
           await _migrateToV10(db);
         }
+        if (oldVersion < 11) {
+          await _migrateToV11(db);
+        }
+        if (oldVersion < 12) {
+          await _migrateToV12(db);
+        }
         // Ensure no legacy triggers/views remain that reference old temp tables
         await _cleanupOrphanObjects(db);
         await _ensureCategorySchemaOn(db);
         await _createIndexes(db);
       },
       onOpen: (db) async {
-        // التحقق من وجود جدول event_log عند فتح قاعدة البيانات
+        // التحقق من وجود الجداول المهمة عند فتح قاعدة البيانات
         await _ensureEventLogTable(db);
+        await _ensureReturnsTable(db);
+        // التأكد من أن جدول returns يحتوي على جميع الأعمدة المطلوبة
+        await _ensureReturnsTableColumns(db);
       },
     );
     // إعدادات أساسية فقط
     await _db.execute('PRAGMA foreign_keys = ON');
 
-    // التحقق من وجود جدول event_log وإنشاؤه إذا لم يكن موجوداً
+    // التحقق من وجود الجداول المهمة وإنشائها إذا لم تكن موجودة
     await _ensureEventLogTable(_db);
+    await _ensureReturnsTable();
+    // التأكد من أن جدول returns يحتوي على جميع الأعمدة المطلوبة
+    await _ensureReturnsTableColumns(_db);
 
     await _createIndexes(_db);
 
@@ -101,6 +114,8 @@ class DatabaseService {
 
     // التحقق من وجود جدول event_log وإنشاؤه إذا لم يكن موجوداً
     await _ensureEventLogTable(_db);
+    await _ensureReturnsTable();
+    await _ensureReturnsTableColumns(_db);
 
     await _createIndexes(_db);
     await _cleanupOrphanObjects(_db);
@@ -854,12 +869,36 @@ class DatabaseService {
     ''');
 
     await db.execute('''
+      CREATE TABLE groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE group_permissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id INTEGER NOT NULL,
+        section TEXT NOT NULL,
+        permission TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE,
+        UNIQUE(group_id, section, permission)
+      );
+    ''');
+
+    await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        role TEXT NOT NULL CHECK(role IN ('manager','supervisor','employee')),
+        role TEXT CHECK(role IN ('manager','supervisor','employee')),
+        group_id INTEGER REFERENCES groups(id),
         employee_code TEXT UNIQUE NOT NULL,
         active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
@@ -1381,6 +1420,236 @@ class DatabaseService {
       debugPrint('انتهى Migration V10 بنجاح');
     } catch (e) {
       debugPrint('خطأ في Migration V10: $e');
+    }
+  }
+
+  Future<void> _migrateToV11(Database db) async {
+    // إضافة جدول returns للمرتجعات
+    try {
+      debugPrint('بدء Migration V11 - إضافة جدول returns...');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS returns (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sale_id INTEGER NOT NULL,
+          total_amount REAL NOT NULL,
+          return_date TEXT NOT NULL,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY(sale_id) REFERENCES sales(id)
+        );
+      ''');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_returns_sale_id ON returns(sale_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_returns_return_date ON returns(return_date)');
+      debugPrint('انتهى Migration V11 بنجاح');
+    } catch (e) {
+      debugPrint('خطأ في Migration V11: $e');
+    }
+  }
+
+  Future<void> _migrateToV12(Database db) async {
+    // إضافة نظام المجموعات والصلاحيات
+    try {
+      debugPrint('بدء Migration V12 - إضافة نظام المجموعات والصلاحيات...');
+
+      // 1. إنشاء جدول groups
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS groups (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          description TEXT,
+          active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      ''');
+
+      // 2. إنشاء جدول group_permissions
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS group_permissions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          group_id INTEGER NOT NULL,
+          section TEXT NOT NULL,
+          permission TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE,
+          UNIQUE(group_id, section, permission)
+        );
+      ''');
+
+      // 3. إضافة عمود group_id إلى جدول users
+      try {
+        await db.execute(
+            'ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id)');
+        debugPrint('تم إضافة عمود group_id إلى جدول users');
+      } catch (e) {
+        debugPrint('عمود group_id موجود بالفعل أو خطأ: $e');
+      }
+
+      // 4. إنشاء المجموعات الافتراضية
+      final now = DateTime.now().toIso8601String();
+
+      // مجموعة المدير (Admin)
+      final adminGroupId = await db.insert('groups', {
+        'name': 'Admin',
+        'description': 'مجموعة المديرين - جميع الصلاحيات',
+        'active': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      // مجموعة الموظفين (Employee)
+      final employeeGroupId = await db.insert('groups', {
+        'name': 'Employee',
+        'description': 'مجموعة الموظفين - صلاحيات محدودة',
+        'active': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      // مجموعة HR
+      final hrGroupId = await db.insert('groups', {
+        'name': 'HR',
+        'description': 'مجموعة الموارد البشرية',
+        'active': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      // 5. إضافة الصلاحيات للمجموعات
+      // صلاحيات مجموعة Admin (جميع الصلاحيات)
+      final allPermissions = [
+        'manageUsers',
+        'systemSettings',
+        'manageBackup',
+        'manageLicensing',
+        'manageSales',
+        'applyDiscount',
+        'overridePrice',
+        'refundSales',
+        'voidSale',
+        'deleteSaleItem',
+        'openCashDrawer',
+        'manageProducts',
+        'manageInventory',
+        'adjustStock',
+        'viewCostPrice',
+        'editCostPrice',
+        'receivePurchase',
+        'manageSuppliers',
+        'manageCategories',
+        'manageCustomers',
+        'viewReports',
+        'exportReports',
+        'viewProfitCosts',
+      ];
+
+      // تعيين الصلاحيات لمجموعة Admin
+      for (final perm in allPermissions) {
+        // تحديد القسم لكل صلاحية
+        String section = 'system';
+        if (perm.startsWith('manageUsers'))
+          section = 'hr';
+        else if (perm.contains('Sales') ||
+            perm.contains('Discount') ||
+            perm.contains('Price') ||
+            perm.contains('refund') ||
+            perm.contains('void') ||
+            perm.contains('CashDrawer') ||
+            perm.contains('Customers'))
+          section = 'sales';
+        else if (perm.contains('Product') ||
+            perm.contains('Inventory') ||
+            perm.contains('Stock') ||
+            perm.contains('Cost') ||
+            perm.contains('Purchase') ||
+            perm.contains('Supplier') ||
+            perm.contains('Categor'))
+          section = 'inventory';
+        else if (perm.contains('Report') || perm.contains('Profit'))
+          section = 'reports';
+        else if (perm.contains('Backup') ||
+            perm.contains('Licensing') ||
+            perm.contains('Settings'))
+          section = 'system';
+        else if (perm.contains('Profit')) section = 'finance';
+
+        await db.insert('group_permissions', {
+          'group_id': adminGroupId,
+          'section': section,
+          'permission': perm,
+          'created_at': now,
+        });
+      }
+
+      // صلاحيات مجموعة Employee (مبيعات وتقارير محدودة)
+      final employeePermissions = [
+        {'section': 'sales', 'permission': 'manageSales'},
+        {'section': 'reports', 'permission': 'viewReports'},
+      ];
+
+      for (final perm in employeePermissions) {
+        await db.insert('group_permissions', {
+          'group_id': employeeGroupId,
+          'section': perm['section'],
+          'permission': perm['permission'],
+          'created_at': now,
+        });
+      }
+
+      // صلاحيات مجموعة HR
+      final hrPermissions = [
+        {'section': 'hr', 'permission': 'manageUsers'},
+        {'section': 'reports', 'permission': 'viewReports'},
+      ];
+
+      for (final perm in hrPermissions) {
+        await db.insert('group_permissions', {
+          'group_id': hrGroupId,
+          'section': perm['section'],
+          'permission': perm['permission'],
+          'created_at': now,
+        });
+      }
+
+      // 6. تحديث المستخدمين الموجودين لربطهم بالمجموعات المناسبة
+      final users = await db.query('users');
+      for (final user in users) {
+        final role = user['role']?.toString() ?? 'employee';
+        int? groupId;
+
+        if (role == 'manager') {
+          groupId = adminGroupId;
+        } else if (role == 'employee') {
+          groupId = employeeGroupId;
+        } else if (role == 'supervisor') {
+          // المشرفون ينتقلون لمجموعة Admin (يمكن تغيير ذلك لاحقاً)
+          groupId = adminGroupId;
+        }
+
+        if (groupId != null) {
+          await db.update(
+            'users',
+            {'group_id': groupId},
+            where: 'id = ?',
+            whereArgs: [user['id']],
+          );
+        }
+      }
+
+      // 7. إنشاء الفهارس
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_users_group_id ON users(group_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_group_permissions_group_id ON group_permissions(group_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_group_permissions_section ON group_permissions(section)');
+
+      debugPrint('انتهى Migration V12 بنجاح');
+    } catch (e, stackTrace) {
+      debugPrint('خطأ في Migration V12: $e');
+      debugPrint('Stack trace: $stackTrace');
     }
   }
 
@@ -5284,6 +5553,301 @@ class DatabaseService {
     }
   }
 
+  // ========== دوال المرتجعات ==========
+
+  /// التأكد من وجود جميع الأعمدة المطلوبة في جدول returns
+  Future<void> _ensureReturnsTableColumns([Database? db]) async {
+    try {
+      final database = db ?? _db;
+      // التحقق من وجود الجدول أولاً
+      final tables = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='returns'");
+
+      if (tables.isNotEmpty) {
+        final columns = await database.rawQuery("PRAGMA table_info(returns)");
+        final columnNames =
+            columns.map((c) => c['name']?.toString().toLowerCase()).toSet();
+
+        // إضافة العمود return_date إذا لم يكن موجوداً
+        if (!columnNames.contains('return_date')) {
+          debugPrint('إضافة عمود return_date إلى جدول returns...');
+          try {
+            await database
+                .execute('ALTER TABLE returns ADD COLUMN return_date TEXT');
+            debugPrint('تم إضافة عمود return_date بنجاح');
+          } catch (e) {
+            debugPrint('خطأ في إضافة عمود return_date: $e');
+          }
+        }
+
+        // إضافة العمود notes إذا لم يكن موجوداً
+        if (!columnNames.contains('notes')) {
+          debugPrint('إضافة عمود notes إلى جدول returns...');
+          try {
+            await database.execute('ALTER TABLE returns ADD COLUMN notes TEXT');
+            debugPrint('تم إضافة عمود notes بنجاح');
+          } catch (e) {
+            debugPrint('خطأ في إضافة عمود notes: $e');
+          }
+        }
+
+        // إضافة العمود created_at إذا لم يكن موجوداً
+        if (!columnNames.contains('created_at')) {
+          debugPrint('إضافة عمود created_at إلى جدول returns...');
+          try {
+            await database
+                .execute('ALTER TABLE returns ADD COLUMN created_at TEXT');
+            // تحديث البيانات الموجودة
+            await database.execute(
+                'UPDATE returns SET created_at = datetime(\'now\') WHERE created_at IS NULL');
+            debugPrint('تم إضافة عمود created_at بنجاح');
+          } catch (e) {
+            debugPrint('خطأ في إضافة عمود created_at: $e');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('خطأ في التأكد من أعمدة جدول returns: $e');
+    }
+  }
+
+  /// إنشاء جدول المرتجعات إذا لم يكن موجوداً (للتوافق مع الإصدارات القديمة)
+  Future<void> _ensureReturnsTable([Database? db]) async {
+    try {
+      final database = db ?? _db;
+      // التحقق من وجود الجدول أولاً
+      final tables = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='returns'");
+      if (tables.isEmpty) {
+        debugPrint('إنشاء جدول returns...');
+        await database.execute('''
+          CREATE TABLE returns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sale_id INTEGER NOT NULL,
+            total_amount REAL NOT NULL,
+            return_date TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(sale_id) REFERENCES sales(id)
+          );
+        ''');
+        debugPrint('تم إنشاء جدول returns بنجاح');
+      } else {
+        debugPrint('جدول returns موجود بالفعل');
+        // التحقق من وجود الأعمدة المطلوبة
+        final columns = await database.rawQuery("PRAGMA table_info(returns)");
+        final columnNames =
+            columns.map((c) => c['name']?.toString().toLowerCase()).toSet();
+
+        // إضافة العمود return_date إذا لم يكن موجوداً
+        if (!columnNames.contains('return_date')) {
+          debugPrint('إضافة عمود return_date إلى جدول returns...');
+          try {
+            await database
+                .execute('ALTER TABLE returns ADD COLUMN return_date TEXT');
+            debugPrint('تم إضافة عمود return_date بنجاح');
+          } catch (e) {
+            debugPrint('خطأ في إضافة عمود return_date: $e');
+          }
+        }
+
+        // إضافة العمود notes إذا لم يكن موجوداً
+        if (!columnNames.contains('notes')) {
+          debugPrint('إضافة عمود notes إلى جدول returns...');
+          try {
+            await database.execute('ALTER TABLE returns ADD COLUMN notes TEXT');
+            debugPrint('تم إضافة عمود notes بنجاح');
+          } catch (e) {
+            debugPrint('خطأ في إضافة عمود notes: $e');
+          }
+        }
+
+        // إضافة العمود created_at إذا لم يكن موجوداً
+        if (!columnNames.contains('created_at')) {
+          debugPrint('إضافة عمود created_at إلى جدول returns...');
+          try {
+            await database.execute(
+                'ALTER TABLE returns ADD COLUMN created_at TEXT NOT NULL DEFAULT (datetime(\'now\'))');
+            debugPrint('تم إضافة عمود created_at بنجاح');
+          } catch (e) {
+            debugPrint('خطأ في إضافة عمود created_at: $e');
+          }
+        }
+      }
+    } catch (e, stackTrace) {
+      debugPrint('خطأ في إنشاء جدول المرتجعات: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // لا نرمي الخطأ هنا لأن الجدول قد يكون موجوداً بالفعل
+    }
+  }
+
+  /// الحصول على جميع المرتجعات
+  Future<List<Map<String, dynamic>>> getReturns({
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    try {
+      // التأكد من وجود الجدول
+      await _ensureReturnsTable();
+
+      // التحقق من وجود الجدول
+      final tables = await _db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='returns'");
+      if (tables.isEmpty) {
+        debugPrint('جدول returns غير موجود، محاولة إنشائه...');
+        await _ensureReturnsTable();
+      }
+
+      final where = <String>[];
+      final whereArgs = <Object?>[];
+
+      if (from != null && to != null) {
+        where.add('r.return_date BETWEEN ? AND ?');
+        whereArgs.addAll([from.toIso8601String(), to.toIso8601String()]);
+      }
+
+      final whereClause =
+          where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : '';
+
+      final returns = await _db.rawQuery('''
+        SELECT 
+          r.id,
+          r.sale_id,
+          r.total_amount,
+          r.return_date,
+          r.notes,
+          r.created_at,
+          c.name as customer_name
+        FROM returns r
+        LEFT JOIN sales s ON s.id = r.sale_id
+        LEFT JOIN customers c ON c.id = s.customer_id
+        $whereClause
+        ORDER BY r.return_date DESC, r.created_at DESC
+      ''', whereArgs);
+
+      return returns
+          .map((r) => {
+                ...r,
+                'total_amount': (r['total_amount'] as num?)?.toDouble() ?? 0.0,
+              })
+          .toList();
+    } catch (e, stackTrace) {
+      debugPrint('خطأ في getReturns: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // إرجاع قائمة فارغة بدلاً من رمي خطأ
+      return [];
+    }
+  }
+
+  /// إنشاء مرتجع جديد مع إرجاع المنتجات للمخزون وتحديث الديون
+  Future<int> createReturn({
+    required int saleId,
+    required double totalAmount,
+    required List<Map<String, dynamic>>
+        returnItems, // [{product_id, quantity, price}]
+    String? notes,
+    int? userId,
+    String? username,
+  }) async {
+    return await _db.transaction<int>((txn) async {
+      try {
+        // الحصول على تفاصيل البيع
+        final sale = await txn.query('sales',
+            where: 'id = ?', whereArgs: [saleId], limit: 1);
+        if (sale.isEmpty) {
+          throw Exception('الفاتورة غير موجودة');
+        }
+
+        final saleData = sale.first;
+        final saleType = saleData['type'] as String;
+        final customerId = saleData['customer_id'] as int?;
+
+        // إرجاع المنتجات للمخزون
+        for (final item in returnItems) {
+          final productId = item['product_id'] as int;
+          final quantity = item['quantity'] as int;
+          await txn.rawUpdate(
+            'UPDATE products SET quantity = quantity + ? WHERE id = ?',
+            [quantity, productId],
+          );
+        }
+
+        // تحديث إجمالي المبيعات (تقليل المبلغ من إجمالي الفاتورة)
+        final currentTotal = (saleData['total'] as num).toDouble();
+        final newTotal =
+            (currentTotal - totalAmount).clamp(0.0, double.infinity);
+        final currentProfit = (saleData['profit'] as num?)?.toDouble() ?? 0.0;
+
+        // حساب الربح المرتجع (نسبة من الربح الأصلي)
+        final profitRatio = currentTotal > 0 ? totalAmount / currentTotal : 0.0;
+        final returnedProfit = currentProfit * profitRatio;
+        final newProfit =
+            (currentProfit - returnedProfit).clamp(0.0, double.infinity);
+
+        await txn.rawUpdate(
+          'UPDATE sales SET total = ?, profit = ? WHERE id = ?',
+          [newTotal, newProfit, saleId],
+        );
+
+        // تحديث ديون العميل إذا كان البيع آجل أو أقساط
+        if (customerId != null &&
+            (saleType == 'credit' || saleType == 'installment')) {
+          await txn.rawUpdate(
+            'UPDATE customers SET total_debt = IFNULL(total_debt, 0) - ? WHERE id = ?',
+            [totalAmount, customerId],
+          );
+        }
+
+        // إنشاء سجل المرتجع
+        final now = DateTime.now();
+        final returnId = await txn.insert('returns', {
+          'sale_id': saleId,
+          'total_amount': totalAmount,
+          'return_date': now.toIso8601String(),
+          'notes': notes,
+          'created_at': now.toIso8601String(),
+        });
+
+        // تسجيل حدث المرتجع
+        try {
+          await logEvent(
+            eventType: 'return',
+            entityType: 'return',
+            entityId: returnId,
+            userId: userId,
+            username: username,
+            description:
+                'إنشاء مرتجع للفاتورة #$saleId - المبلغ: ${totalAmount.toStringAsFixed(2)}',
+            details: 'عدد المنتجات المرجعة: ${returnItems.length}',
+            transaction: txn,
+          );
+        } catch (e) {
+          debugPrint('خطأ في تسجيل حدث المرتجع: $e');
+        }
+
+        return returnId;
+      } catch (e) {
+        debugPrint('خطأ في إنشاء المرتجع: $e');
+        rethrow;
+      }
+    });
+  }
+
+  /// حذف مرتجع
+  Future<void> deleteReturn(int id) async {
+    try {
+      await _ensureReturnsTable();
+
+      await _db.delete(
+        'returns',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      throw Exception('خطأ في حذف المرتجع: $e');
+    }
+  }
+
   /// الحصول على إحصائيات المصروفات حسب النوع
   Future<Map<String, double>> getExpensesByCategory({
     DateTime? from,
@@ -6018,6 +6582,214 @@ class DatabaseService {
       ''', [startDate.toIso8601String()]);
     } catch (e) {
       throw Exception('خطأ في جلب اتجاه المبيعات الشهرية: $e');
+    }
+  }
+
+  // Group Management Methods
+  /// الحصول على جميع المجموعات
+  Future<List<Map<String, dynamic>>> getAllGroups(
+      {bool activeOnly = false}) async {
+    try {
+      if (activeOnly) {
+        return await _db.query('groups', where: 'active = ?', whereArgs: [1]);
+      }
+      return await _db.query('groups', orderBy: 'name ASC');
+    } catch (e) {
+      debugPrint('خطأ في جلب المجموعات: $e');
+      return [];
+    }
+  }
+
+  /// الحصول على مجموعة بواسطة المعرف
+  Future<Map<String, dynamic>?> getGroupById(int groupId) async {
+    try {
+      final groups = await _db.query('groups',
+          where: 'id = ?', whereArgs: [groupId], limit: 1);
+      if (groups.isEmpty) return null;
+      return groups.first;
+    } catch (e) {
+      debugPrint('خطأ في جلب المجموعة: $e');
+      return null;
+    }
+  }
+
+  /// الحصول على الصلاحيات لمجموعة معينة
+  Future<Map<SystemSection, List<UserPermission>>> getGroupPermissions(
+      int groupId) async {
+    try {
+      final permissions = await _db.query(
+        'group_permissions',
+        where: 'group_id = ?',
+        whereArgs: [groupId],
+      );
+
+      final Map<SystemSection, List<UserPermission>> result = {};
+
+      for (final perm in permissions) {
+        final section =
+            SystemSection.fromString(perm['section']?.toString() ?? 'system');
+        final permName = perm['permission']?.toString() ?? '';
+
+        // Find the permission enum
+        UserPermission? permission;
+        try {
+          permission = UserPermission.values.firstWhere(
+            (p) => p.name == permName,
+          );
+        } catch (e) {
+          debugPrint('صلاحية غير معروفة: $permName');
+          continue;
+        }
+
+        result.putIfAbsent(section, () => []).add(permission);
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint('خطأ في جلب صلاحيات المجموعة: $e');
+      return {};
+    }
+  }
+
+  /// إنشاء مجموعة جديدة
+  Future<int> createGroup({
+    required String name,
+    String? description,
+    Map<SystemSection, List<UserPermission>>? permissions,
+  }) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      final groupId = await _db.insert('groups', {
+        'name': name,
+        'description': description,
+        'active': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      // إضافة الصلاحيات
+      if (permissions != null && permissions.isNotEmpty) {
+        await _addGroupPermissions(groupId, permissions);
+      }
+
+      return groupId;
+    } catch (e) {
+      debugPrint('خطأ في إنشاء المجموعة: $e');
+      rethrow;
+    }
+  }
+
+  /// تحديث مجموعة
+  Future<bool> updateGroup({
+    required int groupId,
+    String? name,
+    String? description,
+    bool? active,
+    Map<SystemSection, List<UserPermission>>? permissions,
+  }) async {
+    try {
+      final updates = <String, dynamic>{};
+      if (name != null) updates['name'] = name;
+      if (description != null) updates['description'] = description;
+      if (active != null) updates['active'] = active ? 1 : 0;
+      updates['updated_at'] = DateTime.now().toIso8601String();
+
+      if (updates.isNotEmpty) {
+        await _db
+            .update('groups', updates, where: 'id = ?', whereArgs: [groupId]);
+      }
+
+      // تحديث الصلاحيات إذا تم توفيرها
+      if (permissions != null) {
+        await _db.delete('group_permissions',
+            where: 'group_id = ?', whereArgs: [groupId]);
+        await _addGroupPermissions(groupId, permissions);
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('خطأ في تحديث المجموعة: $e');
+      return false;
+    }
+  }
+
+  /// حذف مجموعة
+  Future<bool> deleteGroup(int groupId) async {
+    try {
+      // حذف الصلاحيات المرتبطة (سيتم حذفها تلقائياً بسبب CASCADE)
+      await _db.delete('group_permissions',
+          where: 'group_id = ?', whereArgs: [groupId]);
+
+      // حذف المجموعة
+      final deleted =
+          await _db.delete('groups', where: 'id = ?', whereArgs: [groupId]);
+      return deleted > 0;
+    } catch (e) {
+      debugPrint('خطأ في حذف المجموعة: $e');
+      return false;
+    }
+  }
+
+  /// إضافة صلاحيات لمجموعة
+  Future<void> _addGroupPermissions(
+    int groupId,
+    Map<SystemSection, List<UserPermission>> permissions,
+  ) async {
+    final now = DateTime.now().toIso8601String();
+    final batch = _db.batch();
+
+    for (final entry in permissions.entries) {
+      final section = entry.key;
+      for (final permission in entry.value) {
+        batch.insert('group_permissions', {
+          'group_id': groupId,
+          'section': section.value,
+          'permission': permission.name,
+          'created_at': now,
+        });
+      }
+    }
+
+    await batch.commit(noResult: true);
+  }
+
+  /// الحصول على المجموعة الخاصة بمستخدم
+  Future<GroupModel?> getUserGroup(int userId) async {
+    try {
+      final users = await _db.query('users',
+          where: 'id = ?', whereArgs: [userId], limit: 1);
+      if (users.isEmpty) return null;
+
+      final groupIdObj = users.first['group_id'];
+      if (groupIdObj == null) return null;
+      final groupId =
+          (groupIdObj is int) ? groupIdObj : (groupIdObj as num?)?.toInt();
+      if (groupId == null) return null;
+
+      final groupData = await getGroupById(groupId);
+      if (groupData == null) return null;
+
+      final permissions = await getGroupPermissions(groupId);
+      return GroupModel.fromMap(groupData).copyWith(permissions: permissions);
+    } catch (e) {
+      debugPrint('خطأ في جلب مجموعة المستخدم: $e');
+      return null;
+    }
+  }
+
+  /// تحديث مجموعة المستخدم
+  Future<bool> updateUserGroup(int userId, int groupId) async {
+    try {
+      await _db.update(
+        'users',
+        {'group_id': groupId, 'updated_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+      return true;
+    } catch (e) {
+      debugPrint('خطأ في تحديث مجموعة المستخدم: $e');
+      return false;
     }
   }
 }

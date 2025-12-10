@@ -28,7 +28,7 @@ import 'screens/inventory_reports_screen.dart';
 import 'screens/license_check_screen.dart';
 import 'screens/users_management_screen.dart';
 import 'screens/expenses_screen.dart';
-import 'screens/financial_transactions_screen.dart';
+import 'screens/returns_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/event_log_screen.dart';
 import 'models/user_model.dart';
@@ -94,7 +94,7 @@ class _AppShellState extends State<AppShell> {
       const CustomersScreen(),
       const SuppliersScreen(),
       const ExpensesScreen(), // المصروفات
-      const FinancialTransactionsScreen(), // سجل المعاملات المالية
+      const ReturnsScreen(), // المرتجعات
       const DebtsScreen(), // الديون
       const ReportsScreen(),
       const AnalyticsScreen(), // التحليلات
@@ -126,8 +126,7 @@ class _AppShellState extends State<AppShell> {
         case 8:
           return auth.hasPermission(UserPermission.viewReports); // المصروفات
         case 9:
-          return auth.hasPermission(
-              UserPermission.viewReports); // سجل المعاملات المالية
+          return auth.hasPermission(UserPermission.manageSales); // المرتجعات
         case 10:
           return auth.hasPermission(UserPermission.viewReports); // الديون
         case 11:
@@ -566,8 +565,8 @@ class _AppShellState extends State<AppShell> {
                       ),
                     if (canAccessIndex(9))
                       _buildNavItem(
-                        icon: Icons.account_balance_wallet,
-                        label: 'سجل المعاملات المالية',
+                        icon: Icons.assignment_return,
+                        label: 'المرتجعات',
                         index: 9,
                         isSelected: _selectedIndex == 9,
                       ),
@@ -934,12 +933,12 @@ class _AppShellState extends State<AppShell> {
                       isSelected: _selectedIndex == 9,
                       canAccess: true,
                     ),
-                  if (canAccessIndex(10))
+                  if (canAccessIndex(9))
                     _buildMobileNavItem(
-                      icon: Icons.account_balance_wallet,
-                      label: 'سجل المعاملات المالية',
-                      index: 10,
-                      isSelected: _selectedIndex == 10,
+                      icon: Icons.assignment_return,
+                      label: 'المرتجعات',
+                      index: 9,
+                      isSelected: _selectedIndex == 9,
                       canAccess: true,
                     ),
                   if (canAccessIndex(11))

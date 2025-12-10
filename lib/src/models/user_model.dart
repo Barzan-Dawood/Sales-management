@@ -4,7 +4,8 @@ class UserModel {
   final String name; // الاسم الكامل
   final String username; // اسم المستخدم
   final String password; // كلمة المرور
-  final UserRole role; // دور المستخدم
+  final UserRole? role; // دور المستخدم (legacy - للتوافق مع النظام القديم)
+  final int? groupId; // معرف المجموعة
   final String employeeCode; // رمز الموظف
   final bool active; // حالة المستخدم
   final DateTime createdAt;
@@ -15,7 +16,8 @@ class UserModel {
     required this.name,
     required this.username,
     required this.password,
-    required this.role,
+    this.role,
+    this.groupId,
     required this.employeeCode,
     this.active = true,
     required this.createdAt,
@@ -29,6 +31,7 @@ class UserModel {
     String? username,
     String? password,
     UserRole? role,
+    int? groupId,
     String? employeeCode,
     bool? active,
     DateTime? createdAt,
@@ -40,6 +43,7 @@ class UserModel {
       username: username ?? this.username,
       password: password ?? this.password,
       role: role ?? this.role,
+      groupId: groupId ?? this.groupId,
       employeeCode: employeeCode ?? this.employeeCode,
       active: active ?? this.active,
       createdAt: createdAt ?? this.createdAt,
@@ -54,7 +58,8 @@ class UserModel {
       'name': name,
       'username': username,
       'password': password,
-      'role': role.name,
+      'role': role?.name, // legacy support
+      'group_id': groupId,
       'employee_code': employeeCode,
       'active': active ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
@@ -69,7 +74,8 @@ class UserModel {
       name: map['name'] ?? '',
       username: map['username'] ?? '',
       password: map['password'] ?? '',
-      role: UserRole.fromString(map['role'] ?? 'employee'),
+      role: map['role'] != null ? UserRole.fromString(map['role']) : null,
+      groupId: map['group_id']?.toInt(),
       employeeCode: map['employee_code'] ?? '',
       active: (map['active'] ?? 1) == 1,
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
@@ -77,15 +83,23 @@ class UserModel {
     );
   }
 
-  /// الحصول على اسم الدور بالعربية
-  String get roleDisplayName => role.displayName;
+  /// الحصول على اسم الدور بالعربية (legacy support)
+  String get roleDisplayName => role?.displayName ?? 'غير محدد';
 
-  /// الحصول على وصف الصلاحيات
-  String get permissionsDescription => role.permissionsDescription;
+  /// الحصول على وصف الصلاحيات (legacy support)
+  String get permissionsDescription => role?.permissionsDescription ?? '';
 
   /// التحقق من وجود صلاحية معينة
-  bool hasPermission(UserPermission permission) {
-    return role.permissions.contains(permission);
+  /// Note: يجب تمرير GroupModel عند استخدام نظام المجموعات
+  bool hasPermission(UserPermission permission, {GroupModel? group}) {
+    if (group != null) {
+      return group.hasPermission(permission);
+    }
+    // Legacy support: check role permissions
+    if (role != null) {
+      return role!.permissions.contains(permission);
+    }
+    return false;
   }
 
   /// التحقق من صحة البيانات
@@ -286,5 +300,213 @@ class DefaultUsers {
         'updated_at': now.toIso8601String(),
       };
     }).toList();
+  }
+}
+
+/// الأقسام المختلفة في النظام
+enum SystemSection {
+  finance('finance', 'المالية'),
+  hr('hr', 'الموارد البشرية'),
+  sales('sales', 'المبيعات'),
+  inventory('inventory', 'المخزون'),
+  reports('reports', 'التقارير'),
+  system('system', 'النظام');
+
+  const SystemSection(this.value, this.displayName);
+
+  final String value;
+  final String displayName;
+
+  static SystemSection fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'finance':
+        return SystemSection.finance;
+      case 'hr':
+        return SystemSection.hr;
+      case 'sales':
+        return SystemSection.sales;
+      case 'inventory':
+        return SystemSection.inventory;
+      case 'reports':
+        return SystemSection.reports;
+      case 'system':
+        return SystemSection.system;
+      default:
+        return SystemSection.system;
+    }
+  }
+}
+
+/// نموذج المجموعة
+class GroupModel {
+  final int? id;
+  final String name; // اسم المجموعة
+  final String? description; // وصف المجموعة
+  final bool active; // حالة المجموعة
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  // الصلاحيات حسب الأقسام
+  final Map<SystemSection, List<UserPermission>> permissions;
+
+  const GroupModel({
+    this.id,
+    required this.name,
+    this.description,
+    this.active = true,
+    required this.createdAt,
+    required this.updatedAt,
+    this.permissions = const {},
+  });
+
+  /// إنشاء نسخة من الكائن مع تحديث بعض الحقول
+  GroupModel copyWith({
+    int? id,
+    String? name,
+    String? description,
+    bool? active,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Map<SystemSection, List<UserPermission>>? permissions,
+  }) {
+    return GroupModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      active: active ?? this.active,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      permissions: permissions ?? this.permissions,
+    );
+  }
+
+  /// تحويل الكائن إلى Map
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'active': active ? 1 : 0,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
+  /// إنشاء كائن من Map
+  factory GroupModel.fromMap(Map<String, dynamic> map) {
+    return GroupModel(
+      id: map['id']?.toInt(),
+      name: map['name'] ?? '',
+      description: map['description'],
+      active: (map['active'] ?? 1) == 1,
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(map['updated_at'] ?? '') ?? DateTime.now(),
+    );
+  }
+
+  /// التحقق من وجود صلاحية معينة
+  bool hasPermission(UserPermission permission) {
+    for (final sectionPermissions in permissions.values) {
+      if (sectionPermissions.contains(permission)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// التحقق من وجود صلاحية في قسم معين
+  bool hasPermissionInSection(
+      UserPermission permission, SystemSection section) {
+    return permissions[section]?.contains(permission) ?? false;
+  }
+
+  /// الحصول على جميع الصلاحيات
+  List<UserPermission> getAllPermissions() {
+    final allPermissions = <UserPermission>[];
+    for (final sectionPermissions in permissions.values) {
+      allPermissions.addAll(sectionPermissions);
+    }
+    return allPermissions.toSet().toList(); // Remove duplicates
+  }
+
+  /// التحقق من صحة البيانات
+  bool get isValid {
+    return name.isNotEmpty;
+  }
+
+  @override
+  String toString() {
+    return 'GroupModel(id: $id, name: $name, permissions: ${permissions.length} sections)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is GroupModel && other.id == id && other.name == name;
+  }
+
+  @override
+  int get hashCode => id.hashCode ^ name.hashCode;
+}
+
+/// تعيين الصلاحيات للأقسام المختلفة
+class SectionPermissionMapper {
+  /// الحصول على الصلاحيات المرتبطة بقسم معين
+  static List<UserPermission> getPermissionsForSection(SystemSection section) {
+    switch (section) {
+      case SystemSection.finance:
+        return [
+          UserPermission.viewProfitCosts,
+          UserPermission.exportReports,
+        ];
+      case SystemSection.hr:
+        return [
+          UserPermission.manageUsers,
+        ];
+      case SystemSection.sales:
+        return [
+          UserPermission.manageSales,
+          UserPermission.applyDiscount,
+          UserPermission.overridePrice,
+          UserPermission.refundSales,
+          UserPermission.voidSale,
+          UserPermission.deleteSaleItem,
+          UserPermission.openCashDrawer,
+          UserPermission.manageCustomers,
+        ];
+      case SystemSection.inventory:
+        return [
+          UserPermission.manageProducts,
+          UserPermission.manageInventory,
+          UserPermission.adjustStock,
+          UserPermission.viewCostPrice,
+          UserPermission.editCostPrice,
+          UserPermission.receivePurchase,
+          UserPermission.manageSuppliers,
+          UserPermission.manageCategories,
+        ];
+      case SystemSection.reports:
+        return [
+          UserPermission.viewReports,
+          UserPermission.exportReports,
+          UserPermission.viewProfitCosts,
+        ];
+      case SystemSection.system:
+        return [
+          UserPermission.systemSettings,
+          UserPermission.manageBackup,
+          UserPermission.manageLicensing,
+        ];
+    }
+  }
+
+  /// الحصول على القسم المرتبط بصلاحية معينة
+  static SystemSection? getSectionForPermission(UserPermission permission) {
+    for (final section in SystemSection.values) {
+      if (getPermissionsForSection(section).contains(permission)) {
+        return section;
+      }
+    }
+    return null;
   }
 }

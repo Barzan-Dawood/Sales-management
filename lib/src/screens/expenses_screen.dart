@@ -106,7 +106,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           padding: const EdgeInsets.all(12),
           child: Column(
             children: [
-              // شريط البحث والفلترة - تصميم عصري وجذاب
+              // شريط البحث والفلترة
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -131,7 +131,29 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   children: [
                     Row(
                       children: [
-                        // حقل البحث - أصغر
+                        // زر إضافة مصروف - في البداية
+                        FilledButton.icon(
+                          onPressed: () => _openExpenseEditor(),
+                          icon: const Icon(Icons.add_circle_outline, size: 20),
+                          label: const Text(
+                            'إضافة مصروف',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 12),
+                            elevation: 2,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // حقل البحث
                         Expanded(
                           flex: 2,
                           child: Container(
@@ -191,7 +213,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        // أنواع المصروفات - في نفس الصف
+                        // أنواع المصروفات
                         Container(
                           width: 130,
                           decoration: BoxDecoration(
@@ -247,34 +269,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        // زر إدارة الأنواع - في نفس الصف
+                        // زر إدارة الأنواع
                         _FilterButton(
                           icon: Icons.category,
                           label: 'الأنواع',
                           onPressed: () => _showManageCategoriesDialog(),
                           color: Theme.of(context).colorScheme.secondary,
-                        ),
-                        const SizedBox(width: 8),
-                        // زر إضافة مصروف
-                        FilledButton.icon(
-                          onPressed: () => _openExpenseEditor(),
-                          icon: const Icon(Icons.add_circle_outline, size: 20),
-                          label: const Text(
-                            'إضافة',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          style: FilledButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 10),
-                            elevation: 2,
-                          ),
                         ),
                         const SizedBox(width: 8),
                         // زر عرض الكل
@@ -452,69 +452,76 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         // بطاقة الإجمالي - تصميم عصري وجذاب
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 16),
+                              horizontal: 14, vertical: 12),
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(18),
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.3),
+                              width: 1.5,
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Theme.of(context)
                                     .colorScheme
                                     .primary
-                                    .withOpacity(0.3),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
+                                    .withOpacity(0.15),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                                 spreadRadius: 0,
                               ),
                             ],
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(12),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: Theme.of(context)
                                           .colorScheme
-                                          .primary
-                                          .withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(14),
+                                          .primaryContainer,
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Icon(
                                       Icons.receipt_long,
-                                      size: 28,
+                                      size: 20,
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onPrimaryContainer,
                                     ),
                                   ),
-                                  const SizedBox(width: 14),
+                                  const SizedBox(width: 12),
                                   Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
                                         'إجمالي المصروفات',
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
-                                              .onPrimaryContainer
-                                              .withOpacity(0.9),
-                                          fontSize: 14,
+                                              .onSurface
+                                              .withOpacity(0.7),
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 2),
                                       Text(
                                         Formatters.currencyIQD(total),
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
-                                              .onPrimaryContainer,
-                                          fontSize: 22,
+                                              .primary,
+                                          fontSize: 18,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -522,26 +529,16 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                   ),
                                 ],
                               ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: IconButton(
-                                  onPressed: () async {
-                                    await _exportExpensesList(
-                                        context, filteredExpenses);
-                                  },
-                                  tooltip: 'تصدير PDF',
-                                  icon: Icon(Icons.picture_as_pdf, size: 24),
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onPrimaryContainer,
-                                  padding: const EdgeInsets.all(12),
-                                ),
+                              IconButton(
+                                onPressed: () async {
+                                  await _exportExpensesList(
+                                      context, filteredExpenses);
+                                },
+                                tooltip: 'تصدير PDF',
+                                icon: Icon(Icons.picture_as_pdf, size: 20),
+                                color: Theme.of(context).colorScheme.primary,
+                                padding: const EdgeInsets.all(8),
+                                constraints: const BoxConstraints(),
                               ),
                             ],
                           ),
@@ -1686,40 +1683,50 @@ class _ExpenseCard extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Theme.of(context).colorScheme.shadow.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
             spreadRadius: 0,
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Row(
           children: [
             // أيقونة - تصميم جذاب
             Container(
-              width: 50,
-              height: 50,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Theme.of(context).colorScheme.primaryContainer,
+                    Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withOpacity(0.8),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
                     color:
                         Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -1729,11 +1736,12 @@ class _ExpenseCard extends StatelessWidget {
                 size: 24,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             // المحتوى
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
@@ -1742,7 +1750,7 @@ class _ExpenseCard extends StatelessWidget {
                           title,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                            fontSize: 14,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1753,12 +1761,9 @@ class _ExpenseCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.grey.shade200,
-                                Colors.grey.shade100,
-                              ],
-                            ),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -1782,8 +1787,15 @@ class _ExpenseCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color:
+                          gradient: LinearGradient(
+                            colors: [
                               Theme.of(context).colorScheme.secondaryContainer,
+                              Theme.of(context)
+                                  .colorScheme
+                                  .secondaryContainer
+                                  .withOpacity(0.8),
+                            ],
+                          ),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -1807,7 +1819,7 @@ class _ExpenseCard extends StatelessWidget {
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity(0.6),
+                                  .withOpacity(0.65),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1823,12 +1835,20 @@ class _ExpenseCard extends StatelessWidget {
             // المبلغ والأزرار
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.primary.withOpacity(0.9),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
@@ -1845,13 +1865,13 @@ class _ExpenseCard extends StatelessWidget {
                     Formatters.currencyIQD(amount),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                      fontSize: 14,
                       color: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                 ),
                 if (canEdit) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -2596,129 +2616,115 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 200,
-      height: 110,
+      width: 180,
+      height: 100,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.12),
+            color.withOpacity(0.06),
+            Theme.of(context).colorScheme.surface,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: color.withOpacity(0.3),
+          color: color.withOpacity(0.25),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
+            color: color.withOpacity(0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
             spreadRadius: 0,
           ),
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Theme.of(context).colorScheme.shadow.withOpacity(0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
             spreadRadius: 0,
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          // خلفية تدرج لوني خفيف
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    color.withOpacity(0.1),
-                    color.withOpacity(0.05),
-                    Colors.transparent,
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(18),
-              ),
-            ),
-          ),
-          // المحتوى
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // العنوان والأيقونة
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // الأيقونة
+                Flexible(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.75),
+                    ),
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        color.withOpacity(0.25),
-                        color.withOpacity(0.15),
+                        color.withOpacity(0.3),
+                        color.withOpacity(0.2),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: color.withOpacity(0.3),
-                      width: 1,
-                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Icon(
                     icon,
                     color: color,
-                    size: 24,
-                  ),
-                ),
-                // العنوان والرقم في نفس الصف
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // العنوان
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.7),
-                          ),
-                          textAlign: TextAlign.right,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        // الرقم
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            value,
-                            style: TextStyle(
-                              color: color,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: -0.3,
-                            ),
-                            textAlign: TextAlign.right,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                    size: 20,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            // الرقم
+            Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    letterSpacing: -0.4,
+                  ),
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

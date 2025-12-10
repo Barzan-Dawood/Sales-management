@@ -20,7 +20,10 @@ class AuthProvider extends ChangeNotifier {
   final DatabaseService _db;
 
   UserModel? _currentUser;
+  GroupModel? _currentGroup;
+
   UserModel? get currentUser => _currentUser;
+  GroupModel? get currentGroup => _currentGroup;
 
   // Forced password change disabled per request
   bool get mustChangePassword => false;
@@ -32,7 +35,15 @@ class AuthProvider extends ChangeNotifier {
 
   /// التحقق من وجود صلاحية معينة للمستخدم الحالي
   bool hasPermission(UserPermission permission) {
-    return _currentUser?.hasPermission(permission) ?? false;
+    if (_currentUser == null) return false;
+
+    // استخدام نظام المجموعات إذا كان المستخدم لديه مجموعة
+    if (_currentGroup != null) {
+      return _currentGroup!.hasPermission(permission);
+    }
+
+    // استخدام النظام القديم (roles) للتوافق
+    return _currentUser!.hasPermission(permission, group: null);
   }
 
   /// الحصول على اسم المستخدم الحالي
@@ -64,9 +75,31 @@ class AuthProvider extends ChangeNotifier {
     }
 
     _currentUser = UserModel.fromMap(userData);
+
+    // تحميل مجموعة المستخدم إذا كان لديه group_id
+    if (_currentUser?.groupId != null) {
+      try {
+        _currentGroup = await _db.getUserGroup(_currentUser!.id!);
+        if (kDebugMode) {
+          debugPrint('تم تحميل مجموعة المستخدم: ${_currentGroup?.name}');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('خطأ في تحميل مجموعة المستخدم: $e');
+        }
+        _currentGroup = null;
+      }
+    } else {
+      _currentGroup = null;
+    }
+
     if (kDebugMode) {
       debugPrint(
           'تم تسجيل الدخول بنجاح: ${_currentUser?.username} - ${_currentUser?.name}');
+      if (_currentGroup != null) {
+        debugPrint(
+            'المجموعة: ${_currentGroup?.name} - الصلاحيات: ${_currentGroup?.getAllPermissions().length}');
+      }
     }
 
     // تسجيل حدث تسجيل الدخول
@@ -221,6 +254,7 @@ class AuthProvider extends ChangeNotifier {
     }
 
     _currentUser = null;
+    _currentGroup = null;
     notifyListeners();
   }
 
