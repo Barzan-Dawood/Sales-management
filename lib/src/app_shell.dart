@@ -31,6 +31,7 @@ import 'screens/expenses_screen.dart';
 import 'screens/returns_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/event_log_screen.dart';
+import 'screens/deleted_items_screen.dart';
 import 'models/user_model.dart';
 
 class AppShell extends StatefulWidget {
@@ -101,6 +102,7 @@ class _AppShellState extends State<AppShell> {
       const AdvancedReportsScreen(),
       const InventoryReportsScreen(),
       const EventLogScreen(), // سجل الأحداث
+      const DeletedItemsScreen(), // سلة المحذوفات
       const SettingsScreen(),
       const UsersManagementScreen(), // إدارة المستخدمين
     ];
@@ -141,8 +143,11 @@ class _AppShellState extends State<AppShell> {
         case 15:
           return auth.hasPermission(UserPermission.viewReports); // سجل الأحداث
         case 16:
-          return auth.hasPermission(UserPermission.systemSettings);
+          return auth
+              .hasPermission(UserPermission.viewReports); // سلة المحذوفات
         case 17:
+          return auth.hasPermission(UserPermission.systemSettings);
+        case 18:
           return auth.hasPermission(UserPermission.manageUsers);
         default:
           return false;
@@ -612,20 +617,27 @@ class _AppShellState extends State<AppShell> {
                         index: 15,
                         isSelected: _selectedIndex == 15,
                       ),
+                    if (canAccessIndex(16))
+                      _buildNavItem(
+                        icon: Icons.delete_outline,
+                        label: 'سلة المحذوفات',
+                        index: 16,
+                        isSelected: _selectedIndex == 16,
+                      ),
                     // إدارة المستخدمين - للمديرين فقط
-                    if (canAccessIndex(17))
+                    if (canAccessIndex(18))
                       _buildNavItem(
                         icon: Icons.people,
                         label: 'إدارة المستخدمين',
-                        index: 17,
-                        isSelected: _selectedIndex == 17,
+                        index: 18,
+                        isSelected: _selectedIndex == 18,
                       ),
-                    if (canAccessIndex(16))
+                    if (canAccessIndex(17))
                       _buildNavItem(
                         icon: Icons.settings,
                         label: AppStrings.settings,
-                        index: 16,
-                        isSelected: _selectedIndex == 16,
+                        index: 17,
+                        isSelected: _selectedIndex == 17,
                       ),
                   ],
                 ),
@@ -991,18 +1003,26 @@ class _AppShellState extends State<AppShell> {
                     ),
                   if (canAccessIndex(16))
                     _buildMobileNavItem(
-                      icon: Icons.settings,
-                      label: 'الإعدادات',
+                      icon: Icons.delete_outline,
+                      label: 'سلة المحذوفات',
                       index: 16,
                       isSelected: _selectedIndex == 16,
                       canAccess: true,
                     ),
                   if (canAccessIndex(17))
                     _buildMobileNavItem(
-                      icon: Icons.people,
-                      label: 'إدارة المستخدمين',
+                      icon: Icons.settings,
+                      label: 'الإعدادات',
                       index: 17,
                       isSelected: _selectedIndex == 17,
+                      canAccess: true,
+                    ),
+                  if (canAccessIndex(18))
+                    _buildMobileNavItem(
+                      icon: Icons.people,
+                      label: 'إدارة المستخدمين',
+                      index: 18,
+                      isSelected: _selectedIndex == 18,
                       canAccess: true,
                     ),
                 ],

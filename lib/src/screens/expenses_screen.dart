@@ -956,7 +956,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
     if (confirmed == true && mounted) {
       try {
-        await context.read<DatabaseService>().deleteExpense(id);
+        final auth = context.read<AuthProvider>();
+        final currentUser = auth.currentUser;
+        await context.read<DatabaseService>().deleteExpense(
+          id,
+          userId: currentUser?.id,
+          username: currentUser?.username,
+          name: currentUser?.name,
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('تم حذف المصروف بنجاح')),

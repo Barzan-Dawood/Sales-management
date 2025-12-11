@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 import '../services/db/database_service.dart';
+import '../services/auth/auth_provider.dart';
 import '../utils/format.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
@@ -787,7 +788,14 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     );
 
     if (confirm == true) {
-      await db.deleteProduct(id);
+      final auth = context.read<AuthProvider>();
+      final currentUser = auth.currentUser;
+      await db.deleteProduct(
+        id,
+        userId: currentUser?.id,
+        username: currentUser?.username,
+        name: currentUser?.name,
+      );
       if (!mounted) return;
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(

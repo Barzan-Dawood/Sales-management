@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 import '../../services/db/database_service.dart';
+import '../../services/auth/auth_provider.dart';
 import '../../utils/dark_mode_utils.dart';
 import '../../utils/responsive_utils.dart';
 
@@ -888,7 +889,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
     if (confirm == true) {
       final db = context.read<DatabaseService>();
-      await db.deleteProduct(id);
+      final auth = context.read<AuthProvider>();
+      final currentUser = auth.currentUser;
+      await db.deleteProduct(
+        id,
+        userId: currentUser?.id,
+        username: currentUser?.username,
+        name: currentUser?.name,
+      );
       if (!mounted) return;
       setState(() {});
 

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
+import '../services/auth/auth_provider.dart';
 import '../services/sales_history_view_model.dart';
 import '../services/print_service.dart';
 import '../services/store_config.dart';
@@ -1011,7 +1012,14 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   Future<void> _deleteSale(int saleId) async {
     try {
       final db = context.read<DatabaseService>();
-      final success = await db.deleteSale(saleId);
+      final auth = context.read<AuthProvider>();
+      final currentUser = auth.currentUser;
+      final success = await db.deleteSale(
+        saleId,
+        userId: currentUser?.id,
+        username: currentUser?.username,
+        name: currentUser?.name,
+      );
 
       if (!mounted) return;
 
@@ -1212,9 +1220,16 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       );
 
       // حذف كل فاتورة على حدة
+      final auth = context.read<AuthProvider>();
+      final currentUser = auth.currentUser;
       for (final saleId in _selectedSales) {
         try {
-          final success = await db.deleteSale(saleId);
+          final success = await db.deleteSale(
+            saleId,
+            userId: currentUser?.id,
+            username: currentUser?.username,
+            name: currentUser?.name,
+          );
           if (success) {
             successCount++;
           } else {

@@ -13,7 +13,7 @@ import '../../models/user_model.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
-  static const int _dbVersion = 13;
+  static const int _dbVersion = 14;
 
   late Database _db;
   late String _dbPath;
@@ -82,6 +82,9 @@ class DatabaseService {
         if (oldVersion < 13) {
           await _migrateToV13(db);
         }
+        if (oldVersion < 14) {
+          await _migrateToV14(db);
+        }
         // Ensure no legacy triggers/views remain that reference old temp tables
         await _cleanupOrphanObjects(db);
         await _ensureCategorySchemaOn(db);
@@ -95,6 +98,8 @@ class DatabaseService {
         await _ensureReturnsTableColumns(db);
         // التأكد من وجود حقل status
         await _ensureReturnsStatusColumn(db);
+        // التأكد من وجود جدول deleted_items
+        await _ensureDeletedItemsTable(db);
       },
     );
     // إعدادات أساسية فقط
@@ -107,6 +112,8 @@ class DatabaseService {
     await _ensureReturnsTableColumns(_db);
     // التأكد من وجود حقل status
     await _ensureReturnsStatusColumn(_db);
+    // التأكد من وجود جدول deleted_items
+    await _ensureDeletedItemsTable(_db);
 
     await _createIndexes(_db);
 
@@ -124,6 +131,7 @@ class DatabaseService {
     await _ensureReturnsTable();
     await _ensureReturnsTableColumns(_db);
     await _ensureReturnsStatusColumn(_db);
+    await _ensureDeletedItemsTable(_db);
 
     await _createIndexes(_db);
     await _cleanupOrphanObjects(_db);
@@ -1038,6 +1046,20 @@ class DatabaseService {
         FOREIGN KEY(user_id) REFERENCES users(id)
       );
     ''');
+
+    await db.execute('''
+      CREATE TABLE deleted_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER NOT NULL,
+        original_data TEXT NOT NULL,
+        deleted_by_user_id INTEGER,
+        deleted_by_username TEXT,
+        deleted_at TEXT NOT NULL,
+        can_restore INTEGER NOT NULL DEFAULT 1,
+        FOREIGN KEY(deleted_by_user_id) REFERENCES users(id)
+      );
+    ''');
   }
 
   Future<void> _ensureCategorySchemaOn(Database db) async {
@@ -1453,6 +1475,33 @@ class DatabaseService {
       debugPrint('انتهى Migration V11 بنجاح');
     } catch (e) {
       debugPrint('خطأ في Migration V11: $e');
+    }
+  }
+
+  Future<void> _migrateToV14(Database db) async {
+    // إضافة جدول deleted_items لسلة المحذوفات
+    try {
+      debugPrint('بدء Migration V14 - إضافة جدول deleted_items...');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS deleted_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          entity_type TEXT NOT NULL,
+          entity_id INTEGER NOT NULL,
+          original_data TEXT NOT NULL,
+          deleted_by_user_id INTEGER,
+          deleted_by_username TEXT,
+          deleted_at TEXT NOT NULL,
+          can_restore INTEGER NOT NULL DEFAULT 1,
+          FOREIGN KEY(deleted_by_user_id) REFERENCES users(id)
+        );
+      ''');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_deleted_items_entity_type ON deleted_items(entity_type)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_deleted_items_deleted_at ON deleted_items(deleted_at)');
+      debugPrint('انتهى Migration V14 بنجاح');
+    } catch (e) {
+      debugPrint('خطأ في Migration V14: $e');
     }
   }
 
@@ -2054,76 +2103,135 @@ class DatabaseService {
     return updatedRows;
   }
 
-  Future<int> deleteProduct(int id, {int? userId, String? username}) async {
-    return _db.transaction<int>((txn) async {
-      try {
-        // التحقق من وجود المنتج
-        final product = await txn.query('products',
-            where: 'id = ?', whereArgs: [id], limit: 1);
-        if (product.isEmpty) {
-          return 0; // المنتج غير موجود
-        }
-
-        // First, get all sales that have items with this product
-        final salesWithProduct = await txn.rawQuery('''
-          SELECT DISTINCT s.id FROM sales s
-          JOIN sale_items si ON s.id = si.sale_id
-          WHERE si.product_id = ?
-        ''', [id]);
-
-        // Delete all sale_items that reference this product
-        await txn
-            .delete('sale_items', where: 'product_id = ?', whereArgs: [id]);
-
-        // Delete installments for sales that only had this product
-        for (final sale in salesWithProduct) {
-          final saleId = sale['id'] as int;
-
-          // Check if this sale has any remaining items
-          final remainingItems = await txn.rawQuery('''
-            SELECT COUNT(*) as count FROM sale_items WHERE sale_id = ?
-          ''', [saleId]);
-
-          final itemCount = remainingItems.first['count'] as int;
-
-          // If no items remain, delete the sale and its installments
-          if (itemCount == 0) {
-            await txn.delete('installments',
-                where: 'sale_id = ?', whereArgs: [saleId]);
-            await txn.delete('sales', where: 'id = ?', whereArgs: [saleId]);
-          }
-        }
-
-        // الحصول على بيانات المنتج قبل الحذف
-        final productName = product.first['name'] as String? ?? '';
-
-        // Then delete the product
-        final deletedRows =
-            await txn.delete('products', where: 'id = ?', whereArgs: [id]);
-
-        // تسجيل حدث حذف المنتج
-        if (deletedRows > 0) {
-          try {
-            await logEvent(
-              eventType: 'delete',
-              entityType: 'product',
-              entityId: id,
-              userId: userId,
-              username: username,
-              description: 'حذف منتج: $productName',
-              details: 'تم حذف المنتج رقم $id',
-              transaction: txn,
-            );
-          } catch (e) {
-            debugPrint('خطأ في تسجيل حدث حذف المنتج: $e');
-          }
-        }
-
-        return deletedRows;
-      } catch (e) {
-        rethrow;
+  Future<int> deleteProduct(int id,
+      {int? userId, String? username, String? name}) async {
+    try {
+      // التحقق من وجود المنتج أولاً
+      final product = await _db.query('products',
+          where: 'id = ?', whereArgs: [id], limit: 1);
+      if (product.isEmpty) {
+        return 0; // المنتج غير موجود
       }
-    });
+
+      final productData = product.first;
+      final productName = productData['name'] as String? ?? '';
+
+      // حفظ بيانات المنتج في سلة المحذوفات قبل الحذف
+      try {
+        await _db.insert('deleted_items', {
+          'entity_type': 'product',
+          'entity_id': id,
+          'original_data': jsonEncode(productData),
+          'deleted_by_user_id': userId,
+          'deleted_by_username': username,
+          'deleted_by_name': name,
+          'deleted_at': DateTime.now().toIso8601String(),
+          'can_restore': 1,
+        });
+      } catch (e) {
+        debugPrint('خطأ في حفظ المنتج في سلة المحذوفات: $e');
+        // نتابع الحذف حتى لو فشل الحفظ في سلة المحذوفات
+      }
+
+      // تعطيل المفاتيح الخارجية قبل بدء المعاملة (يجب أن يكون خارج المعاملة)
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      try {
+        return await _db.transaction<int>((txn) async {
+          try {
+            // حذف sale_items المرتبطة بالمنتج
+            try {
+              await txn.delete('sale_items',
+                  where: 'product_id = ?', whereArgs: [id]);
+            } catch (e) {
+              debugPrint('خطأ في حذف sale_items المرتبطة بالمنتج: $e');
+              // نتابع حتى لو فشل حذف sale_items
+            }
+
+            // الحصول على المبيعات التي كانت تحتوي على هذا المنتج فقط
+            try {
+              final salesWithProduct = await txn.rawQuery('''
+                SELECT DISTINCT s.id FROM sales s
+                JOIN sale_items si ON s.id = si.sale_id
+                WHERE si.product_id = ?
+              ''', [id]);
+
+              // حذف الأقساط والمبيعات التي لم يعد لديها عناصر
+              for (final sale in salesWithProduct) {
+                final saleId = sale['id'] as int;
+
+                // التحقق من وجود عناصر متبقية في البيع
+                final remainingItems = await txn.rawQuery('''
+                  SELECT COUNT(*) as count FROM sale_items WHERE sale_id = ?
+                ''', [saleId]);
+
+                final itemCount = remainingItems.first['count'] as int;
+
+                // إذا لم يعد هناك عناصر، احذف البيع وأقساطه
+                if (itemCount == 0) {
+                  try {
+                    await txn.delete('installments',
+                        where: 'sale_id = ?', whereArgs: [saleId]);
+                  } catch (e) {
+                    debugPrint('خطأ في حذف installments للبيع $saleId: $e');
+                  }
+                  try {
+                    await txn
+                        .delete('sales', where: 'id = ?', whereArgs: [saleId]);
+                  } catch (e) {
+                    debugPrint('خطأ في حذف البيع $saleId: $e');
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint('خطأ في معالجة المبيعات المرتبطة: $e');
+              // نتابع حذف المنتج حتى لو فشلت معالجة المبيعات
+            }
+
+            // حذف المنتج
+            final deletedRows =
+                await txn.delete('products', where: 'id = ?', whereArgs: [id]);
+
+            // تسجيل حدث حذف المنتج (باستخدام transaction لتجنب deadlock)
+            if (deletedRows > 0) {
+              try {
+                await logEvent(
+                  eventType: 'delete',
+                  entityType: 'product',
+                  entityId: id,
+                  userId: userId,
+                  username: username,
+                  description: 'حذف منتج: $productName',
+                  details: 'تم حذف المنتج رقم $id',
+                  transaction: txn,
+                );
+              } catch (e) {
+                debugPrint('خطأ في تسجيل حدث حذف المنتج: $e');
+              }
+            }
+
+            return deletedRows;
+          } catch (e) {
+            debugPrint('خطأ في حذف المنتج داخل المعاملة: $e');
+            rethrow;
+          }
+        });
+      } finally {
+        // إعادة تفعيل المفاتيح الخارجية دائماً
+        try {
+          await _db.execute('PRAGMA foreign_keys = ON');
+        } catch (e) {
+          debugPrint('خطأ في إعادة تفعيل المفاتيح الخارجية: $e');
+        }
+      }
+    } catch (e) {
+      // التأكد من إعادة تفعيل المفاتيح الخارجية في حالة الخطأ
+      try {
+        await _db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+      debugPrint('خطأ في حذف المنتج: $e');
+      rethrow;
+    }
   }
 
   /// Delete product with cascade option - removes related sale_items first
@@ -2219,125 +2327,95 @@ class DatabaseService {
     }
   }
 
-  Future<int> deleteCustomer(int id) async {
+  /// التحقق من وجود بيانات مرتبطة بالعميل
+  Future<Map<String, int>> getCustomerRelatedDataCount(int customerId) async {
+    final salesCount = await _db.rawQuery(
+        'SELECT COUNT(*) as count FROM sales WHERE customer_id = ?',
+        [customerId]);
+    final paymentsCount = await _db.rawQuery(
+        'SELECT COUNT(*) as count FROM payments WHERE customer_id = ?',
+        [customerId]);
+
+    return {
+      'sales': salesCount.first['count'] as int,
+      'payments': paymentsCount.first['count'] as int,
+    };
+  }
+
+  /// التحقق من وجود مدفوعات مرتبطة بدين معين
+  Future<bool> hasPaymentsForCreditSale(int saleId, int customerId) async {
+    final result = await _db.rawQuery('''
+      SELECT COUNT(*) as count FROM payments
+      WHERE customer_id = ? AND payment_date >= (
+        SELECT created_at FROM sales WHERE id = ?
+      )
+    ''', [customerId, saleId]);
+
+    return (result.first['count'] as int) > 0;
+  }
+
+  /// الحصول على إجمالي المدفوعات المرتبطة بدين معين
+  Future<double> getPaymentsForCreditSale(int saleId, int customerId) async {
+    final result = await _db.rawQuery('''
+      SELECT IFNULL(SUM(amount), 0) as total FROM payments
+      WHERE customer_id = ? AND payment_date >= (
+        SELECT created_at FROM sales WHERE id = ?
+      )
+    ''', [customerId, saleId]);
+
+    return (result.first['total'] as num).toDouble();
+  }
+
+  Future<int> deleteCustomer(int id,
+      {int? userId, String? username, String? name}) async {
     return _db.transaction<int>((txn) async {
       try {
-        // تنظيف المراجع القديمة قبل البدء
-        try {
-          await txn.execute('PRAGMA foreign_keys = OFF');
-          await txn.execute('DROP TABLE IF EXISTS sales_old');
-
-          // حذف أي triggers أو views تشير إلى sales_old من المخطط الرئيسي
-          final orphanObjects = await txn.rawQuery('''
-            SELECT type, name FROM sqlite_master 
-            WHERE type IN ('trigger', 'view', 'index') 
-            AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
-          ''');
-
-          for (final row in orphanObjects) {
-            final type = row['type']?.toString();
-            final name = row['name']?.toString();
-            if (type != null && name != null && name.isNotEmpty) {
-              try {
-                String dropCommand;
-                switch (type) {
-                  case 'view':
-                    dropCommand = 'DROP VIEW IF EXISTS $name';
-                    break;
-                  case 'index':
-                    dropCommand = 'DROP INDEX IF EXISTS $name';
-                    break;
-                  case 'trigger':
-                    dropCommand = 'DROP TRIGGER IF EXISTS $name';
-                    break;
-                  default:
-                    continue;
-                }
-                await txn.execute(dropCommand);
-              } catch (e) {
-                // ignore
-              }
-            }
-          }
-
-          // حذف أي triggers أو views تشير إلى sales_old من المخطط المؤقت
-          final tempOrphanObjects = await txn.rawQuery('''
-            SELECT type, name FROM sqlite_temp_master 
-            WHERE type IN ('trigger', 'view', 'index') 
-            AND (IFNULL(sql,'') LIKE '%sales_old%' OR name LIKE '%sales_old%')
-          ''');
-
-          for (final row in tempOrphanObjects) {
-            final type = row['type']?.toString();
-            final name = row['name']?.toString();
-            if (type != null && name != null && name.isNotEmpty) {
-              try {
-                String dropCommand;
-                switch (type) {
-                  case 'view':
-                    dropCommand = 'DROP VIEW IF EXISTS $name';
-                    break;
-                  case 'index':
-                    dropCommand = 'DROP INDEX IF EXISTS $name';
-                    break;
-                  case 'trigger':
-                    dropCommand = 'DROP TRIGGER IF EXISTS $name';
-                    break;
-                  default:
-                    continue;
-                }
-                await txn.execute(dropCommand);
-              } catch (e) {
-                // ignore
-              }
-            }
-          }
-
-          await txn.execute('PRAGMA foreign_keys = ON');
-        } catch (e) {
-          await txn.execute('PRAGMA foreign_keys = ON');
-        }
-
         // التحقق من وجود العميل أولاً
-        final customerExists = await txn.query('customers',
-            columns: ['id'], where: 'id = ?', whereArgs: [id]);
-        if (customerExists.isEmpty) {
+        final customer = await txn.query('customers',
+            where: 'id = ?', whereArgs: [id], limit: 1);
+        if (customer.isEmpty) {
           return 0;
         }
 
-        // أولاً، الحصول على معرفات المبيعات المرتبطة بالعميل
-        final sales = await txn.query('sales',
-            columns: ['id'], where: 'customer_id = ?', whereArgs: [id]);
+        // التحقق من وجود بيانات مرتبطة بالعميل
+        final salesCount = await txn.rawQuery(
+            'SELECT COUNT(*) as count FROM sales WHERE customer_id = ?', [id]);
+        final paymentsCount = await txn.rawQuery(
+            'SELECT COUNT(*) as count FROM payments WHERE customer_id = ?',
+            [id]);
 
-        // حذف عناصر المبيعات المرتبطة
-        for (final sale in sales) {
-          await txn.delete('sale_items',
-              where: 'sale_id = ?', whereArgs: [sale['id']]);
-        }
+        final sales = salesCount.first['count'] as int;
+        final payments = paymentsCount.first['count'] as int;
 
-        // حذف المدفوعات المرتبطة بالعميل
-        await txn.delete('payments', where: 'customer_id = ?', whereArgs: [id]);
-
-        // حذف الأقساط المرتبطة بالمبيعات
-        for (final sale in sales) {
-          try {
-            await txn.delete('installments',
-                where: 'sale_id = ?', whereArgs: [sale['id']]);
-          } catch (e) {
-            // محاولة بديلة - حذف مباشر
-            try {
-              await txn.execute(
-                  'DELETE FROM installments WHERE sale_id = ?', [sale['id']]);
-            } catch (directError) {
-              // تجاهل الخطأ والمتابعة
-            }
+        // إذا كان هناك بيانات مرتبطة، منع الحذف
+        if (sales > 0 || payments > 0) {
+          final List<String> relatedData = [];
+          if (sales > 0) {
+            relatedData.add('$sales عملية بيع');
           }
+          if (payments > 0) {
+            relatedData.add('$payments دفعة');
+          }
+
+          throw Exception(
+              'لا يمكن حذف العميل لأنه مرتبط ببيانات مهمة:\n${relatedData.join('\n')}\n\n'
+              'لحماية السجلات المالية والتاريخية، يجب حذف جميع المبيعات والمدفوعات المرتبطة بهذا العميل أولاً.');
         }
 
-        // حذف المبيعات المرتبطة بالعميل
-        await txn.delete('sales', where: 'customer_id = ?', whereArgs: [id]);
+        // حفظ البيانات الأصلية في سلة المحذوفات
+        final customerData = customer.first;
+        await txn.insert('deleted_items', {
+          'entity_type': 'customer',
+          'entity_id': id,
+          'original_data': jsonEncode(customerData),
+          'deleted_by_user_id': userId,
+          'deleted_by_username': username,
+          'deleted_by_name': name,
+          'deleted_at': DateTime.now().toIso8601String(),
+          'can_restore': 1,
+        });
 
-        // حذف العميل نفسه
+        // حذف العميل
         final deletedRows =
             await txn.delete('customers', where: 'id = ?', whereArgs: [id]);
 
@@ -2428,6 +2506,20 @@ class DatabaseService {
 
       final installmentData = installment.first;
       final saleId = installmentData['sale_id'] as int;
+      final installmentAmount = (installmentData['amount'] as num).toDouble();
+      final isPaid = (installmentData['paid'] as int?) == 1;
+
+      // التحقق من أن القسط غير مدفوع
+      if (isPaid) {
+        throw Exception('القسط مدفوع بالفعل ولا يمكن دفعه مرة أخرى');
+      }
+
+      // التحقق من أن المبلغ المدفوع لا يتجاوز مبلغ القسط
+      if (amount > installmentAmount) {
+        throw Exception(
+            'المبلغ المدفوع ($amount) يتجاوز مبلغ القسط ($installmentAmount)');
+      }
+
       final customerId = await txn.query(
         'sales',
         columns: ['customer_id'],
@@ -2895,7 +2987,8 @@ class DatabaseService {
     return result.isNotEmpty ? result.first : null;
   }
 
-  Future<bool> deleteSale(int saleId, {int? userId, String? username}) async {
+  Future<bool> deleteSale(int saleId,
+      {int? userId, String? username, String? name}) async {
     return await _db.transaction<bool>((txn) async {
       try {
         // Get sale to adjust debts if needed
@@ -2927,6 +3020,19 @@ class DatabaseService {
           }
         }
 
+        // حفظ بيانات البيع في سلة المحذوفات قبل الحذف
+        final saleData = sale.first;
+        await txn.insert('deleted_items', {
+          'entity_type': 'sale',
+          'entity_id': saleId,
+          'original_data': jsonEncode(saleData),
+          'deleted_by_user_id': userId,
+          'deleted_by_username': username,
+          'deleted_by_name': name,
+          'deleted_at': DateTime.now().toIso8601String(),
+          'can_restore': 1,
+        });
+
         // Delete sale items
         try {
           await txn
@@ -2951,7 +3057,7 @@ class DatabaseService {
           [saleId],
         );
 
-        // تسجيل حدث حذف البيع
+        // تسجيل حدث حذف البيع (باستخدام transaction لتجنب deadlock)
         if (deletedRows > 0) {
           try {
             final saleData = sale.first;
@@ -2966,6 +3072,7 @@ class DatabaseService {
               description:
                   'حذف بيع - النوع: ${type == 'cash' ? 'نقدي' : type == 'credit' ? 'دين' : 'أقساط'} - الإجمالي: ${total.toStringAsFixed(2)}',
               details: 'تم حذف البيع رقم $saleId',
+              transaction: txn,
             );
           } catch (e) {
             debugPrint('خطأ في تسجيل حدث حذف البيع: $e');
@@ -3320,7 +3427,8 @@ class DatabaseService {
   }
 
   // Delete payment
-  Future<bool> deletePayment(int paymentId) async {
+  Future<bool> deletePayment(int paymentId,
+      {int? userId, String? username, String? name}) async {
     return _db.transaction<bool>((txn) async {
       try {
         // Get payment details
@@ -3332,6 +3440,18 @@ class DatabaseService {
         final p = payment.first;
         final customerId = p['customer_id'] as int;
         final amount = (p['amount'] as num).toDouble();
+
+        // حفظ بيانات المدفوعة في سلة المحذوفات قبل الحذف
+        await txn.insert('deleted_items', {
+          'entity_type': 'payment',
+          'entity_id': paymentId,
+          'original_data': jsonEncode(p),
+          'deleted_by_user_id': userId,
+          'deleted_by_username': username,
+          'deleted_by_name': name,
+          'deleted_at': DateTime.now().toIso8601String(),
+          'can_restore': 1,
+        });
 
         // Delete payment
         final deletedRows = await txn
@@ -3460,32 +3580,41 @@ class DatabaseService {
   // دالة تعديل القسط
   Future<void> updateInstallment(
       int installmentId, double newAmount, DateTime newDueDate) async {
-    await _db.update(
-      'installments',
-      {
-        'amount': newAmount,
-        'due_date': newDueDate.toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [installmentId],
-    );
-  }
-
-  // دالة حذف القسط
-  Future<void> deleteInstallment(int installmentId) async {
     await _db.transaction((txn) async {
-      // الحصول على بيانات القسط
+      // الحصول على بيانات القسط الحالية
       final installment = await txn.query(
         'installments',
         where: 'id = ?',
         whereArgs: [installmentId],
       );
 
-      if (installment.isNotEmpty) {
-        final saleId = installment.first['sale_id'] as int;
-        final amount = (installment.first['amount'] as num).toDouble();
+      if (installment.isEmpty) {
+        throw Exception('القسط غير موجود');
+      }
 
-        // الحصول على بيانات البيع
+      final installmentData = installment.first;
+      final isPaid = (installmentData['paid'] as int?) == 1;
+      final oldAmount = (installmentData['amount'] as num).toDouble();
+      final saleId = installmentData['sale_id'] as int;
+
+      // التحقق من أن القسط غير مدفوع قبل التعديل
+      if (isPaid) {
+        throw Exception('لا يمكن تعديل قسط مدفوع');
+      }
+
+      // تحديث بيانات القسط
+      await txn.update(
+        'installments',
+        {
+          'amount': newAmount,
+          'due_date': newDueDate.toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [installmentId],
+      );
+
+      // تحديث دين العميل إذا تغير المبلغ
+      if (oldAmount != newAmount) {
         final sale = await txn.query(
           'sales',
           where: 'id = ?',
@@ -3494,8 +3623,69 @@ class DatabaseService {
 
         if (sale.isNotEmpty) {
           final customerId = sale.first['customer_id'] as int;
+          final amountDifference = newAmount - oldAmount;
 
-          // إضافة المبلغ إلى دين العميل
+          // تحديث دين العميل بالفرق بين المبلغ القديم والجديد
+          await txn.rawUpdate(
+            'UPDATE customers SET total_debt = IFNULL(total_debt, 0) + ? WHERE id = ?',
+            [amountDifference, customerId],
+          );
+        }
+      }
+    });
+  }
+
+  // دالة حذف القسط
+  Future<void> deleteInstallment(int installmentId,
+      {int? userId, String? username, String? name}) async {
+    await _db.transaction((txn) async {
+      // الحصول على بيانات القسط
+      final installment = await txn.query(
+        'installments',
+        where: 'id = ?',
+        whereArgs: [installmentId],
+      );
+
+      if (installment.isEmpty) {
+        throw Exception('القسط غير موجود');
+      }
+
+      final installmentData = installment.first;
+      final saleId = installmentData['sale_id'] as int;
+      final amount = (installmentData['amount'] as num).toDouble();
+      final isPaid = (installmentData['paid'] as int?) == 1;
+
+      // التحقق من أن القسط غير مدفوع قبل الحذف
+      if (isPaid) {
+        throw Exception(
+            'لا يمكن حذف قسط مدفوع. يجب حذف المدفوعة المرتبطة به من سجل المدفوعات أولاً.');
+      }
+
+      // حفظ بيانات القسط في سلة المحذوفات قبل الحذف
+      await txn.insert('deleted_items', {
+        'entity_type': 'installment',
+        'entity_id': installmentId,
+        'original_data': jsonEncode(installmentData),
+        'deleted_by_user_id': userId,
+        'deleted_by_username': username,
+        'deleted_by_name': name,
+        'deleted_at': DateTime.now().toIso8601String(),
+        'can_restore': 1,
+      });
+
+      // الحصول على بيانات البيع
+      final sale = await txn.query(
+        'sales',
+        where: 'id = ?',
+        whereArgs: [saleId],
+      );
+
+      if (sale.isNotEmpty) {
+        final customerId = sale.first['customer_id'] as int;
+
+        // إضافة المبلغ إلى دين العميل فقط إذا كان القسط غير مدفوع
+        // لأن القسط المدفوع تم خصم مبلغه من الدين عند الدفع
+        if (!isPaid) {
           await txn.rawUpdate(
             'UPDATE customers SET total_debt = IFNULL(total_debt, 0) + ? WHERE id = ?',
             [amount, customerId],
@@ -5293,13 +5483,37 @@ class DatabaseService {
   }
 
   /// حذف مصروف
-  Future<void> deleteExpense(int id) async {
+  Future<void> deleteExpense(int id,
+      {int? userId, String? username, String? name}) async {
     try {
-      await _db.delete(
-        'expenses',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      await _db.transaction((txn) async {
+        // التحقق من وجود المصروف
+        final expense = await txn.query('expenses',
+            where: 'id = ?', whereArgs: [id], limit: 1);
+        if (expense.isEmpty) {
+          throw Exception('المصروف غير موجود');
+        }
+
+        // حفظ بيانات المصروف في سلة المحذوفات قبل الحذف
+        final expenseData = expense.first;
+        await txn.insert('deleted_items', {
+          'entity_type': 'expense',
+          'entity_id': id,
+          'original_data': jsonEncode(expenseData),
+          'deleted_by_user_id': userId,
+          'deleted_by_username': username,
+          'deleted_by_name': name,
+          'deleted_at': DateTime.now().toIso8601String(),
+          'can_restore': 1,
+        });
+
+        // حذف المصروف
+        await txn.delete(
+          'expenses',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      });
     } catch (e) {
       throw Exception('خطأ في حذف المصروف: $e');
     }
@@ -6897,6 +7111,272 @@ class DatabaseService {
     } catch (e) {
       debugPrint('خطأ في تحديث مجموعة المستخدم: $e');
       return false;
+    }
+  }
+
+  // ==================== دوال سلة المحذوفات ====================
+
+  /// حذف مؤقت لعنصر (soft delete)
+  Future<int> softDeleteItem({
+    required String entityType,
+    required int entityId,
+    required Map<String, dynamic> originalData,
+    int? userId,
+    String? username,
+    String? name,
+  }) async {
+    return _db.transaction<int>((txn) async {
+      // حفظ البيانات الأصلية في جدول deleted_items
+      final deletedItemId = await txn.insert('deleted_items', {
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'original_data': jsonEncode(originalData),
+        'deleted_by_user_id': userId,
+        'deleted_by_username': username,
+        'deleted_by_name': name,
+        'deleted_at': DateTime.now().toIso8601String(),
+        'can_restore': 1,
+      });
+
+      // حذف العنصر من الجدول الأصلي
+      String tableName;
+      switch (entityType) {
+        case 'customer':
+          tableName = 'customers';
+          break;
+        case 'sale':
+          tableName = 'sales';
+          break;
+        case 'installment':
+          tableName = 'installments';
+          break;
+        case 'payment':
+          tableName = 'payments';
+          break;
+        case 'product':
+          tableName = 'products';
+          break;
+        case 'expense':
+          tableName = 'expenses';
+          break;
+        default:
+          throw Exception('نوع العنصر غير مدعوم: $entityType');
+      }
+
+      await txn.delete(tableName, where: 'id = ?', whereArgs: [entityId]);
+
+      return deletedItemId;
+    });
+  }
+
+  /// الحصول على جميع العناصر المحذوفة
+  Future<List<Map<String, dynamic>>> getDeletedItems({
+    String? entityType,
+    int? limit,
+  }) async {
+    final where = <String>[];
+    final args = <Object?>[];
+
+    if (entityType != null) {
+      where.add('entity_type = ?');
+      args.add(entityType);
+    }
+
+    final sql = '''
+      SELECT * FROM deleted_items
+      ${where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : ''}
+      ORDER BY deleted_at DESC
+      ${limit != null ? 'LIMIT $limit' : ''}
+    ''';
+
+    final results = await _db.rawQuery(sql, args);
+    return results.map((row) {
+      final data = row['original_data'] as String;
+      return {
+        ...row,
+        'original_data': jsonDecode(data),
+      };
+    }).toList();
+  }
+
+  /// استرجاع عنصر محذوف
+  Future<bool> restoreDeletedItem(int deletedItemId) async {
+    return _db.transaction<bool>((txn) async {
+      // الحصول على بيانات العنصر المحذوف
+      final deletedItem = await txn.query('deleted_items',
+          where: 'id = ?', whereArgs: [deletedItemId], limit: 1);
+
+      if (deletedItem.isEmpty) {
+        throw Exception('العنصر المحذوف غير موجود');
+      }
+
+      final item = deletedItem.first;
+      final entityType = item['entity_type'] as String;
+      final originalDataStr = item['original_data'] as String;
+      final originalData = jsonDecode(originalDataStr) as Map<String, dynamic>;
+      final canRestore = (item['can_restore'] as int) == 1;
+
+      if (!canRestore) {
+        throw Exception('لا يمكن استرجاع هذا العنصر');
+      }
+
+      // تحديد اسم الجدول
+      String tableName;
+      switch (entityType) {
+        case 'customer':
+          tableName = 'customers';
+          break;
+        case 'sale':
+          tableName = 'sales';
+          break;
+        case 'installment':
+          tableName = 'installments';
+          break;
+        case 'payment':
+          tableName = 'payments';
+          break;
+        case 'product':
+          tableName = 'products';
+          break;
+        case 'expense':
+          tableName = 'expenses';
+          break;
+        default:
+          throw Exception('نوع العنصر غير مدعوم: $entityType');
+      }
+
+      // إعادة إدراج العنصر في الجدول الأصلي
+      await txn.insert(tableName, originalData);
+
+      // تحديث دين العميل عند استرجاع الأقساط أو المدفوعات
+      if (entityType == 'installment') {
+        // عند استرجاع قسط، يجب تقليل دين العميل
+        final saleId = originalData['sale_id'] as int;
+        final amount = (originalData['amount'] as num).toDouble();
+
+        final sale = await txn.query('sales',
+            where: 'id = ?', whereArgs: [saleId], limit: 1);
+        if (sale.isNotEmpty && sale.first['customer_id'] != null) {
+          final customerId = sale.first['customer_id'] as int;
+          await txn.rawUpdate(
+            'UPDATE customers SET total_debt = MAX(IFNULL(total_debt, 0) - ?, 0) WHERE id = ?',
+            [amount, customerId],
+          );
+        }
+      } else if (entityType == 'payment') {
+        // عند استرجاع مدفوعة، يجب زيادة دين العميل
+        final customerId = originalData['customer_id'] as int;
+        final amount = (originalData['amount'] as num).toDouble();
+        await txn.rawUpdate(
+          'UPDATE customers SET total_debt = IFNULL(total_debt, 0) + ? WHERE id = ?',
+          [amount, customerId],
+        );
+      } else if (entityType == 'sale') {
+        // عند استرجاع بيع من نوع credit، يجب زيادة دين العميل
+        if (originalData['type'] == 'credit' &&
+            originalData['customer_id'] != null) {
+          final customerId = originalData['customer_id'] as int;
+          final total = (originalData['total'] as num).toDouble();
+          await txn.rawUpdate(
+            'UPDATE customers SET total_debt = IFNULL(total_debt, 0) + ? WHERE id = ?',
+            [total, customerId],
+          );
+        }
+      }
+
+      // حذف العنصر من جدول deleted_items
+      await txn
+          .delete('deleted_items', where: 'id = ?', whereArgs: [deletedItemId]);
+
+      return true;
+    });
+  }
+
+  /// حذف نهائي لعنصر من سلة المحذوفات
+  Future<bool> permanentlyDeleteItem(int deletedItemId) async {
+    final deletedRows = await _db
+        .delete('deleted_items', where: 'id = ?', whereArgs: [deletedItemId]);
+    return deletedRows > 0;
+  }
+
+  /// حذف جميع العناصر المحذوفة نهائياً
+  Future<int> permanentlyDeleteAllItems({String? entityType}) async {
+    if (entityType != null) {
+      return await _db.delete('deleted_items',
+          where: 'entity_type = ?', whereArgs: [entityType]);
+    } else {
+      return await _db.delete('deleted_items');
+    }
+  }
+
+  /// الحصول على عدد العناصر المحذوفة
+  Future<Map<String, int>> getDeletedItemsCount() async {
+    final result = await _db.rawQuery('''
+      SELECT entity_type, COUNT(*) as count
+      FROM deleted_items
+      GROUP BY entity_type
+    ''');
+
+    final counts = <String, int>{};
+    for (final row in result) {
+      counts[row['entity_type'] as String] = row['count'] as int;
+    }
+
+    return counts;
+  }
+
+  /// التأكد من وجود جدول deleted_items
+  Future<void> _ensureDeletedItemsTable(DatabaseExecutor db) async {
+    try {
+      // التحقق من وجود الجدول
+      final tables = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='deleted_items'");
+
+      if (tables.isEmpty) {
+        debugPrint('جدول deleted_items غير موجود، جاري إنشاؤه...');
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS deleted_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER NOT NULL,
+            original_data TEXT NOT NULL,
+            deleted_by_user_id INTEGER,
+            deleted_by_username TEXT,
+            deleted_by_name TEXT,
+            deleted_at TEXT NOT NULL,
+            can_restore INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY(deleted_by_user_id) REFERENCES users(id)
+          );
+        ''');
+
+        // إنشاء الفهارس
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_deleted_items_entity_type ON deleted_items(entity_type)');
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_deleted_items_deleted_at ON deleted_items(deleted_at)');
+
+        debugPrint('تم إنشاء جدول deleted_items بنجاح');
+      } else {
+        // التحقق من وجود عمود deleted_by_name وإضافته إذا لم يكن موجوداً
+        try {
+          final columns = await db.rawQuery("PRAGMA table_info(deleted_items)");
+          final hasDeletedByName = columns.any(
+              (col) => (col['name']?.toString() ?? '') == 'deleted_by_name');
+
+          if (!hasDeletedByName) {
+            debugPrint('إضافة عمود deleted_by_name إلى جدول deleted_items...');
+            await db.execute(
+                'ALTER TABLE deleted_items ADD COLUMN deleted_by_name TEXT');
+            debugPrint('تم إضافة عمود deleted_by_name بنجاح');
+          }
+        } catch (e) {
+          debugPrint('خطأ في التحقق من/إضافة عمود deleted_by_name: $e');
+        }
+      }
+    } catch (e, stackTrace) {
+      debugPrint('خطأ في التحقق من/إنشاء جدول deleted_items: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // لا نرمي الخطأ هنا لأن الجدول قد يكون موجوداً بالفعل
     }
   }
 }

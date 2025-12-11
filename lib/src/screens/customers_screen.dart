@@ -400,7 +400,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
     if (ok != true) return;
 
     try {
-      final deletedRows = await db.deleteCustomer(id);
+      final auth = context.read<AuthProvider>();
+      final currentUser = auth.currentUser;
+      final deletedRows = await db.deleteCustomer(
+        id,
+        userId: currentUser?.id,
+        username: currentUser?.username,
+        name: currentUser?.name,
+      );
       if (!mounted) return;
 
       if (deletedRows > 0) {
@@ -661,136 +668,235 @@ class _CustomersScreenState extends State<CustomersScreen> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Directionality(
           textDirection: TextDirection.rtl,
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.9,
-            height: MediaQuery.of(context).size.height * 0.8,
-            padding: const EdgeInsets.all(20),
+            width: MediaQuery.of(context).size.width * 0.65,
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: DarkModeUtils.getCardColor(context),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person,
-                      size: 32,
-                      color: DarkModeUtils.getInfoColor(context),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'تفاصيل العميل: $customerName',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: DarkModeUtils.getTextColor(context),
-                            ),
-                          ),
-                          Text(
-                            'الهاتف: ${customer['phone']?.toString() ?? 'غير محدد'}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color:
-                                  DarkModeUtils.getSecondaryTextColor(context),
-                            ),
-                          ),
-                          Text(
-                            'العنوان: ${customer['address']?.toString() ?? 'غير محدد'}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color:
-                                  DarkModeUtils.getSecondaryTextColor(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Debt Summary
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: DarkModeUtils.getCardColor(context),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: DarkModeUtils.getBorderColor(context)),
+                    color: DarkModeUtils.getBackgroundColor(context),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Expanded(
-                        child: _buildDetailCard(
-                          'إجمالي الدين',
-                          Formatters.currencyIQD(
-                              (customer['total_debt'] as num?)?.toDouble() ??
-                                  0.0),
-                          Icons.money_off,
-                          _getDebtColor(
-                              (customer['total_debt'] as num?)?.toDouble() ??
-                                  0.0),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: DarkModeUtils.getInfoColor(context)
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.person,
+                          size: 20,
+                          color: DarkModeUtils.getInfoColor(context),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: _buildDetailCard(
-                          'عدد المعاملات',
-                          customerSales.length.toString(),
-                          Icons.receipt_long,
-                          Colors.blue,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              customerName,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: DarkModeUtils.getTextColor(context),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (customer['phone']?.toString().isNotEmpty ??
+                                false)
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.phone,
+                                    size: 14,
+                                    color: DarkModeUtils.getSecondaryTextColor(
+                                        context),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    customer['phone']?.toString() ?? '',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          DarkModeUtils.getSecondaryTextColor(
+                                              context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            if (customer['address']?.toString().isNotEmpty ??
+                                false) ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 14,
+                                    color: DarkModeUtils.getSecondaryTextColor(
+                                        context),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      customer['address']?.toString() ?? '',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            DarkModeUtils.getSecondaryTextColor(
+                                                context),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildDetailCard(
-                          'عدد المدفوعات',
-                          customerPayments.length.toString(),
-                          Icons.payments,
-                          Colors.green,
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.close,
+                          size: 20,
+                          color: DarkModeUtils.getTextColor(context),
                         ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Tabs
+                // Content
                 Expanded(
-                  child: DefaultTabController(
-                    length: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        TabBar(
-                          labelColor: DarkModeUtils.getTextColor(context),
-                          unselectedLabelColor:
-                              DarkModeUtils.getSecondaryTextColor(context),
-                          indicatorColor: DarkModeUtils.getInfoColor(context),
-                          tabs: const [
-                            Tab(
-                                text: 'المعاملات',
-                                icon: Icon(Icons.receipt_long)),
-                            Tab(text: 'المدفوعات', icon: Icon(Icons.payments)),
+                        // Statistics Cards
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildDetailCard(
+                                context,
+                                'إجمالي الدين',
+                                Formatters.currencyIQD(
+                                    (customer['total_debt'] as num?)
+                                            ?.toDouble() ??
+                                        0.0),
+                                Icons.account_balance_wallet,
+                                _getDebtColor((customer['total_debt'] as num?)
+                                        ?.toDouble() ??
+                                    0.0),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: _buildDetailCard(
+                                context,
+                                'عدد المعاملات',
+                                customerSales.length.toString(),
+                                Icons.receipt_long,
+                                const Color(0xFF3B82F6),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: _buildDetailCard(
+                                context,
+                                'عدد المدفوعات',
+                                customerPayments.length.toString(),
+                                Icons.payments,
+                                const Color(0xFF10B981),
+                              ),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
+
+                        // Tabs
                         Expanded(
-                          child: TabBarView(
-                            children: [
-                              // Sales Tab
-                              _buildSalesList(customerSales),
-                              // Payments Tab
-                              _buildPaymentsList(customerPayments),
-                            ],
+                          child: DefaultTabController(
+                            length: 2,
+                            child: Column(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: DarkModeUtils.getBackgroundColor(
+                                        context),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: TabBar(
+                                    labelColor: Colors.white,
+                                    unselectedLabelColor:
+                                        DarkModeUtils.getSecondaryTextColor(
+                                            context),
+                                    indicator: BoxDecoration(
+                                      color:
+                                          DarkModeUtils.getInfoColor(context),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    indicatorSize: TabBarIndicatorSize.tab,
+                                    dividerColor: Colors.transparent,
+                                    labelPadding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    labelStyle: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    unselectedLabelStyle: const TextStyle(
+                                      fontSize: 10,
+                                    ),
+                                    tabs: const [
+                                      Tab(
+                                        text: 'المعاملات',
+                                        icon:
+                                            Icon(Icons.receipt_long, size: 14),
+                                        iconMargin: EdgeInsets.only(bottom: 0),
+                                      ),
+                                      Tab(
+                                        text: 'المدفوعات',
+                                        icon: Icon(Icons.payments, size: 14),
+                                        iconMargin: EdgeInsets.only(bottom: 0),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Expanded(
+                                  child: TabBarView(
+                                    children: [
+                                      // Sales Tab
+                                      _buildSalesList(context, customerSales),
+                                      // Payments Tab
+                                      _buildPaymentsList(
+                                          context, customerPayments),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -806,37 +912,45 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   /// بناء بطاقة تفصيلية
-  Widget _buildDetailCard(
-      String title, String value, IconData icon, Color color) {
+  Widget _buildDetailCard(BuildContext ctx, String title, String value,
+      IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: DarkModeUtils.getBackgroundColor(ctx),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: DarkModeUtils.getBorderColor(ctx),
+          width: 1,
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
+          Icon(icon, color: color, size: 14),
+          const SizedBox(height: 3),
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
-              color: DarkModeUtils.getSecondaryTextColor(context),
+              fontSize: 8,
+              fontWeight: FontWeight.w600,
+              color: DarkModeUtils.getSecondaryTextColor(ctx),
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             value,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: DarkModeUtils.getTextColor(context),
+              color: color,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -844,25 +958,42 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   /// بناء قائمة المعاملات
-  Widget _buildSalesList(List<Map<String, Object?>> sales) {
+  Widget _buildSalesList(BuildContext ctx, List<Map<String, Object?>> sales) {
     if (sales.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.receipt_long,
-              size: 64,
-              color: DarkModeUtils.getSecondaryTextColor(context),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: DarkModeUtils.getBackgroundColor(ctx),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 64,
+                color:
+                    DarkModeUtils.getSecondaryTextColor(ctx).withOpacity(0.5),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               'لا توجد معاملات',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: DarkModeUtils.getSecondaryTextColor(context),
+                color: DarkModeUtils.getTextColor(ctx),
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'لم يتم تسجيل أي معاملات لهذا العميل بعد',
+              style: TextStyle(
+                fontSize: 14,
+                color: DarkModeUtils.getSecondaryTextColor(ctx),
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -870,6 +1001,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: sales.length,
       itemBuilder: (context, index) {
         final sale = sales[index];
@@ -898,86 +1030,127 @@ class _CustomersScreenState extends State<CustomersScreen> {
         }
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 10),
           decoration: BoxDecoration(
             color: DarkModeUtils.getCardColor(context),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: DarkModeUtils.getBorderColor(context)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: DarkModeUtils.getBorderColor(context),
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: typeColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  Icons.receipt,
-                  color: typeColor,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {},
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
                   children: [
-                    Text(
-                      'فاتورة #${sale['id']}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: DarkModeUtils.getTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'النوع: $typeText',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: typeColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (sale['items_summary'] != null)
-                      Text(
-                        sale['items_summary'].toString(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: DarkModeUtils.getSecondaryTextColor(context),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: DarkModeUtils.getBackgroundColor(context),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: DarkModeUtils.getBorderColor(context),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                      child: Icon(
+                        Icons.receipt,
+                        color: typeColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'فاتورة #${sale['id']}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: DarkModeUtils.getTextColor(context),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: typeColor.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  typeText,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: typeColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          if (sale['items_summary'] != null)
+                            Text(
+                              sale['items_summary'].toString(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: DarkModeUtils.getSecondaryTextColor(
+                                    context),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: DarkModeUtils.getSecondaryTextColor(
+                                    context),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatDate(createdAt),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          Formatters.currencyIQD(total),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: typeColor,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    Formatters.currencyIQD(total),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: DarkModeUtils.getTextColor(context),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatDate(createdAt),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: DarkModeUtils.getSecondaryTextColor(context),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -985,25 +1158,43 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   /// بناء قائمة المدفوعات
-  Widget _buildPaymentsList(List<Map<String, Object?>> payments) {
+  Widget _buildPaymentsList(
+      BuildContext ctx, List<Map<String, Object?>> payments) {
     if (payments.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.payments,
-              size: 64,
-              color: DarkModeUtils.getSecondaryTextColor(context),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: DarkModeUtils.getBackgroundColor(ctx),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.payments_outlined,
+                size: 64,
+                color:
+                    DarkModeUtils.getSecondaryTextColor(ctx).withOpacity(0.5),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               'لا توجد مدفوعات',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: DarkModeUtils.getSecondaryTextColor(context),
+                color: DarkModeUtils.getTextColor(ctx),
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'لم يتم تسجيل أي مدفوعات لهذا العميل بعد',
+              style: TextStyle(
+                fontSize: 14,
+                color: DarkModeUtils.getSecondaryTextColor(ctx),
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -1011,6 +1202,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
     }
 
     return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: payments.length,
       itemBuilder: (context, index) {
         final payment = payments[index];
@@ -1018,79 +1210,128 @@ class _CustomersScreenState extends State<CustomersScreen> {
         final paymentDate = payment['payment_date']?.toString() ?? '';
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 10),
           decoration: BoxDecoration(
             color: DarkModeUtils.getCardColor(context),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: DarkModeUtils.getBorderColor(context)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: DarkModeUtils.getBorderColor(context).withOpacity(0.5),
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(
-                  Icons.payments,
-                  color: Colors.green,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {},
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
                   children: [
-                    Text(
-                      'دفعة #${payment['id']}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: DarkModeUtils.getTextColor(context),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: DarkModeUtils.getBackgroundColor(context),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: DarkModeUtils.getBorderColor(context),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.payments,
+                        color: Colors.green,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    if (payment['notes'] != null &&
-                        payment['notes'].toString().isNotEmpty)
-                      Text(
-                        payment['notes'].toString(),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: DarkModeUtils.getSecondaryTextColor(context),
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'دفعة #${payment['id']}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: DarkModeUtils.getTextColor(context),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'مدفوعة',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          if (payment['notes'] != null &&
+                              payment['notes'].toString().isNotEmpty)
+                            Text(
+                              payment['notes'].toString(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: DarkModeUtils.getSecondaryTextColor(
+                                    context),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: DarkModeUtils.getSecondaryTextColor(
+                                    context),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatDate(paymentDate),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          Formatters.currencyIQD(amount),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    Formatters.currencyIQD(amount),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatDate(paymentDate),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: DarkModeUtils.getSecondaryTextColor(context),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         );
       },

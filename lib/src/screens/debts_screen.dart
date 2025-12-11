@@ -11,6 +11,7 @@ import 'package:printing/printing.dart';
 import '../services/store_config.dart';
 import 'package:flutter/material.dart';
 import '../services/db/database_service.dart';
+import '../services/auth/auth_provider.dart';
 import '../services/print_service.dart';
 import '../utils/format.dart';
 import '../utils/export.dart';
@@ -260,11 +261,27 @@ class _DebtsScreenState extends State<DebtsScreen>
 
                             const SizedBox(height: 16),
 
+                            // تفاصيل الديون (credit sales)
+                            if (data['creditSales'] != null &&
+                                (data['creditSales'] as List).isNotEmpty) ...[
+                              _buildCreditSalesSection(
+                                data['creditSales']
+                                    as List<Map<String, dynamic>>,
+                                db,
+                                customer,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+
                             // تفاصيل الأقساط
                             if (data['installments'] != null &&
                                 (data['installments'] as List).isNotEmpty) ...[
-                              _buildInstallmentsSection(data['installments']
-                                  as List<Map<String, dynamic>>),
+                              _buildInstallmentsSection(
+                                data['installments']
+                                    as List<Map<String, dynamic>>,
+                                db,
+                                customer,
+                              ),
                               const SizedBox(height: 16),
                             ],
 
@@ -336,6 +353,7 @@ class _DebtsScreenState extends State<DebtsScreen>
       final debtData = await _getCustomerDebtData(customerId, db);
       final payments = await db.getCustomerPayments(customerId: customerId);
       final installments = await _getCustomerInstallments(customerId, db);
+      final creditSales = await db.creditSales(customerId: customerId);
 
       return {
         'totalDebt': debtData['totalDebt'],
@@ -343,6 +361,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         'remainingDebt': debtData['remainingDebt'],
         'payments': payments,
         'installments': installments,
+        'creditSales': creditSales,
       };
     } catch (e) {
       return {
@@ -351,6 +370,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         'remainingDebt': 0.0,
         'payments': <Map<String, dynamic>>[],
         'installments': <Map<String, dynamic>>[],
+        'creditSales': <Map<String, dynamic>>[],
       };
     }
   }
@@ -420,8 +440,132 @@ class _DebtsScreenState extends State<DebtsScreen>
     }
   }
 
+  // دالة لبناء قسم الديون (credit sales)
+  Widget _buildCreditSalesSection(
+    List<Map<String, dynamic>> creditSales,
+    DatabaseService db,
+    Map<String, dynamic> customer,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'الديون (مبيعات آجلة)',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...creditSales.map((sale) {
+              final saleId = sale['id'] as int;
+              final total = (sale['total'] as num).toDouble();
+              final createdAt =
+                  DateTime.tryParse(sale['created_at']?.toString() ?? '');
+              final dueDate = sale['due_date'] != null
+                  ? DateTime.tryParse(sale['due_date']?.toString() ?? '')
+                  : null;
+              final isOverdue =
+                  dueDate != null && dueDate.isBefore(DateTime.now());
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isOverdue
+                      ? Theme.of(context).colorScheme.error.withOpacity(0.08)
+                      : Colors.orange.withOpacity(0.08),
+                  border: Border.all(
+                    color: isOverdue
+                        ? Theme.of(context).colorScheme.error.withOpacity(0.4)
+                        : Colors.orange.withOpacity(0.35),
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.shopping_cart,
+                                size: 16,
+                                color: Colors.orange,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'دين رقم $saleId',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'المبلغ: ${Formatters.currencyIQD(total)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                          if (createdAt != null)
+                            Text(
+                              'تاريخ البيع: ${DateFormat('yyyy/MM/dd').format(createdAt)}',
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                          if (dueDate != null)
+                            Text(
+                              'تاريخ الاستحقاق: ${DateFormat('yyyy/MM/dd').format(dueDate)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: isOverdue
+                                    ? Theme.of(context).colorScheme.error
+                                    : Colors.orange,
+                                fontWeight: isOverdue
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon:
+                          const Icon(Icons.delete, color: Colors.red, size: 20),
+                      onPressed: () => _showDeleteCreditSaleDialog(
+                        context,
+                        sale,
+                        db,
+                        customer,
+                      ),
+                      tooltip: 'حذف الدين',
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
   // دالة لبناء قسم الأقساط
-  Widget _buildInstallmentsSection(List<Map<String, dynamic>> installments) {
+  Widget _buildInstallmentsSection(
+    List<Map<String, dynamic>> installments,
+    DatabaseService db,
+    Map<String, dynamic> customer,
+  ) {
     // تشخيص مؤقت
     print(
         'Building installments section with ${installments.length} installments');
@@ -676,36 +820,55 @@ class _DebtsScreenState extends State<DebtsScreen>
                           style:
                               const TextStyle(fontSize: 8, color: Colors.grey),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 3, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: installment['sale_type'] == 'installment'
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withOpacity(0.1)
-                                : Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: installment['sale_type'] == 'installment'
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.3)
-                                  : Colors.orange.withOpacity(0.3),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 3, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: installment['sale_type'] == 'installment'
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.1)
+                                    : Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color:
+                                      installment['sale_type'] == 'installment'
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                              .withOpacity(0.3)
+                                          : Colors.orange.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                'نوع البيع: ${_translateSaleType(installment['sale_type'])}',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  color: installment['sale_type'] ==
+                                          'installment'
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.orange.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            'نوع البيع: ${_translateSaleType(installment['sale_type'])}',
-                            style: TextStyle(
-                              fontSize: 8,
-                              color: installment['sale_type'] == 'installment'
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.orange.shade700,
-                              fontWeight: FontWeight.bold,
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.delete,
+                                  color: Colors.red, size: 16),
+                              onPressed: () => _deleteInstallment(
+                                context,
+                                installment,
+                                db,
+                              ),
+                              tooltip: 'حذف القسط',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -2132,17 +2295,17 @@ class _DebtsScreenState extends State<DebtsScreen>
                   ],
                 ),
               ),
-            ],
-            const PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit, size: 16, color: Colors.blue),
-                  SizedBox(width: 8),
-                  Text('تعديل القسط'),
-                ],
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 16, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('تعديل القسط'),
+                  ],
+                ),
               ),
-            ),
+            ],
             const PopupMenuItem(
               value: 'print',
               child: Row(
@@ -2735,7 +2898,14 @@ class _DebtsScreenState extends State<DebtsScreen>
             ElevatedButton(
               onPressed: () async {
                 try {
-                  await db.deletePayment(paymentId);
+                  final auth = context.read<AuthProvider>();
+                  final currentUser = auth.currentUser;
+                  await db.deletePayment(
+                    paymentId,
+                    userId: currentUser?.id,
+                    username: currentUser?.username,
+                    name: currentUser?.name,
+                  );
                   Navigator.pop(context);
                   // إعادة تحميل البيانات
                   _refreshData();
@@ -3208,10 +3378,39 @@ class _DebtsScreenState extends State<DebtsScreen>
                   return;
                 }
 
+                // التحقق من أن القسط غير مدفوع
+                final isPaid = (installment['paid'] as int?) == 1;
+                if (isPaid) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text('القسط مدفوع بالفعل ولا يمكن دفعه مرة أخرى'),
+                      backgroundColor: Color(0xFFDC2626),
+                    ),
+                  );
+                  return;
+                }
+
+                final paymentAmount = double.parse(amountController.text);
+                final installmentAmount =
+                    (installment['amount'] as num).toDouble();
+
+                // التحقق من أن المبلغ المدفوع لا يتجاوز مبلغ القسط
+                if (paymentAmount > installmentAmount) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'المبلغ المدفوع ($paymentAmount) يتجاوز مبلغ القسط ($installmentAmount)'),
+                      backgroundColor: Color(0xFFDC2626),
+                    ),
+                  );
+                  return;
+                }
+
                 try {
                   await db.payInstallment(
                     installment['id'],
-                    double.parse(amountController.text),
+                    paymentAmount,
                     notes: notesController.text.isNotEmpty
                         ? notesController.text
                         : null,
@@ -3250,7 +3449,113 @@ class _DebtsScreenState extends State<DebtsScreen>
     BuildContext context,
     Map<String, dynamic> customer,
     DatabaseService db,
-  ) {
+  ) async {
+    // التحقق من وجود بيانات مرتبطة قبل عرض الحوار
+    try {
+      final relatedData = await db.getCustomerRelatedDataCount(customer['id']);
+      final hasRelatedData =
+          relatedData['sales']! > 0 || relatedData['payments']! > 0;
+
+      if (hasRelatedData) {
+        // عرض تحذير واضح بأن الحذف غير ممكن
+        showDialog(
+          context: context,
+          builder: (context) => Directionality(
+            textDirection: ui.TextDirection.rtl,
+            child: AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.warning, color: Color(0xFFDC2626), size: 28),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'لا يمكن حذف العميل',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFDC2626),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'العميل: ${customer['name'] ?? 'غير محدد'}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'هذا العميل مرتبط ببيانات مهمة:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  if (relatedData['sales']! > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.shopping_cart,
+                              size: 16, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Text('${relatedData['sales']} عملية بيع'),
+                        ],
+                      ),
+                    ),
+                  if (relatedData['payments']! > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.payment, size: 16, color: Colors.green),
+                          const SizedBox(width: 8),
+                          Text('${relatedData['payments']} دفعة'),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFFFF3CD),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Color(0xFFFFC107)),
+                    ),
+                    child: const Text(
+                      'لحماية السجلات المالية والتاريخية، يجب حذف جميع المبيعات والمدفوعات المرتبطة بهذا العميل أولاً قبل حذف العميل نفسه.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF856404),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF1976D2),
+                  ),
+                  child: const Text('حسناً'),
+                ),
+              ],
+            ),
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      // في حالة حدوث خطأ في التحقق، نتابع مع الحذف العادي
+      debugPrint('خطأ في التحقق من البيانات المرتبطة: $e');
+    }
+
+    // إذا لم يكن هناك بيانات مرتبطة، عرض حوار الحذف العادي
     showDialog(
       context: context,
       builder: (context) => Directionality(
@@ -3261,21 +3566,28 @@ class _DebtsScreenState extends State<DebtsScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('هل أنت متأكد من حذف العميل:'),
+              const Text('هل أنت متأكد من حذف العميل:'),
               const SizedBox(height: 4),
               Text(
                 '${customer['name'] ?? 'غير محدد'}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 14,
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'تحذير: سيتم حذف جميع البيانات المرتبطة بهذا العميل بما في ذلك المدفوعات والفواتير.',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 12,
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'ملاحظة: هذا العميل لا يحتوي على أي مبيعات أو مدفوعات مرتبطة به.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
             ],
@@ -3288,73 +3600,217 @@ class _DebtsScreenState extends State<DebtsScreen>
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // التحقق من وجود العميل قبل المحاولة
-                  final customers = await db.getCustomers();
-                  final customerExists =
-                      customers.any((c) => c['id'] == customer['id']);
-
-                  // حذف العميل (سيحذف جميع البيانات المرتبطة تلقائياً)
-                  final deletedRows = await db.deleteCustomer(customer['id']);
-
-                  // التحقق من وجود العميل بعد المحاولة
-                  final customersAfter = await db.getCustomers();
-                  final customerExistsAfter =
-                      customersAfter.any((c) => c['id'] == customer['id']);
+                  final auth = context.read<AuthProvider>();
+                  final currentUser = auth.currentUser;
+                  final deletedRows = await db.deleteCustomer(
+                    customer['id'],
+                    userId: currentUser?.id,
+                    username: currentUser?.username,
+                    name: currentUser?.name,
+                  );
 
                   if (deletedRows > 0) {
                     Navigator.pop(context);
-                    // إعادة تحميل البيانات
                     _refreshData();
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content:
                             Text('تم حذف العميل ${customer['name']} بنجاح'),
-                        backgroundColor:
-                            Color(0xFF059669), // Professional Green
+                        backgroundColor: Color(0xFF059669),
                       ),
                     );
                   } else {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            'لم يتم العثور على العميل أو حدث خطأ في الحذف'),
-                        backgroundColor:
-                            Color(0xFFF59E0B), // Professional Orange
+                        content: Text('لم يتم العثور على العميل'),
+                        backgroundColor: Color(0xFFF59E0B),
                       ),
                     );
                   }
                 } catch (e) {
                   Navigator.pop(context);
 
-                  // تحسين رسائل الخطأ
                   String errorMessage = 'خطأ في حذف العميل';
-                  if (e.toString().contains('FOREIGN KEY constraint failed')) {
-                    errorMessage =
-                        'لا يمكن حذف العميل لأنه مرتبط بفواتير أو مدفوعات';
-                  } else if (e.toString().contains('database is locked')) {
+                  final errorString = e.toString();
+
+                  if (errorString.contains('لا يمكن حذف العميل')) {
+                    // رسالة الخطأ من قاعدة البيانات
+                    errorMessage = errorString.replaceAll('Exception: ', '');
+                  } else if (errorString.contains('database is locked')) {
                     errorMessage =
                         'قاعدة البيانات قيد الاستخدام، حاول مرة أخرى';
-                  } else if (e.toString().contains('no such table')) {
+                  } else if (errorString.contains('no such table')) {
                     errorMessage =
                         'خطأ في قاعدة البيانات، يرجى إعادة تشغيل التطبيق';
                   } else {
-                    errorMessage = 'خطأ في حذف العميل: ${e.toString()}';
+                    errorMessage = 'خطأ في حذف العميل: $errorString';
                   }
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(errorMessage),
-                      backgroundColor: Color(0xFFDC2626), // Professional Red
-                      duration: const Duration(seconds: 4),
+                      backgroundColor: Color(0xFFDC2626),
+                      duration: const Duration(seconds: 5),
+                    ),
+                  );
+                }
+              },
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: Color(0xFFDC2626)),
+              child: const Text('حذف'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // دالة حذف الدين (credit sale)
+  void _showDeleteCreditSaleDialog(
+    BuildContext context,
+    Map<String, dynamic> sale,
+    DatabaseService db,
+    Map<String, dynamic> customer,
+  ) async {
+    // التحقق من وجود مدفوعات مرتبطة
+    final saleId = sale['id'] as int;
+    final customerId = customer['id'] as int;
+    final saleTotal = (sale['total'] as num).toDouble();
+
+    try {
+      final hasPayments = await db.hasPaymentsForCreditSale(saleId, customerId);
+      final paymentsTotal = hasPayments
+          ? await db.getPaymentsForCreditSale(saleId, customerId)
+          : 0.0;
+
+      if (hasPayments && paymentsTotal > 0) {
+        // عرض تحذير بأن هناك مدفوعات مرتبطة
+        showDialog(
+          context: context,
+          builder: (context) => Directionality(
+            textDirection: ui.TextDirection.rtl,
+            child: AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.warning, color: Color(0xFFDC2626), size: 28),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'تحذير: لا يمكن حذف الدين',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFDC2626),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'هذا الدين مرتبط بمدفوعات:',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('مبلغ الدين: ${Formatters.currencyIQD(saleTotal)}'),
+                  Text(
+                      'إجمالي المدفوعات: ${Formatters.currencyIQD(paymentsTotal)}'),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFFFF3CD),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Color(0xFFFFC107)),
+                    ),
+                    child: const Text(
+                      'لحذف هذا الدين، يجب حذف جميع المدفوعات المرتبطة به أولاً من سجل المدفوعات.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF856404),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF1976D2),
+                  ),
+                  child: const Text('حسناً'),
+                ),
+              ],
+            ),
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      // في حالة حدوث خطأ في التحقق، نتابع مع الحذف العادي
+      debugPrint('خطأ في التحقق من المدفوعات: $e');
+    }
+
+    // إذا لم يكن هناك مدفوعات، عرض حوار الحذف العادي
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('حذف الدين'),
+          content: Text(
+            'هل أنت متأكد من حذف الدين رقم $saleId بقيمة ${Formatters.currencyIQD(saleTotal)}؟\n\n'
+            'سيتم حذف هذا الدين فقط دون التأثير على باقي بيانات العميل أو المبيعات الأخرى.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final deleted = await db.deleteSale(saleId);
+                  if (deleted) {
+                    Navigator.pop(context);
+                    Navigator.pop(context); // إغلاق المعاينة التفصيلية أيضاً
+                    _refreshData();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'تم حذف الدين رقم $saleId بنجاح',
+                        ),
+                        backgroundColor: Color(0xFF059669),
+                      ),
+                    );
+                  } else {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('فشل حذف الدين'),
+                        backgroundColor: Color(0xFFDC2626),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('خطأ في حذف الدين: $e'),
+                      backgroundColor: Color(0xFFDC2626),
                     ),
                   );
                 }
               },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFDC2626)), // Professional Red
-              child: const Text('حذف العميل'),
+                backgroundColor: Color(0xFFDC2626),
+              ),
+              child: const Text('حذف'),
             ),
           ],
         ),
@@ -3431,6 +3887,18 @@ class _DebtsScreenState extends State<DebtsScreen>
             ),
             ElevatedButton(
               onPressed: () async {
+                // التحقق من أن القسط غير مدفوع
+                final isPaid = (installment['paid'] as int?) == 1;
+                if (isPaid) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('لا يمكن تعديل قسط مدفوع'),
+                      backgroundColor: Color(0xFFDC2626),
+                    ),
+                  );
+                  return;
+                }
+
                 if (amountController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -3479,6 +3947,81 @@ class _DebtsScreenState extends State<DebtsScreen>
     Map<String, dynamic> installment,
     DatabaseService db,
   ) {
+    final isPaid = (installment['paid'] as int?) == 1;
+    final amount = (installment['amount'] as num?)?.toDouble() ?? 0.0;
+    final customerName = installment['customer_name'] ?? 'غير محدد';
+
+    // إذا كان القسط مدفوعاً، عرض تحذير
+    if (isPaid) {
+      showDialog(
+        context: context,
+        builder: (context) => Directionality(
+          textDirection: ui.TextDirection.rtl,
+          child: AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.warning, color: Color(0xFFDC2626), size: 28),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'تحذير: القسط مدفوع',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFDC2626),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'القسط المحدد مدفوع بالفعل:',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text('المبلغ: ${Formatters.currencyIQD(amount)}'),
+                Text('العميل: $customerName'),
+                if (installment['paid_at'] != null)
+                  Text(
+                    'تاريخ الدفع: ${DateFormat('yyyy/MM/dd').format(DateTime.parse(installment['paid_at'].toString()))}',
+                  ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFFFF3CD),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Color(0xFFFFC107)),
+                  ),
+                  child: const Text(
+                    'لا يمكن حذف قسط مدفوع. إذا كنت تريد إلغاء الدفع، يجب حذف المدفوعة المرتبطة به من سجل المدفوعات أولاً.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF856404),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF1976D2),
+                ),
+                child: const Text('حسناً'),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
+    // إذا لم يكن مدفوعاً، عرض حوار الحذف العادي
     showDialog(
       context: context,
       builder: (context) => Directionality(
@@ -3486,7 +4029,8 @@ class _DebtsScreenState extends State<DebtsScreen>
         child: AlertDialog(
           title: const Text('حذف القسط'),
           content: Text(
-            'هل أنت متأكد من حذف قسط ${Formatters.currencyIQD(installment['amount'])} للعميل ${installment['customer_name']}؟',
+            'هل أنت متأكد من حذف قسط ${Formatters.currencyIQD(amount)} للعميل $customerName؟\n\n'
+            'سيتم حذف هذا القسط فقط دون التأثير على باقي بيانات العميل أو المبيعات الأخرى.',
           ),
           actions: [
             TextButton(
@@ -3496,13 +4040,20 @@ class _DebtsScreenState extends State<DebtsScreen>
             ElevatedButton(
               onPressed: () async {
                 try {
-                  await db.deleteInstallment(installment['id']);
+                  final auth = context.read<AuthProvider>();
+                  final currentUser = auth.currentUser;
+                  await db.deleteInstallment(
+                    installment['id'],
+                    userId: currentUser?.id,
+                    username: currentUser?.username,
+                    name: currentUser?.name,
+                  );
                   Navigator.pop(context);
                   _refreshData();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('تم حذف القسط بنجاح'),
-                      backgroundColor: Color(0xFF059669), // Professional Green
+                      backgroundColor: Color(0xFF059669),
                     ),
                   );
                 } catch (e) {
@@ -3510,13 +4061,14 @@ class _DebtsScreenState extends State<DebtsScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('خطأ في حذف القسط: $e'),
-                      backgroundColor: Color(0xFFDC2626), // Professional Red
+                      backgroundColor: Color(0xFFDC2626),
                     ),
                   );
                 }
               },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFDC2626)), // Professional Red
+                backgroundColor: Color(0xFFDC2626),
+              ),
               child: const Text('حذف'),
             ),
           ],
