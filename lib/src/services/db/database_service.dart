@@ -13,7 +13,7 @@ import '../../models/user_model.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
-  static const int _dbVersion = 12;
+  static const int _dbVersion = 13;
 
   late Database _db;
   late String _dbPath;
@@ -79,6 +79,9 @@ class DatabaseService {
         if (oldVersion < 12) {
           await _migrateToV12(db);
         }
+        if (oldVersion < 13) {
+          await _migrateToV13(db);
+        }
         // Ensure no legacy triggers/views remain that reference old temp tables
         await _cleanupOrphanObjects(db);
         await _ensureCategorySchemaOn(db);
@@ -90,6 +93,8 @@ class DatabaseService {
         await _ensureReturnsTable(db);
         // التأكد من أن جدول returns يحتوي على جميع الأعمدة المطلوبة
         await _ensureReturnsTableColumns(db);
+        // التأكد من وجود حقل status
+        await _ensureReturnsStatusColumn(db);
       },
     );
     // إعدادات أساسية فقط
@@ -100,6 +105,8 @@ class DatabaseService {
     await _ensureReturnsTable();
     // التأكد من أن جدول returns يحتوي على جميع الأعمدة المطلوبة
     await _ensureReturnsTableColumns(_db);
+    // التأكد من وجود حقل status
+    await _ensureReturnsStatusColumn(_db);
 
     await _createIndexes(_db);
 
@@ -116,6 +123,7 @@ class DatabaseService {
     await _ensureEventLogTable(_db);
     await _ensureReturnsTable();
     await _ensureReturnsTableColumns(_db);
+    await _ensureReturnsStatusColumn(_db);
 
     await _createIndexes(_db);
     await _cleanupOrphanObjects(_db);
@@ -1650,6 +1658,34 @@ class DatabaseService {
     } catch (e, stackTrace) {
       debugPrint('خطأ في Migration V12: $e');
       debugPrint('Stack trace: $stackTrace');
+    }
+  }
+
+  Future<void> _migrateToV13(Database db) async {
+    // إضافة حقل status إلى جدول returns
+    try {
+      debugPrint('بدء Migration V13 - إضافة حقل status إلى جدول returns...');
+
+      // التحقق من وجود العمود أولاً
+      final columns = await db.rawQuery("PRAGMA table_info(returns)");
+      final columnNames =
+          columns.map((c) => c['name']?.toString().toLowerCase()).toSet();
+
+      if (!columnNames.contains('status')) {
+        await db.execute(
+            'ALTER TABLE returns ADD COLUMN status TEXT NOT NULL DEFAULT \'pending\'');
+        debugPrint('تم إضافة عمود status إلى جدول returns');
+      } else {
+        debugPrint('عمود status موجود بالفعل في جدول returns');
+      }
+
+      // إنشاء فهرس على status
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_returns_status ON returns(status)');
+
+      debugPrint('انتهى Migration V13 بنجاح');
+    } catch (e) {
+      debugPrint('خطأ في Migration V13: $e');
     }
   }
 
@@ -5611,6 +5647,37 @@ class DatabaseService {
     }
   }
 
+  /// التأكد من وجود عمود status في جدول returns
+  Future<void> _ensureReturnsStatusColumn([Database? db]) async {
+    try {
+      final database = db ?? _db;
+      final tables = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='returns'");
+
+      if (tables.isNotEmpty) {
+        final columns = await database.rawQuery("PRAGMA table_info(returns)");
+        final columnNames =
+            columns.map((c) => c['name']?.toString().toLowerCase()).toSet();
+
+        if (!columnNames.contains('status')) {
+          debugPrint('إضافة عمود status إلى جدول returns...');
+          try {
+            await database.execute(
+                'ALTER TABLE returns ADD COLUMN status TEXT NOT NULL DEFAULT \'pending\'');
+            // تحديث البيانات الموجودة
+            await database.execute(
+                'UPDATE returns SET status = \'completed\' WHERE status IS NULL');
+            debugPrint('تم إضافة عمود status بنجاح');
+          } catch (e) {
+            debugPrint('خطأ في إضافة عمود status: $e');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('خطأ في التأكد من عمود status في جدول returns: $e');
+    }
+  }
+
   /// إنشاء جدول المرتجعات إذا لم يكن موجوداً (للتوافق مع الإصدارات القديمة)
   Future<void> _ensureReturnsTable([Database? db]) async {
     try {
@@ -5627,6 +5694,7 @@ class DatabaseService {
             total_amount REAL NOT NULL,
             return_date TEXT NOT NULL,
             notes TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
             created_at TEXT NOT NULL,
             FOREIGN KEY(sale_id) REFERENCES sales(id)
           );
@@ -5716,6 +5784,7 @@ class DatabaseService {
           r.total_amount,
           r.return_date,
           r.notes,
+          r.status,
           r.created_at,
           c.name as customer_name
         FROM returns r
@@ -5746,6 +5815,7 @@ class DatabaseService {
     required List<Map<String, dynamic>>
         returnItems, // [{product_id, quantity, price}]
     String? notes,
+    String status = 'pending',
     int? userId,
     String? username,
   }) async {
@@ -5805,6 +5875,7 @@ class DatabaseService {
           'total_amount': totalAmount,
           'return_date': now.toIso8601String(),
           'notes': notes,
+          'status': status,
           'created_at': now.toIso8601String(),
         });
 
@@ -5845,6 +5916,42 @@ class DatabaseService {
       );
     } catch (e) {
       throw Exception('خطأ في حذف المرتجع: $e');
+    }
+  }
+
+  /// تحديث حالة المرتجع
+  Future<void> updateReturnStatus({
+    required int id,
+    required String status,
+    int? userId,
+    String? username,
+  }) async {
+    try {
+      await _ensureReturnsTable();
+      await _ensureReturnsStatusColumn();
+
+      await _db.update(
+        'returns',
+        {'status': status},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      // تسجيل حدث تحديث الحالة
+      try {
+        await logEvent(
+          eventType: 'return_status_update',
+          entityType: 'return',
+          entityId: id,
+          userId: userId,
+          username: username,
+          description: 'تحديث حالة المرتجع #$id إلى: $status',
+        );
+      } catch (e) {
+        debugPrint('خطأ في تسجيل حدث تحديث الحالة: $e');
+      }
+    } catch (e) {
+      throw Exception('خطأ في تحديث حالة المرتجع: $e');
     }
   }
 

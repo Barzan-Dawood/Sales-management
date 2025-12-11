@@ -3,13 +3,12 @@
 import 'dart:ui' as ui show TextDirection;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../services/db/database_service.dart';
 import '../services/auth/auth_provider.dart';
 import '../models/user_model.dart';
 import '../utils/format.dart';
 
-/// صفحة المرتجعات - تصميم مبسط وسهل الاستخدام
+/// صفحة المرتجعات - تصميم بسيط وسهل
 class ReturnsScreen extends StatefulWidget {
   const ReturnsScreen({super.key});
 
@@ -19,8 +18,7 @@ class ReturnsScreen extends StatefulWidget {
 
 class _ReturnsScreenState extends State<ReturnsScreen> {
   String _searchQuery = '';
-  DateTime? _fromDate;
-  DateTime? _toDate;
+  String _selectedStatus = 'all'; // all, pending, completed, cancelled
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +43,23 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
     return Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: const Text('المرتجعات'),
           actions: [
+            TextButton.icon(
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('إضافة مرتجع'),
+              onPressed: () => _showAddReturnDialog(),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.blue,
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.refresh),
+              color: Colors.blue,
               onPressed: () => setState(() {}),
+              tooltip: 'تحديث',
             ),
           ],
         ),
@@ -58,175 +67,70 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
           onRefresh: () async => setState(() {}),
           child: Column(
             children: [
-              _buildStatsCard(),
-              _buildSearchSection(),
+              _buildFilterSection(),
               Expanded(child: _buildReturnsList()),
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showAddReturnDialog(),
-          icon: const Icon(Icons.add),
-          label: const Text('إرجاع منتج'),
-          backgroundColor: Colors.orange,
-        ),
       ),
     );
   }
 
-  /// بطاقة الإحصائيات
-  Widget _buildStatsCard() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: context.read<DatabaseService>().getReturns(
-            from: _fromDate,
-            to: _toDate,
-          ),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: CircularProgressIndicator(),
-          );
-        }
-
-        final returns = snapshot.data ?? [];
-        final filteredReturns = _filterReturns(returns);
-
-        double totalAmount = 0;
-        for (final r in filteredReturns) {
-          totalAmount += (r['total_amount'] as num?)?.toDouble() ?? 0;
-        }
-
-        return Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.orange.shade400, Colors.orange.shade600],
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.orange.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.assignment_return,
-                    color: Colors.white, size: 32),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'إجمالي المرتجعات',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      Formatters.currencyIQD(totalAmount),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                children: [
-                  Text(
-                    '${filteredReturns.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'مرتجع',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// قسم البحث والفلترة
-  Widget _buildSearchSection() {
+  /// قسم الفلترة والبحث
+  Widget _buildFilterSection() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'بحث (رقم الفاتورة، اسم العميل...)',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.surface,
-            ),
-            onChanged: (v) => setState(() => _searchQuery = v),
-          ),
-          const SizedBox(height: 12),
+          // البحث
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _selectDateRange,
-                  icon: const Icon(Icons.date_range, size: 18),
-                  label: Text(
-                    _fromDate != null && _toDate != null
-                        ? '${DateFormat('yyyy-MM-dd').format(_fromDate!)} - ${DateFormat('yyyy-MM-dd').format(_toDate!)}'
-                        : 'فلترة حسب التاريخ',
-                    style: const TextStyle(fontSize: 12),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'بحث...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    isDense: true,
                   ),
+                  onChanged: (v) => setState(() => _searchQuery = v),
                 ),
               ),
-              if (_fromDate != null ||
-                  _toDate != null ||
-                  _searchQuery.isNotEmpty)
+              if (_searchQuery.isNotEmpty)
                 IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: const Icon(Icons.clear, size: 18),
                   onPressed: () {
                     setState(() {
-                      _fromDate = null;
-                      _toDate = null;
                       _searchQuery = '';
                     });
                   },
                 ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // فلاتر الحالة
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatusChip('all', 'الكل', Colors.grey),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildStatusChip('pending', 'في الانتظار', Colors.blue),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildStatusChip('completed', 'مكتملة', Colors.green),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildStatusChip('cancelled', 'ملغاة', Colors.red),
+              ),
             ],
           ),
         ],
@@ -234,13 +138,42 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
     );
   }
 
+  Widget _buildStatusChip(String status, String label, Color color) {
+    final isSelected = _selectedStatus == status;
+    return InkWell(
+      onTap: () => setState(() => _selectedStatus = status),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
+          border: Border.all(
+            color: isSelected
+                ? color
+                : Theme.of(context).colorScheme.outline.withOpacity(0.5),
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected
+                  ? color
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// قائمة المرتجعات
   Widget _buildReturnsList() {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: context.read<DatabaseService>().getReturns(
-            from: _fromDate,
-            to: _toDate,
-          ),
+      future: context.read<DatabaseService>().getReturns(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -251,7 +184,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 16),
                 Text('خطأ: ${snapshot.error}'),
                 const SizedBox(height: 16),
@@ -272,21 +205,22 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.assignment_return,
-                  size: 64,
-                  color: Colors.grey.shade400,
-                ),
+                Icon(Icons.assignment_return,
+                    size: 64,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.4)),
                 const SizedBox(height: 16),
                 Text(
                   'لا توجد مرتجعات',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
                 ElevatedButton.icon(
                   onPressed: () => _showAddReturnDialog(),
                   icon: const Icon(Icons.add),
-                  label: const Text('إضافة مرتجع جديد'),
+                  label: const Text('إضافة مرتجع'),
                 ),
               ],
             ),
@@ -294,13 +228,15 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           itemCount: filteredReturns.length,
           itemBuilder: (context, index) {
             return _ReturnItemCard(
               returnItem: filteredReturns[index],
               onTap: () => _showReturnDetails(filteredReturns[index]),
               onDelete: () => _deleteReturn(filteredReturns[index]),
+              onStatusChange: (newStatus) =>
+                  _updateReturnStatus(filteredReturns[index], newStatus),
             );
           },
         );
@@ -311,40 +247,27 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
   /// فلترة المرتجعات
   List<Map<String, dynamic>> _filterReturns(
       List<Map<String, dynamic>> returns) {
-    if (_searchQuery.isEmpty) return returns;
+    var filtered = returns;
 
-    final query = _searchQuery.toLowerCase();
-    return returns.where((r) {
-      final saleId = r['sale_id']?.toString().toLowerCase() ?? '';
-      final customerName = r['customer_name']?.toString().toLowerCase() ?? '';
-      return saleId.contains(query) || customerName.contains(query);
-    }).toList();
-  }
-
-  /// اختيار نطاق التاريخ
-  Future<void> _selectDateRange() async {
-    final now = DateTime.now();
-    final range = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: now,
-      initialDateRange: _fromDate != null && _toDate != null
-          ? DateTimeRange(start: _fromDate!, end: _toDate!)
-          : null,
-      builder: (context, child) {
-        return Directionality(
-          textDirection: ui.TextDirection.rtl,
-          child: child!,
-        );
-      },
-    );
-
-    if (range != null) {
-      setState(() {
-        _fromDate = range.start;
-        _toDate = range.end;
-      });
+    // فلترة حسب الحالة
+    if (_selectedStatus != 'all') {
+      filtered = filtered.where((r) {
+        final status = r['status']?.toString() ?? 'pending';
+        return status == _selectedStatus;
+      }).toList();
     }
+
+    // فلترة حسب البحث
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      filtered = filtered.where((r) {
+        final saleId = r['sale_id']?.toString().toLowerCase() ?? '';
+        final customerName = r['customer_name']?.toString().toLowerCase() ?? '';
+        return saleId.contains(query) || customerName.contains(query);
+      }).toList();
+    }
+
+    return filtered;
   }
 
   /// حوار إضافة مرتجع
@@ -355,7 +278,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
         textDirection: ui.TextDirection.rtl,
         child: Dialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
             child: _AddReturnDialog(
@@ -394,12 +317,11 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildDetailRow('الفاتورة', '#$saleId', Icons.receipt),
+                    _buildDetailRow('الفاتورة', '#$saleId'),
                     const SizedBox(height: 8),
                     _buildDetailRow(
                       'العميل',
                       returnItem['customer_name']?.toString() ?? 'عميل عام',
-                      Icons.person,
                     ),
                     const SizedBox(height: 8),
                     _buildDetailRow(
@@ -407,15 +329,18 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
                       Formatters.currencyIQD(
                         (returnItem['total_amount'] as num?)?.toDouble() ?? 0,
                       ),
-                      Icons.attach_money,
-                      Colors.orange,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildDetailRow(
+                      'الحالة',
+                      _getStatusLabel(
+                          returnItem['status']?.toString() ?? 'pending'),
                     ),
                     const SizedBox(height: 8),
                     _buildDetailRow(
                       'التاريخ',
                       returnItem['return_date']?.toString().substring(0, 10) ??
                           '',
-                      Icons.calendar_today,
                     ),
                     if (returnItem['notes'] != null &&
                         returnItem['notes'].toString().isNotEmpty) ...[
@@ -423,7 +348,6 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
                       _buildDetailRow(
                         'ملاحظات',
                         returnItem['notes'].toString(),
-                        Icons.note,
                       ),
                     ],
                     const Divider(height: 24),
@@ -432,25 +356,25 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
-                    ...saleItems.map((item) => Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                    ...saleItems.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
                           child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
                                 child: Text(
                                   item['product_name']?.toString() ?? 'منتج',
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w600),
+                                      fontWeight: FontWeight.w500),
                                 ),
                               ),
                               Text(
                                 '${item['quantity']} × ${Formatters.currencyIQD((item['price'] as num?)?.toDouble() ?? 0)}',
-                                style: TextStyle(color: Colors.grey.shade700),
+                                style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.6)),
                               ),
                             ],
                           ),
@@ -477,16 +401,62 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
     }
   }
 
-  Widget _buildDetailRow(String label, String value, IconData icon,
-      [Color? color]) {
+  Widget _buildDetailRow(String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: color ?? Colors.grey.shade600),
-        const SizedBox(width: 8),
-        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
         Expanded(child: Text(value)),
       ],
     );
+  }
+
+  String _getStatusLabel(String status) {
+    switch (status) {
+      case 'pending':
+        return 'في الانتظار';
+      case 'completed':
+        return 'مكتملة';
+      case 'cancelled':
+        return 'ملغاة';
+      default:
+        return 'غير معروف';
+    }
+  }
+
+  /// تحديث حالة المرتجع
+  Future<void> _updateReturnStatus(
+      Map<String, dynamic> returnItem, String newStatus) async {
+    final id = returnItem['id'] as int?;
+    if (id == null) return;
+
+    try {
+      final auth = context.read<AuthProvider>();
+      await context.read<DatabaseService>().updateReturnStatus(
+            id: id,
+            status: newStatus,
+            userId: auth.currentUser?.id,
+            username: auth.currentUser?.name,
+          );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم تحديث الحالة إلى: ${_getStatusLabel(newStatus)}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   /// حذف مرتجع
@@ -539,178 +509,246 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
   }
 }
 
-/// بطاقة عنصر المرتجع
+/// بطاقة عنصر المرتجع - تصميم بسيط
 class _ReturnItemCard extends StatelessWidget {
   final Map<String, dynamic> returnItem;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final Function(String) onStatusChange;
 
   const _ReturnItemCard({
     required this.returnItem,
     required this.onTap,
     required this.onDelete,
+    required this.onStatusChange,
   });
 
   @override
   Widget build(BuildContext context) {
-    final id = returnItem['id'] as int?;
     final saleId = returnItem['sale_id'] as int?;
     final amount = (returnItem['total_amount'] as num?)?.toDouble() ?? 0;
     final dateStr = returnItem['return_date']?.toString() ?? '';
     final customerName = returnItem['customer_name']?.toString() ?? 'عميل عام';
+    final status = returnItem['status']?.toString() ?? 'pending';
     final date = dateStr.isNotEmpty && dateStr.length > 10
         ? dateStr.substring(0, 10)
         : dateStr;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final statusColor = _getStatusColor(status);
+    final statusLabel = _getStatusLabel(status);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // الصف الأول: المعلومات الأساسية
+            Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                // أيقونة الحالة
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _getStatusIcon(status),
+                    color: statusColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // معلومات المرتجع
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        customerName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.assignment_return,
-                        color: Colors.orange,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 4),
+                      Row(
                         children: [
                           Text(
-                            customerName,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            'فاتورة #$saleId',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'فاتورة #$saleId',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  date,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade700,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          const SizedBox(width: 12),
+                          Text(
+                            date,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          Formatters.currencyIQD(amount),
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange.shade700,
-                                  ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '#$id',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const Divider(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                // المبلغ
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    OutlinedButton.icon(
-                      onPressed: onTap,
-                      icon: const Icon(Icons.visibility, size: 18),
-                      label: const Text('التفاصيل'),
+                    Text(
+                      Formatters.currencyIQD(amount),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange.shade700,
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete, size: 18),
-                      label: const Text('حذف'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: statusColor,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ],
             ),
-          ),
+            const Divider(height: 16),
+            // الأزرار
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (status != 'completed')
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, size: 18),
+                    onSelected: (value) => onStatusChange(value),
+                    itemBuilder: (context) => [
+                      if (status != 'completed')
+                        const PopupMenuItem(
+                          value: 'completed',
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle,
+                                  color: Colors.green, size: 18),
+                              SizedBox(width: 8),
+                              Text('مكتملة'),
+                            ],
+                          ),
+                        ),
+                      if (status != 'cancelled')
+                        const PopupMenuItem(
+                          value: 'cancelled',
+                          child: Row(
+                            children: [
+                              Icon(Icons.cancel, color: Colors.red, size: 18),
+                              SizedBox(width: 8),
+                              Text('إلغاء'),
+                            ],
+                          ),
+                        ),
+                      if (status != 'pending')
+                        const PopupMenuItem(
+                          value: 'pending',
+                          child: Row(
+                            children: [
+                              Icon(Icons.hourglass_empty,
+                                  color: Colors.blue, size: 18),
+                              SizedBox(width: 8),
+                              Text('في الانتظار'),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: onTap,
+                  icon: const Icon(Icons.visibility, size: 16),
+                  label: const Text('التفاصيل'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                TextButton.icon(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete, size: 16),
+                  label: const Text('حذف'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return Colors.blue;
+      case 'completed':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getStatusLabel(String status) {
+    switch (status) {
+      case 'pending':
+        return 'في الانتظار';
+      case 'completed':
+        return 'مكتملة';
+      case 'cancelled':
+        return 'ملغاة';
+      default:
+        return 'غير معروف';
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'pending':
+        return Icons.hourglass_empty;
+      case 'completed':
+        return Icons.check_circle;
+      case 'cancelled':
+        return Icons.cancel;
+      default:
+        return Icons.help_outline;
+    }
   }
 }
 
@@ -744,26 +782,21 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
       children: [
         // Header
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.orange.shade400, Colors.orange.shade600],
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-            ),
+            color: Colors.orange,
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
             ),
           ),
           child: Row(
             children: [
-              const Icon(Icons.assignment_return,
-                  color: Colors.white, size: 28),
+              const Icon(Icons.assignment_return, color: Colors.white),
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
-                  'إرجاع منتجات من فاتورة',
+                  'إرجاع منتجات',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -781,17 +814,17 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
         // Content
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildSaleSelector(),
                 if (_saleItems.isNotEmpty) ...[
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   _buildProductsList(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   _buildTotalCard(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                 ],
                 TextField(
                   controller: _notesController,
@@ -799,7 +832,7 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
                     labelText: 'ملاحظات (اختياري)',
                     prefixIcon: const Icon(Icons.note),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                   maxLines: 2,
@@ -814,8 +847,8 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(16),
-              bottomRight: Radius.circular(16),
+              bottomLeft: Radius.circular(12),
+              bottomRight: Radius.circular(12),
             ),
           ),
           child: Row(
@@ -829,11 +862,9 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
               FilledButton.icon(
                 onPressed: _canCreateReturn() ? _createReturn : null,
                 icon: const Icon(Icons.check),
-                label: const Text('إنشاء المرتجع'),
+                label: const Text('إنشاء'),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.orange,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
             ],
@@ -865,7 +896,7 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
           decoration: InputDecoration(
             labelText: 'اختر الفاتورة',
             prefixIcon: const Icon(Icons.receipt),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
           items: sales.map((sale) {
             final id = sale['id'] as int;
@@ -886,7 +917,10 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
                     Formatters.currencyIQD(total),
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -939,9 +973,7 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
       children: [
         Text(
           'المنتجات',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
         ..._saleItems.map((item) {
@@ -951,62 +983,47 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
           final price = (item['price'] as num?)?.toDouble() ?? 0;
           final returnQty = _returnQuantities[productId] ?? 0;
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: returnQty > 0
-                  ? Colors.orange.withOpacity(0.05)
-                  : Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: returnQty > 0
-                    ? Colors.orange.withOpacity(0.3)
-                    : Colors.grey.shade200,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            productName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              productName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'المباع: $quantity | السعر: ${Formatters.currencyIQD(price)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
+                            Text(
+                              'المباع: $quantity | السعر: ${Formatters.currencyIQD(price)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Text('الكمية المرجعة: ',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Text('الكمية المرجعة: ',
+                          style: TextStyle(fontWeight: FontWeight.w500)),
+                      const Spacer(),
+                      Row(
                         children: [
                           IconButton(
                             icon: const Icon(Icons.remove_circle_outline),
@@ -1019,14 +1036,15 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
                                     });
                                   }
                                 : null,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: Text(
                               '$returnQty / $quantity',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
                                 color:
                                     returnQty > 0 ? Colors.orange : Colors.grey,
                               ),
@@ -1045,38 +1063,39 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
                                     });
                                   }
                                 : null,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (returnQty > 0) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('مبلغ الإرجاع:',
+                              style: TextStyle(fontWeight: FontWeight.w500)),
+                          Text(
+                            Formatters.currencyIQD(returnQty * price),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ],
-                ),
-                if (returnQty > 0) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('مبلغ الإرجاع:',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                        Text(
-                          Formatters.currencyIQD(returnQty * price),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
-              ],
+              ),
             ),
           );
         }),
@@ -1088,13 +1107,16 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
     final total = _calculateTotal();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color:
-            total > 0 ? Colors.orange.withOpacity(0.1) : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
+        color: total > 0
+            ? Colors.orange.withOpacity(0.1)
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: total > 0 ? Colors.orange : Colors.grey.shade300,
+          color: total > 0
+              ? Colors.orange
+              : Theme.of(context).colorScheme.outline.withOpacity(0.5),
         ),
       ),
       child: Row(
@@ -1107,15 +1129,16 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'المبلغ الإجمالي للمرتجع',
+                  'المبلغ الإجمالي',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 Text(
                   Formatters.currencyIQD(total),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: total > 0 ? Colors.orange : Colors.grey,
-                      ),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: total > 0 ? Colors.orange : Colors.grey,
+                  ),
                 ),
               ],
             ),
@@ -1208,6 +1231,7 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        status: 'pending',
         userId: auth.currentUser?.id,
         username: auth.currentUser?.name,
       );
