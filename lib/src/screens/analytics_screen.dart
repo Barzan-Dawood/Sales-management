@@ -9,6 +9,7 @@ import '../services/db/database_service.dart';
 import '../services/auth/auth_provider.dart';
 import '../models/user_model.dart';
 import '../utils/format.dart';
+import '../utils/export.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -72,6 +73,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         appBar: AppBar(
           title: const Text('التحليلات والتحليلات'),
           actions: [
+            IconButton(
+              icon: const Icon(
+                Icons.picture_as_pdf,
+                color: Colors.deepOrange,
+              ),
+              tooltip: 'تصدير PDF',
+              onPressed: () => _exportCurrentTab(),
+            ),
             IconButton(
               icon: const Icon(Icons.date_range),
               onPressed: _showDateRangePicker,
@@ -1060,6 +1069,237 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         _toDate = result.end;
       });
     }
+  }
+
+  Future<void> _exportCurrentTab() async {
+    final currentIndex = _tabController.index;
+    final db = context.read<DatabaseService>();
+    String? savedPath;
+
+    try {
+      switch (currentIndex) {
+        case 0: // مؤشرات الأداء
+          savedPath = await _exportKPIsTab(db);
+          break;
+        case 1: // تحليل المبيعات
+          savedPath = await _exportSalesAnalysisTab(db);
+          break;
+        case 2: // تحليل العملاء
+          savedPath = await _exportCustomersAnalysisTab(db);
+          break;
+        case 3: // التنبؤ بالطلب
+          savedPath = await _exportDemandForecastTab(db);
+          break;
+        case 4: // مقارنات زمنية
+          savedPath = await _exportTimeComparisonTab(db);
+          break;
+      }
+
+      if (savedPath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم حفظ التقرير في: $savedPath')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في التصدير: $e')),
+        );
+      }
+    }
+  }
+
+  String _formatDateForFilename(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+
+  String _formatDateForDisplay(DateTime date) {
+    return DateFormat('d - M - yyyy', 'ar').format(date);
+  }
+
+  Future<String?> _exportKPIsTab(DatabaseService db) async {
+    final data = await db.getSalesKPIs(from: _fromDate, to: _toDate);
+    final kpis = data['current_period'] ?? {};
+
+    final items = <MapEntry<String, String>>[
+      MapEntry('إجمالي المبيعات', '${kpis['total_sales'] ?? 0} عملية بيع'),
+      MapEntry(
+          'إجمالي الإيرادات',
+          Formatters.currencyIQD(
+              (kpis['total_revenue'] as num?)?.toDouble() ?? 0.0)),
+      MapEntry(
+          'إجمالي الأرباح',
+          Formatters.currencyIQD(
+              (kpis['total_profit'] as num?)?.toDouble() ?? 0.0)),
+      MapEntry(
+          'متوسط قيمة البيع',
+          Formatters.currencyIQD(
+              (kpis['avg_sale_amount'] as num?)?.toDouble() ?? 0.0)),
+      MapEntry('عدد العملاء', '${kpis['unique_customers'] ?? 0} عميل'),
+      MapEntry(
+          'عدد المنتجات المباعة', '${kpis['unique_products_sold'] ?? 0} منتج'),
+      MapEntry(
+          'المبيعات النقدية',
+          Formatters.currencyIQD(
+              (kpis['cash_sales'] as num?)?.toDouble() ?? 0.0)),
+      MapEntry(
+          'المبيعات الآجلة',
+          Formatters.currencyIQD(
+              (kpis['credit_sales'] as num?)?.toDouble() ?? 0.0)),
+      MapEntry(
+          'المبيعات بالأقساط',
+          Formatters.currencyIQD(
+              (kpis['installment_sales'] as num?)?.toDouble() ?? 0.0)),
+    ];
+
+    final dateStr = _fromDate != null && _toDate != null
+        ? '${_formatDateForFilename(_fromDate!)}_${_formatDateForFilename(_toDate!)}'
+        : _formatDateForFilename(DateTime.now());
+
+    return await PdfExporter.exportKeyValue(
+      filename: 'مؤشرات_الأداء_$dateStr.pdf',
+      title:
+          'مؤشرات الأداء - ${_fromDate != null && _toDate != null ? '${_formatDateForDisplay(_fromDate!)} إلى ${_formatDateForDisplay(_toDate!)}' : 'الفترة الحالية'}',
+      items: items,
+    );
+  }
+
+  Future<String?> _exportSalesAnalysisTab(DatabaseService db) async {
+    final topProducts = await db.getTopSellingProducts(
+      from: _fromDate,
+      to: _toDate,
+      limit: 20,
+    );
+
+    final rows = <List<String>>[
+      ['المنتج', 'الكمية المباعة', 'الإيرادات', 'الربح'],
+      ...topProducts.map((product) => [
+            product['name']?.toString() ?? 'غير معروف',
+            '${product['total_quantity_sold'] ?? 0}',
+            Formatters.currencyIQD(
+                (product['total_revenue'] as num?)?.toDouble() ?? 0.0),
+            Formatters.currencyIQD(
+                (product['total_profit'] as num?)?.toDouble() ?? 0.0),
+          ]),
+    ];
+
+    final dateStr = _fromDate != null && _toDate != null
+        ? '${_formatDateForFilename(_fromDate!)}_${_formatDateForFilename(_toDate!)}'
+        : _formatDateForFilename(DateTime.now());
+
+    return await PdfExporter.exportDataTable(
+      filename: 'تحليل_المبيعات_$dateStr.pdf',
+      title:
+          'تحليل المبيعات - ${_fromDate != null && _toDate != null ? '${_formatDateForDisplay(_fromDate!)} إلى ${_formatDateForDisplay(_toDate!)}' : 'الفترة الحالية'}',
+      headers: ['المنتج', 'الكمية المباعة', 'الإيرادات', 'الربح'],
+      rows: rows.skip(1).toList(),
+    );
+  }
+
+  Future<String?> _exportCustomersAnalysisTab(DatabaseService db) async {
+    final topCustomers = await db.getTopCustomers(
+      from: _fromDate,
+      to: _toDate,
+      limit: 20,
+    );
+
+    final rows = <List<String>>[
+      ['العميل', 'إجمالي المشتريات', 'عدد المشتريات', 'الدين'],
+      ...topCustomers.map((customer) => [
+            customer['name']?.toString() ?? 'غير معروف',
+            Formatters.currencyIQD(
+                (customer['total_spent'] as num?)?.toDouble() ?? 0.0),
+            '${customer['total_purchases'] ?? 0}',
+            Formatters.currencyIQD(
+                (customer['total_debt'] as num?)?.toDouble() ?? 0.0),
+          ]),
+    ];
+
+    final dateStr = _fromDate != null && _toDate != null
+        ? '${_formatDateForFilename(_fromDate!)}_${_formatDateForFilename(_toDate!)}'
+        : _formatDateForFilename(DateTime.now());
+
+    return await PdfExporter.exportDataTable(
+      filename: 'تحليل_العملاء_$dateStr.pdf',
+      title:
+          'تحليل العملاء - ${_fromDate != null && _toDate != null ? '${_formatDateForDisplay(_fromDate!)} إلى ${_formatDateForDisplay(_toDate!)}' : 'الفترة الحالية'}',
+      headers: ['العميل', 'إجمالي المشتريات', 'عدد المشتريات', 'الدين'],
+      rows: rows.skip(1).toList(),
+    );
+  }
+
+  Future<String?> _exportDemandForecastTab(DatabaseService db) async {
+    final products = await db.getProductsAtRisk(
+      daysAhead: 30,
+      riskThreshold: 0.3,
+    );
+
+    final rows = <List<String>>[
+      ['المنتج', 'المخزون الحالي', 'الحد الأدنى', 'مستوى الخطر', 'أيام متبقية'],
+      ...products.map((product) {
+        final stock = (product['current_stock'] as num?)?.toInt() ?? 0;
+        final minQty = (product['min_quantity'] as num?)?.toInt() ?? 0;
+        final riskScore = (product['risk_score'] as num?)?.toDouble() ?? 0.0;
+        final avgDaily =
+            (product['avg_daily_sales'] as num?)?.toDouble() ?? 0.0;
+        final daysLeft = avgDaily > 0 ? (stock / avgDaily).toInt() : 0;
+
+        String riskLevel;
+        if (riskScore >= 0.8) {
+          riskLevel = 'خطر عالي';
+        } else if (riskScore >= 0.6) {
+          riskLevel = 'خطر متوسط';
+        } else {
+          riskLevel = 'خطر منخفض';
+        }
+
+        return [
+          product['name']?.toString() ?? 'غير معروف',
+          '$stock',
+          '$minQty',
+          riskLevel,
+          '$daysLeft',
+        ];
+      }),
+    ];
+
+    final dateStr = _formatDateForFilename(DateTime.now());
+
+    return await PdfExporter.exportDataTable(
+      filename: 'التنبؤ_بالطلب_$dateStr.pdf',
+      title: 'التنبؤ بالطلب - ${_formatDateForDisplay(DateTime.now())}',
+      headers: [
+        'المنتج',
+        'المخزون الحالي',
+        'الحد الأدنى',
+        'مستوى الخطر',
+        'أيام متبقية'
+      ],
+      rows: rows.skip(1).toList(),
+    );
+  }
+
+  Future<String?> _exportTimeComparisonTab(DatabaseService db) async {
+    final data = await db.getMonthlySalesTrend(months: _selectedMonths);
+
+    final rows = <List<String>>[
+      ['الشهر', 'الإيرادات', 'الأرباح', 'عدد المبيعات'],
+      ...data.map((month) => [
+            month['month']?.toString() ?? '',
+            Formatters.currencyIQD(
+                (month['total_revenue'] as num?)?.toDouble() ?? 0.0),
+            Formatters.currencyIQD(
+                (month['total_profit'] as num?)?.toDouble() ?? 0.0),
+            '${month['sales_count'] ?? 0}',
+          ]),
+    ];
+
+    return await PdfExporter.exportDataTable(
+      filename: 'مقارنات_زمنية_${_selectedMonths}_شهر.pdf',
+      title: 'مقارنات زمنية - آخر $_selectedMonths أشهر',
+      headers: ['الشهر', 'الإيرادات', 'الأرباح', 'عدد المبيعات'],
+      rows: rows.skip(1).toList(),
+    );
   }
 }
 
