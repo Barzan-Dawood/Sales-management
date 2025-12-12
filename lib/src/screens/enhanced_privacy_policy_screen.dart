@@ -40,9 +40,9 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
               icon: Icons.info_outline,
               title: 'مقدمة',
               content: '''
-نحن في نظام إدارة المكتب نحترم خصوصيتك ونلتزم بحماية معلوماتك. هذا التطبيق يستخدم قاعدة بيانات محلية تماماً ولا نجمع أي معلومات شخصية عن المستخدمين. **مهم جداً:** جميع بياناتك محفوظة محلياً على جهازك فقط ولا يتم إرسالها إلى أي خادم خارجي. آخر تحديث: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}
+نحن في تجارتي نحترم خصوصيتك ونلتزم بحماية معلوماتك. هذا التطبيق يستخدم قاعدة بيانات محلية تماماً ولا نجمع أي معلومات شخصية عن المستخدمين. **مهم جداً:** جميع بياناتك محفوظة محلياً على جهازك فقط ولا يتم إرسالها إلى أي خادم خارجي. آخر تحديث: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}
 
-نظام إدارة المكتب هو تطبيق محلي مصمم لمساعدتك في إدارة عملك اليومي بكفاءة وأمان. جميع البيانات محفوظة محلياً على جهازك ولا يتم مشاركتها مع أي طرف ثالث.
+تجارتي هو تطبيق محلي مصمم لمساعدتك في إدارة عملك اليومي بكفاءة وأمان. جميع البيانات محفوظة محلياً على جهازك ولا يتم مشاركتها مع أي طرف ثالث.
 ''',
             ),
             const SizedBox(height: 20),
@@ -285,7 +285,7 @@ class EnhancedPrivacyPolicyScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'نظام إدارة المكتب',
+                  'تجارتي',
                   style: TextStyle(
                     fontSize: 12,
                     color: scheme.onPrimary.withOpacity(0.8),
@@ -523,9 +523,9 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
               icon: Icons.info_outline,
               title: 'مقدمة',
               content: '''
-مرحباً بك في نظام إدارة المكتب. باستخدامك لهذا التطبيق، فإنك توافق على الالتزام بشروط الاستخدام هذه. **مهم:** هذا التطبيق يعمل محلياً بالكامل ولا يتطلب اتصال بالإنترنت. آخر تحديث: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}
+مرحباً بك في تجارتي. باستخدامك لهذا التطبيق، فإنك توافق على الالتزام بشروط الاستخدام هذه. **مهم:** هذا التطبيق يعمل محلياً بالكامل ولا يتطلب اتصال بالإنترنت. آخر تحديث: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}
 
-نظام إدارة المكتب هو تطبيق محلي مصمم لمساعدتك في إدارة عملك اليومي بكفاءة وأمان. جميع البيانات محفوظة محلياً على جهازك ولا يتم مشاركتها مع أي طرف ثالث.
+تجارتي هو تطبيق محلي مصمم لمساعدتك في إدارة عملك اليومي بكفاءة وأمان. جميع البيانات محفوظة محلياً على جهازك ولا يتم مشاركتها مع أي طرف ثالث.
 ''',
             ),
             const SizedBox(height: 20),
@@ -760,7 +760,7 @@ class EnhancedTermsConditionsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'نظام إدارة المكتب',
+                  'تجارتي',
                   style: TextStyle(
                     fontSize: 12,
                     color: scheme.onPrimary.withOpacity(0.8),

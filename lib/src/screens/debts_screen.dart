@@ -4393,7 +4393,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            'نظام إدارة المكتب',
+            'تجارتي',
             style: pw.TextStyle(
               fontSize: 14,
               fontWeight: pw.FontWeight.bold,
@@ -4805,7 +4805,7 @@ class _DebtsScreenState extends State<DebtsScreen>
         ),
         pw.SizedBox(height: 4),
         pw.Text(
-          'هذا الكشف صادر من نظام إدارة المكتب',
+          'هذا الكشف صادر من تجارتي',
           style: pw.TextStyle(fontSize: 8, font: arabicFont),
           textAlign: pw.TextAlign.center,
         ),
@@ -4839,7 +4839,7 @@ class _DebtsScreenState extends State<DebtsScreen>
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            'نظام إدارة المكتب',
+            'تجارتي',
             style: pw.TextStyle(
               fontSize: 14,
               fontWeight: pw.FontWeight.bold,

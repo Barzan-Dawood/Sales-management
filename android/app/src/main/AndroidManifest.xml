@@ -19,7 +19,7 @@
         android:maxSdkVersion="29" />
     
     <application
-        android:label="ROJ SYSTEM"
+        android:label="تجارتي"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:allowBackup="true"

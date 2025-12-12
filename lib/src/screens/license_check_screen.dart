@@ -99,7 +99,7 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                       const SizedBox(height: 4),
 
                       Text(
-                        'نظام إدارة المكتب والمحاسبة',
+                        'تجارتي',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: DarkModeUtils.getTextColor(context)
                               .withOpacity(0.7),

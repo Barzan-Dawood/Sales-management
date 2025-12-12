@@ -83,7 +83,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                       const SizedBox(height: 8),
 
                       Text(
-                        'نظام إدارة المكتب والمحاسبة',
+                        'تجارتي',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: DarkModeUtils.getTextColor(context)
                               .withValues(alpha: 0.7),

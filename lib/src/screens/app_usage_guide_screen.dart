@@ -26,7 +26,7 @@ class _AppUsageGuideScreenState extends State<AppUsageGuideScreen> {
     _allSections = [
       _GuideSectionData(
         icon: Icons.info_outline,
-        title: 'مرحباً بك في نظام إدارة المكتب',
+        title: 'مرحباً بك في تجارتي',
         content:
             'نظام شامل لإدارة المتاجر والمكاتب. واجهة عربية بسيطة وسهلة الاستخدام.\n\nالمميزات الرئيسية:\n• إدارة المنتجات والمخزون والأقسام\n• تسجيل المبيعات (نقد/دين/تقسيط)\n• إدارة العملاء والموردين\n• المصروفات والمرتجعات والديون\n• تقارير وتحليلات شاملة\n• إدارة المستخدمين والصلاحيات\n• سجل الأحداث وسلة المحذوفات\n• نسخ احتياطية آمنة',
       ),
@@ -270,7 +270,7 @@ class _AppUsageGuideScreenState extends State<AppUsageGuideScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'تعلم كيفية استخدام نظام إدارة المكتب',
+                  'تعلم كيفية استخدام تجارتي',
                   style: TextStyle(
                     fontSize: 12,
                     color: scheme.onPrimary.withOpacity(0.8),

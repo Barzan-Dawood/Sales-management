@@ -434,7 +434,7 @@ class PrintService {
         ),
         pw.SizedBox(height: 4),
         pw.Text(
-          'هذا الكشف صادر من نظام إدارة المكتب',
+          'هذا الكشف صادر من تجارتي',
           style: pw.TextStyle(fontSize: 8, font: arabicFont),
           textAlign: pw.TextAlign.center,
         ),
@@ -1522,7 +1522,7 @@ class PrintService {
         pw.Divider(),
         pw.SizedBox(height: 8),
         pw.Text(
-          'تم إنشاء هذا التقرير بواسطة نظام إدارة المكتب',
+          'تم إنشاء هذا التقرير بواسطة تجارتي',
           style: pw.TextStyle(
             fontSize: 10,
             fontWeight: pw.FontWeight.bold,

@@ -812,7 +812,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
-                          'نظام إدارة المكتب',
+                          'تجارتي',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
