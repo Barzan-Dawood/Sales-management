@@ -667,30 +667,46 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Directionality(
           textDirection: TextDirection.rtl,
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.65,
-            height: MediaQuery.of(context).size.height * 0.7,
+            width: MediaQuery.of(context).size.width * 0.75,
+            height: MediaQuery.of(context).size.height * 0.85,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(24),
               color: DarkModeUtils.getCardColor(context),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
+                // Header with gradient
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: DarkModeUtils.getBackgroundColor(context),
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        DarkModeUtils.getInfoColor(context),
+                        DarkModeUtils.getInfoColor(context).withOpacity(0.7),
+                        DarkModeUtils.getInfoColor(context).withOpacity(0.5),
+                      ],
+                    ),
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
                     ),
                   ),
                   child: Row(
@@ -698,27 +714,31 @@ class _CustomersScreenState extends State<CustomersScreen> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: DarkModeUtils.getInfoColor(context)
-                              .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 1.5,
+                          ),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.person,
                           size: 20,
-                          color: DarkModeUtils.getInfoColor(context),
+                          color: Colors.white,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               customerName,
-                              style: TextStyle(
-                                fontSize: 18,
+                              style: const TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: DarkModeUtils.getTextColor(context),
+                                color: Colors.white,
+                                letterSpacing: 0.3,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -726,44 +746,54 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 false)
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.phone,
-                                    size: 14,
-                                    color: DarkModeUtils.getSecondaryTextColor(
-                                        context),
+                                  Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Icon(
+                                      Icons.phone,
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     customer['phone']?.toString() ?? '',
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          DarkModeUtils.getSecondaryTextColor(
-                                              context),
+                                      fontSize: 11,
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
                               ),
                             if (customer['address']?.toString().isNotEmpty ??
                                 false) ...[
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 3),
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 14,
-                                    color: DarkModeUtils.getSecondaryTextColor(
-                                        context),
+                                  Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
                                       customer['address']?.toString() ?? '',
                                       style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            DarkModeUtils.getSecondaryTextColor(
-                                                context),
+                                        fontSize: 11,
+                                        color: Colors.white.withOpacity(0.9),
+                                        fontWeight: FontWeight.w500,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -775,131 +805,168 @@ class _CustomersScreenState extends State<CustomersScreen> {
                           ],
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(
-                          Icons.close,
-                          size: 20,
-                          color: DarkModeUtils.getTextColor(context),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
                         ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                        child: IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          tooltip: 'إغلاق',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 // Content
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        // Statistics Cards
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildDetailCard(
-                                context,
-                                'إجمالي الدين',
-                                Formatters.currencyIQD(
-                                    (customer['total_debt'] as num?)
-                                            ?.toDouble() ??
-                                        0.0),
-                                Icons.account_balance_wallet,
-                                _getDebtColor((customer['total_debt'] as num?)
-                                        ?.toDouble() ??
-                                    0.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: DarkModeUtils.getCardColor(context),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          // Statistics Cards
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDetailCard(
+                                  context,
+                                  'إجمالي الدين',
+                                  Formatters.currencyIQD(
+                                      (customer['total_debt'] as num?)
+                                              ?.toDouble() ??
+                                          0.0),
+                                  Icons.account_balance_wallet,
+                                  _getDebtColor((customer['total_debt'] as num?)
+                                          ?.toDouble() ??
+                                      0.0),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: _buildDetailCard(
-                                context,
-                                'عدد المعاملات',
-                                customerSales.length.toString(),
-                                Icons.receipt_long,
-                                const Color(0xFF3B82F6),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _buildDetailCard(
+                                  context,
+                                  'عدد المعاملات',
+                                  customerSales.length.toString(),
+                                  Icons.receipt_long,
+                                  const Color(0xFF3B82F6),
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: _buildDetailCard(
-                                context,
-                                'عدد المدفوعات',
-                                customerPayments.length.toString(),
-                                Icons.payments,
-                                const Color(0xFF10B981),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _buildDetailCard(
+                                  context,
+                                  'عدد المدفوعات',
+                                  customerPayments.length.toString(),
+                                  Icons.payments,
+                                  const Color(0xFF10B981),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
 
-                        // Tabs
-                        Expanded(
-                          child: DefaultTabController(
-                            length: 2,
-                            child: Column(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: DarkModeUtils.getBackgroundColor(
-                                        context),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: TabBar(
-                                    labelColor: Colors.white,
-                                    unselectedLabelColor:
-                                        DarkModeUtils.getSecondaryTextColor(
-                                            context),
-                                    indicator: BoxDecoration(
-                                      color:
-                                          DarkModeUtils.getInfoColor(context),
-                                      borderRadius: BorderRadius.circular(6),
+                          // Tabs
+                          Expanded(
+                            child: DefaultTabController(
+                              length: 2,
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: DarkModeUtils.getBackgroundColor(
+                                          context),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    indicatorSize: TabBarIndicatorSize.tab,
-                                    dividerColor: Colors.transparent,
-                                    labelPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    labelStyle: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    unselectedLabelStyle: const TextStyle(
-                                      fontSize: 10,
-                                    ),
-                                    tabs: const [
-                                      Tab(
-                                        text: 'المعاملات',
-                                        icon:
-                                            Icon(Icons.receipt_long, size: 14),
-                                        iconMargin: EdgeInsets.only(bottom: 0),
+                                    child: TabBar(
+                                      labelColor: Colors.white,
+                                      unselectedLabelColor:
+                                          DarkModeUtils.getSecondaryTextColor(
+                                              context),
+                                      indicator: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            DarkModeUtils.getInfoColor(context),
+                                            DarkModeUtils.getInfoColor(context)
+                                                .withOpacity(0.8),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: DarkModeUtils.getInfoColor(
+                                                    context)
+                                                .withOpacity(0.3),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
                                       ),
-                                      Tab(
-                                        text: 'المدفوعات',
-                                        icon: Icon(Icons.payments, size: 14),
-                                        iconMargin: EdgeInsets.only(bottom: 0),
+                                      indicatorSize: TabBarIndicatorSize.tab,
+                                      dividerColor: Colors.transparent,
+                                      labelPadding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 4),
+                                      labelStyle: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ],
+                                      unselectedLabelStyle: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      tabs: const [
+                                        Tab(
+                                          text: 'المعاملات',
+                                          icon: Icon(Icons.receipt_long,
+                                              size: 14),
+                                          iconMargin:
+                                              EdgeInsets.only(bottom: 1),
+                                        ),
+                                        Tab(
+                                          text: 'المدفوعات',
+                                          icon: Icon(Icons.payments, size: 14),
+                                          iconMargin:
+                                              EdgeInsets.only(bottom: 1),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 6),
-                                Expanded(
-                                  child: TabBarView(
-                                    children: [
-                                      // Sales Tab
-                                      _buildSalesList(context, customerSales),
-                                      // Payments Tab
-                                      _buildPaymentsList(
-                                          context, customerPayments),
-                                    ],
+                                  const SizedBox(height: 12),
+                                  Expanded(
+                                    child: TabBarView(
+                                      children: [
+                                        // Sales Tab
+                                        _buildSalesList(context, customerSales),
+                                        // Payments Tab
+                                        _buildPaymentsList(
+                                            context, customerPayments),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -915,24 +982,47 @@ class _CustomersScreenState extends State<CustomersScreen> {
   Widget _buildDetailCard(BuildContext ctx, String title, String value,
       IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
       decoration: BoxDecoration(
-        color: DarkModeUtils.getBackgroundColor(ctx),
-        borderRadius: BorderRadius.circular(4),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.12),
+            color.withOpacity(0.06),
+            color.withOpacity(0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: DarkModeUtils.getBorderColor(ctx),
+          color: color.withOpacity(0.25),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(height: 3),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(height: 4),
           Text(
             title,
             style: TextStyle(
-              fontSize: 8,
+              fontSize: 9,
               fontWeight: FontWeight.w600,
               color: DarkModeUtils.getSecondaryTextColor(ctx),
             ),
@@ -940,16 +1030,17 @@ class _CustomersScreenState extends State<CustomersScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             value,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
               color: color,
+              letterSpacing: 0.2,
             ),
             textAlign: TextAlign.center,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -965,32 +1056,32 @@ class _CustomersScreenState extends State<CustomersScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: DarkModeUtils.getBackgroundColor(ctx),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.receipt_long_outlined,
-                size: 64,
+                size: 40,
                 color:
                     DarkModeUtils.getSecondaryTextColor(ctx).withOpacity(0.5),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Text(
               'لا توجد معاملات',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: DarkModeUtils.getTextColor(ctx),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               'لم يتم تسجيل أي معاملات لهذا العميل بعد',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 11,
                 color: DarkModeUtils.getSecondaryTextColor(ctx),
               ),
               textAlign: TextAlign.center,
@@ -1030,13 +1121,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
         }
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 10),
+          margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
             color: DarkModeUtils.getCardColor(context),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: DarkModeUtils.getBorderColor(context),
+              color: typeColor.withOpacity(0.2),
+              width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: DarkModeUtils.getShadowColor(context),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
           child: Material(
             color: Colors.transparent,
@@ -1044,25 +1143,33 @@ class _CustomersScreenState extends State<CustomersScreen> {
               borderRadius: BorderRadius.circular(12),
               onTap: () {},
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: DarkModeUtils.getBackgroundColor(context),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            typeColor.withOpacity(0.2),
+                            typeColor.withOpacity(0.1),
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: DarkModeUtils.getBorderColor(context),
+                          color: typeColor.withOpacity(0.3),
+                          width: 1,
                         ),
                       ),
                       child: Icon(
                         Icons.receipt,
                         color: typeColor,
-                        size: 20,
+                        size: 18,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1072,25 +1179,34 @@ class _CustomersScreenState extends State<CustomersScreen> {
                               Text(
                                 'فاتورة #${sale['id']}',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                   color: DarkModeUtils.getTextColor(context),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: typeColor.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(4),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      typeColor.withOpacity(0.3),
+                                      typeColor.withOpacity(0.2),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: typeColor.withOpacity(0.4),
+                                    width: 1,
+                                  ),
                                 ),
                                 child: Text(
                                   typeText,
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 9,
                                     color: typeColor,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1098,34 +1214,51 @@ class _CustomersScreenState extends State<CustomersScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           if (sale['items_summary'] != null)
-                            Text(
-                              sale['items_summary'].toString(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: DarkModeUtils.getSecondaryTextColor(
-                                    context),
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: DarkModeUtils.getBackgroundColor(context)
+                                    .withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                              child: Text(
+                                sale['items_summary'].toString(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(
-                                Icons.calendar_today,
-                                size: 12,
-                                color: DarkModeUtils.getSecondaryTextColor(
-                                    context),
+                              Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  color:
+                                      DarkModeUtils.getBackgroundColor(context),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Icon(
+                                  Icons.calendar_today,
+                                  size: 12,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context),
+                                ),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 _formatDate(createdAt),
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   color: DarkModeUtils.getSecondaryTextColor(
                                       context),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -1133,19 +1266,34 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         ],
                       ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          Formatters.currencyIQD(total),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: typeColor,
-                          ),
-                          textAlign: TextAlign.right,
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            typeColor.withOpacity(0.2),
+                            typeColor.withOpacity(0.1),
+                          ],
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: typeColor.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        Formatters.currencyIQD(total),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: typeColor,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
                     ),
                   ],
                 ),
@@ -1166,32 +1314,32 @@ class _CustomersScreenState extends State<CustomersScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: DarkModeUtils.getBackgroundColor(ctx),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.payments_outlined,
-                size: 64,
+                size: 40,
                 color:
                     DarkModeUtils.getSecondaryTextColor(ctx).withOpacity(0.5),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Text(
               'لا توجد مدفوعات',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: DarkModeUtils.getTextColor(ctx),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               'لم يتم تسجيل أي مدفوعات لهذا العميل بعد',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 11,
                 color: DarkModeUtils.getSecondaryTextColor(ctx),
               ),
               textAlign: TextAlign.center,
@@ -1209,14 +1357,23 @@ class _CustomersScreenState extends State<CustomersScreen> {
         final amount = (payment['amount'] as num?)?.toDouble() ?? 0.0;
         final paymentDate = payment['payment_date']?.toString() ?? '';
 
+        final paymentColor = const Color(0xFF10B981);
         return Container(
-          margin: const EdgeInsets.only(bottom: 10),
+          margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
             color: DarkModeUtils.getCardColor(context),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: DarkModeUtils.getBorderColor(context).withOpacity(0.5),
+              color: paymentColor.withOpacity(0.2),
+              width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: DarkModeUtils.getShadowColor(context),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
           child: Material(
             color: Colors.transparent,
@@ -1224,25 +1381,33 @@ class _CustomersScreenState extends State<CustomersScreen> {
               borderRadius: BorderRadius.circular(12),
               onTap: () {},
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: DarkModeUtils.getBackgroundColor(context),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            paymentColor.withOpacity(0.2),
+                            paymentColor.withOpacity(0.1),
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: DarkModeUtils.getBorderColor(context),
+                          color: paymentColor.withOpacity(0.3),
+                          width: 1,
                         ),
                       ),
                       child: const Icon(
                         Icons.payments,
-                        color: Colors.green,
-                        size: 20,
+                        color: Color(0xFF10B981),
+                        size: 18,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1252,61 +1417,87 @@ class _CustomersScreenState extends State<CustomersScreen> {
                               Text(
                                 'دفعة #${payment['id']}',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                   color: DarkModeUtils.getTextColor(context),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(4),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      paymentColor.withOpacity(0.3),
+                                      paymentColor.withOpacity(0.2),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: paymentColor.withOpacity(0.4),
+                                    width: 1,
+                                  ),
                                 ),
                                 child: const Text(
                                   'مدفوعة',
                                   style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.green,
+                                    fontSize: 9,
+                                    color: Color(0xFF10B981),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           if (payment['notes'] != null &&
                               payment['notes'].toString().isNotEmpty)
-                            Text(
-                              payment['notes'].toString(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: DarkModeUtils.getSecondaryTextColor(
-                                    context),
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: DarkModeUtils.getBackgroundColor(context)
+                                    .withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                              child: Text(
+                                payment['notes'].toString(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(
-                                Icons.calendar_today,
-                                size: 12,
-                                color: DarkModeUtils.getSecondaryTextColor(
-                                    context),
+                              Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  color:
+                                      DarkModeUtils.getBackgroundColor(context),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Icon(
+                                  Icons.calendar_today,
+                                  size: 12,
+                                  color: DarkModeUtils.getSecondaryTextColor(
+                                      context),
+                                ),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 _formatDate(paymentDate),
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   color: DarkModeUtils.getSecondaryTextColor(
                                       context),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -1314,19 +1505,34 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         ],
                       ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          Formatters.currencyIQD(amount),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                          textAlign: TextAlign.right,
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            paymentColor.withOpacity(0.2),
+                            paymentColor.withOpacity(0.1),
+                          ],
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: paymentColor.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        Formatters.currencyIQD(amount),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF10B981),
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
                     ),
                   ],
                 ),
