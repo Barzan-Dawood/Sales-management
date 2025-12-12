@@ -20,11 +20,9 @@ import 'screens/suppliers_screen.dart';
 import 'screens/sales_screen.dart';
 import 'screens/sales_history_screen.dart';
 import 'screens/inventory_screen.dart';
-import 'screens/reports_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/debts_screen.dart';
-import 'screens/advanced_reports_screen.dart';
-import 'screens/inventory_reports_screen.dart';
+import 'screens/unified_reports_screen.dart';
 import 'screens/license_check_screen.dart';
 import 'screens/users_management_screen.dart';
 import 'screens/expenses_screen.dart';
@@ -97,10 +95,8 @@ class _AppShellState extends State<AppShell> {
       const ExpensesScreen(), // المصروفات
       const ReturnsScreen(), // المرتجعات
       const DebtsScreen(), // الديون
-      const ReportsScreen(),
+      const UnifiedReportsScreen(), // التقارير الموحدة
       const AnalyticsScreen(), // التحليلات
-      const AdvancedReportsScreen(),
-      const InventoryReportsScreen(),
       const EventLogScreen(), // سجل الأحداث
       const DeletedItemsScreen(), // سلة المحذوفات
       const SettingsScreen(),
@@ -132,22 +128,18 @@ class _AppShellState extends State<AppShell> {
         case 10:
           return auth.hasPermission(UserPermission.viewReports); // الديون
         case 11:
-          return auth.hasPermission(UserPermission.viewReports); // التقارير
+          return auth
+              .hasPermission(UserPermission.viewReports); // التقارير الموحدة
         case 12:
           return auth.hasPermission(UserPermission.viewReports); // التحليلات
         case 13:
-          return auth.hasPermission(
-              UserPermission.viewProfitCosts); // التقارير المالية
-        case 14:
-          return auth.hasPermission(UserPermission.viewReports); // تقارير الجرد
-        case 15:
           return auth.hasPermission(UserPermission.viewReports); // سجل الأحداث
-        case 16:
+        case 14:
           return auth
               .hasPermission(UserPermission.viewReports); // سلة المحذوفات
-        case 17:
+        case 15:
           return auth.hasPermission(UserPermission.systemSettings);
-        case 18:
+        case 16:
           return auth.hasPermission(UserPermission.manageUsers);
         default:
           return false;
@@ -584,8 +576,8 @@ class _AppShellState extends State<AppShell> {
                       ),
                     if (canAccessIndex(11))
                       _buildNavItem(
-                        icon: Icons.bar_chart,
-                        label: AppStrings.reports,
+                        icon: Icons.assessment,
+                        label: 'التقارير الموحدة',
                         index: 11,
                         isSelected: _selectedIndex == 11,
                       ),
@@ -598,46 +590,32 @@ class _AppShellState extends State<AppShell> {
                       ),
                     if (canAccessIndex(13))
                       _buildNavItem(
-                        icon: Icons.account_balance_wallet,
-                        label: 'التقارير المالية',
+                        icon: Icons.history,
+                        label: 'سجل الأحداث',
                         index: 13,
                         isSelected: _selectedIndex == 13,
                       ),
                     if (canAccessIndex(14))
                       _buildNavItem(
-                        icon: Icons.inventory_2,
-                        label: 'تقارير الجرد',
+                        icon: Icons.delete_outline,
+                        label: 'سلة المحذوفات',
                         index: 14,
                         isSelected: _selectedIndex == 14,
                       ),
-                    if (canAccessIndex(15))
-                      _buildNavItem(
-                        icon: Icons.history,
-                        label: 'سجل الأحداث',
-                        index: 15,
-                        isSelected: _selectedIndex == 15,
-                      ),
-                    if (canAccessIndex(16))
-                      _buildNavItem(
-                        icon: Icons.delete_outline,
-                        label: 'سلة المحذوفات',
-                        index: 16,
-                        isSelected: _selectedIndex == 16,
-                      ),
                     // إدارة المستخدمين - للمديرين فقط
-                    if (canAccessIndex(18))
+                    if (canAccessIndex(16))
                       _buildNavItem(
                         icon: Icons.people,
                         label: 'إدارة المستخدمين',
-                        index: 18,
-                        isSelected: _selectedIndex == 18,
+                        index: 16,
+                        isSelected: _selectedIndex == 16,
                       ),
-                    if (canAccessIndex(17))
+                    if (canAccessIndex(15))
                       _buildNavItem(
                         icon: Icons.settings,
                         label: AppStrings.settings,
-                        index: 17,
-                        isSelected: _selectedIndex == 17,
+                        index: 15,
+                        isSelected: _selectedIndex == 15,
                       ),
                   ],
                 ),
@@ -953,76 +931,60 @@ class _AppShellState extends State<AppShell> {
                       isSelected: _selectedIndex == 9,
                       canAccess: true,
                     ),
-                  if (canAccessIndex(11))
+                  if (canAccessIndex(10))
                     _buildMobileNavItem(
                       icon: Icons.payments,
                       label: 'الديون',
+                      index: 10,
+                      isSelected: _selectedIndex == 10,
+                      canAccess: true,
+                    ),
+                  if (canAccessIndex(11))
+                    _buildMobileNavItem(
+                      icon: Icons.assessment,
+                      label: 'التقارير الموحدة',
                       index: 11,
                       isSelected: _selectedIndex == 11,
                       canAccess: true,
                     ),
                   if (canAccessIndex(12))
                     _buildMobileNavItem(
-                      icon: Icons.bar_chart,
-                      label: 'التقارير',
+                      icon: Icons.analytics,
+                      label: 'التحليلات',
                       index: 12,
                       isSelected: _selectedIndex == 12,
                       canAccess: true,
                     ),
                   if (canAccessIndex(13))
                     _buildMobileNavItem(
-                      icon: Icons.analytics,
-                      label: 'التحليلات',
-                      index: 13,
-                      isSelected: _selectedIndex == 13,
-                      canAccess: true,
-                    ),
-                  if (canAccessIndex(13))
-                    _buildMobileNavItem(
-                      icon: Icons.account_balance_wallet,
-                      label: 'التقارير المالية',
+                      icon: Icons.history,
+                      label: 'سجل الأحداث',
                       index: 13,
                       isSelected: _selectedIndex == 13,
                       canAccess: true,
                     ),
                   if (canAccessIndex(14))
                     _buildMobileNavItem(
-                      icon: Icons.inventory_2,
-                      label: 'تقارير الجرد',
+                      icon: Icons.delete_outline,
+                      label: 'سلة المحذوفات',
                       index: 14,
                       isSelected: _selectedIndex == 14,
                       canAccess: true,
                     ),
                   if (canAccessIndex(15))
                     _buildMobileNavItem(
-                      icon: Icons.history,
-                      label: 'سجل الأحداث',
+                      icon: Icons.settings,
+                      label: 'الإعدادات',
                       index: 15,
                       isSelected: _selectedIndex == 15,
                       canAccess: true,
                     ),
                   if (canAccessIndex(16))
                     _buildMobileNavItem(
-                      icon: Icons.delete_outline,
-                      label: 'سلة المحذوفات',
-                      index: 16,
-                      isSelected: _selectedIndex == 16,
-                      canAccess: true,
-                    ),
-                  if (canAccessIndex(17))
-                    _buildMobileNavItem(
-                      icon: Icons.settings,
-                      label: 'الإعدادات',
-                      index: 17,
-                      isSelected: _selectedIndex == 17,
-                      canAccess: true,
-                    ),
-                  if (canAccessIndex(18))
-                    _buildMobileNavItem(
                       icon: Icons.people,
                       label: 'إدارة المستخدمين',
-                      index: 18,
-                      isSelected: _selectedIndex == 18,
+                      index: 16,
+                      isSelected: _selectedIndex == 16,
                       canAccess: true,
                     ),
                 ],
@@ -1059,21 +1021,17 @@ class _AppShellState extends State<AppShell> {
         return const Color(0xFFFF6F00); // برتقالي داكن
       case 10: // Debts
         return const Color(0xFFE91E63); // وردي/أحمر
-      case 11: // Reports
+      case 11: // Unified Reports
         return const Color(0xFF3F51B5); // أزرق بنفسجي
       case 12: // Analytics
         return const Color(0xFF009688); // أخضر مزرق
-      case 13: // Financial Reports
-        return const Color(0xFF8BC34A); // أخضر فاتح
-      case 14: // Inventory Reports
-        return const Color(0xFF00ACC1); // أزرق سماوي
-      case 15: // Event Log
+      case 13: // Event Log
         return const Color(0xFF607D8B); // رمادي مزرق
-      case 16: // Deleted Items
+      case 14: // Deleted Items
         return const Color(0xFFD32F2F); // أحمر داكن
-      case 17: // Settings
+      case 15: // Settings
         return const Color(0xFF757575); // رمادي
-      case 18: // Users Management
+      case 16: // Users Management
         return const Color(0xFF7B1FA2); // بنفسجي داكن
       default:
         return const Color(0xFF2196F3); // أزرق افتراضي
