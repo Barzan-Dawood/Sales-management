@@ -6,7 +6,6 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import '../models/user_model.dart';
 import '../utils/dark_mode_utils.dart';
-import 'groups_management_screen.dart';
 
 class UsersManagementScreen extends StatefulWidget {
   const UsersManagementScreen({super.key});
@@ -57,15 +56,6 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
       appBar: AppBar(
         title: const Text('إدارة المستخدمين'),
         backgroundColor: Theme.of(context).colorScheme.surface,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.group),
-            onPressed: () {
-              GroupsManagementScreen.show(context);
-            },
-            tooltip: 'إدارة المجموعات',
-          ),
-        ],
       ),
       backgroundColor: DarkModeUtils.getBackgroundColor(context),
       body: SingleChildScrollView(
@@ -73,55 +63,6 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // رابط سريع لإدارة المجموعات
-            Card(
-              color: DarkModeUtils.getCardColor(context),
-              child: InkWell(
-                onTap: () {
-                  GroupsManagementScreen.show(context);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.group,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'إدارة المجموعات والصلاحيات',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'إدارة مجموعات المستخدمين وصلاحياتهم',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
             // معلومات المستخدم الحالي
             Card(
               color: DarkModeUtils.getCardColor(context),
