@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../services/db/database_service.dart';
 import '../utils/format.dart';
@@ -163,12 +162,12 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildReportHeader('ملخص الجرد الشامل'),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // مؤشرات الجرد الرئيسية
               Row(
@@ -195,7 +194,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                 ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
               Row(
                 children: [
@@ -208,7 +207,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                       Icons.account_balance_wallet,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _buildPerformanceCard(
                       'التكلفة الإجمالية',
@@ -221,7 +220,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                 ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // مؤشرات الأداء
               Row(
@@ -235,7 +234,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                       Icons.rotate_right,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _buildPerformanceCard(
                       'منخفض الكمية',
@@ -248,7 +247,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                 ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
               Row(
                 children: [
@@ -261,7 +260,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                       Icons.error,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _buildPerformanceCard(
                       'هامش الربح',
@@ -276,7 +275,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                 ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // مخطط توزيع المخزون
               _buildInventoryDistributionChart(
@@ -499,16 +498,16 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
 
   Widget _buildReportHeader(String title) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
           Icon(Icons.inventory,
-              color: Theme.of(context).colorScheme.onPrimary, size: 32),
-          const SizedBox(width: 16),
+              color: Theme.of(context).colorScheme.onPrimary, size: 20),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,7 +516,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                   title,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimary,
-                    fontSize: 24,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -528,7 +527,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
                         .colorScheme
                         .onPrimary
                         .withOpacity(0.85),
-                    fontSize: 16,
+                    fontSize: 11,
                   ),
                 ),
               ],
@@ -542,30 +541,34 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
   Widget _buildPerformanceCard(
       String title, String value, String unit, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 6),
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: DarkModeUtils.getSecondaryTextColor(context),
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             '$value $unit',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
               color: color,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -676,117 +679,250 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
 
   Widget _buildInventoryDistributionChart(
       double totalValue, double totalCost, int lowStock, int outOfStock) {
+    final scheme = Theme.of(context).colorScheme;
+    final profit = totalValue - totalCost;
+
+    // حساب النسب المئوية
+    final costPercent = totalValue > 0
+        ? (totalCost / totalValue * 100).toStringAsFixed(1)
+        : '0.0';
+    final profitPercent =
+        totalValue > 0 ? (profit / totalValue * 100).toStringAsFixed(1) : '0.0';
+
     return Container(
-      height: 300,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'توزيع قيمة المخزون',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
+              color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: PieChart(
-              PieChartData(
-                sections: [
-                  PieChartSectionData(
-                    value: totalCost,
-                    title: 'التكلفة',
-                    color: Colors.red,
-                    radius: 80,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  PieChartSectionData(
-                    value: totalValue - totalCost,
-                    title: 'الربح',
-                    color: Colors.green,
-                    radius: 80,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
+          const SizedBox(height: 12),
+          // القيمة الإجمالية
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: scheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: scheme.primary.withOpacity(0.3),
+                width: 1,
               ),
             ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'القيمة الإجمالية',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                Text(
+                  Formatters.currencyIQD(totalValue),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: scheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // التكلفة
+          _buildProgressBarItem(
+            'التكلفة',
+            totalCost,
+            totalValue,
+            costPercent,
+            Colors.red,
+          ),
+          const SizedBox(height: 12),
+          // الربح
+          _buildProgressBarItem(
+            'الربح',
+            profit,
+            totalValue,
+            profitPercent,
+            Colors.green,
           ),
         ],
       ),
     );
   }
 
+  Widget _buildProgressBarItem(
+      String label, double value, double total, String percent, Color color,
+      {bool isCount = false}) {
+    final scheme = Theme.of(context).colorScheme;
+    final percentage = total > 0 ? (value / total) : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  isCount
+                      ? '${value.toInt()} منتج'
+                      : Formatters.currencyIQD(value),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  '$percent%',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: scheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: percentage,
+            minHeight: 8,
+            backgroundColor: scheme.outline.withOpacity(0.2),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildInventoryAnalysisChart(
       int totalProducts, int lowStock, int outOfStock) {
     final healthyStock = totalProducts - lowStock - outOfStock;
+    final scheme = Theme.of(context).colorScheme;
+
+    // حساب النسب المئوية
+    final healthyPercent = totalProducts > 0
+        ? (healthyStock / totalProducts * 100).toStringAsFixed(1)
+        : '0.0';
+    final lowPercent = totalProducts > 0
+        ? (lowStock / totalProducts * 100).toStringAsFixed(1)
+        : '0.0';
+    final outPercent = totalProducts > 0
+        ? (outOfStock / totalProducts * 100).toStringAsFixed(1)
+        : '0.0';
 
     return Container(
-      height: 300,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: DarkModeUtils.createCardDecoration(context),
       child: Column(
         children: [
-          const Text(
+          Text(
             'تحليل حالة المخزون',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
+              color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: PieChart(
-              PieChartData(
-                sections: [
-                  PieChartSectionData(
-                    value: healthyStock.toDouble(),
-                    title: 'مخزون صحي',
-                    color: Colors.green,
-                    radius: 80,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  PieChartSectionData(
-                    value: lowStock.toDouble(),
-                    title: 'منخفض الكمية',
-                    color: Colors.orange,
-                    radius: 80,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  PieChartSectionData(
-                    value: outOfStock.toDouble(),
-                    title: 'نفد من المخزون',
-                    color: Colors.red,
-                    radius: 80,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
+          const SizedBox(height: 12),
+          // إجمالي المنتجات
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: scheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: scheme.primary.withOpacity(0.3),
+                width: 1,
               ),
             ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'إجمالي المنتجات',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                Text(
+                  '$totalProducts منتج',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: scheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // مخزون صحي
+          _buildProgressBarItem(
+            'مخزون صحي',
+            healthyStock.toDouble(),
+            totalProducts.toDouble(),
+            healthyPercent,
+            Colors.green,
+            isCount: true,
+          ),
+          const SizedBox(height: 12),
+          // منخفض الكمية
+          _buildProgressBarItem(
+            'منخفض الكمية',
+            lowStock.toDouble(),
+            totalProducts.toDouble(),
+            lowPercent,
+            Colors.orange,
+            isCount: true,
+          ),
+          const SizedBox(height: 12),
+          // نفد من المخزون
+          _buildProgressBarItem(
+            'نفد من المخزون',
+            outOfStock.toDouble(),
+            totalProducts.toDouble(),
+            outPercent,
+            Colors.red,
+            isCount: true,
           ),
         ],
       ),
@@ -856,7 +992,7 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
   }
 
   String _formatDateForDisplay(DateTime date) {
-    return DateFormat('d - M - yyyy', 'ar').format(date);
+    return DateFormat('yyyy-MM-dd').format(date);
   }
 
   String _formatDateForFilename(DateTime date) {

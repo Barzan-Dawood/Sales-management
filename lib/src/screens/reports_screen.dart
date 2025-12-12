@@ -79,13 +79,13 @@ class _ReportsScreenState extends State<ReportsScreen>
     }
 
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Tabs header
         Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(
               color: Theme.of(context).dividerColor.withOpacity(0.3),
             ),
@@ -96,15 +96,17 @@ class _ReportsScreenState extends State<ReportsScreen>
             unselectedLabelColor:
                 Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             indicatorColor: Theme.of(context).colorScheme.primary,
+            labelStyle: const TextStyle(fontSize: 11),
+            unselectedLabelStyle: const TextStyle(fontSize: 11),
             tabs: const [
-              Tab(icon: Icon(Icons.summarize), text: 'الملخص'),
-              Tab(icon: Icon(Icons.bar_chart), text: 'المبيعات'),
-              Tab(icon: Icon(Icons.inventory_2), text: 'المخزون'),
-              Tab(icon: Icon(Icons.payments), text: 'الديون'),
+              Tab(icon: Icon(Icons.summarize, size: 18), text: 'الملخص'),
+              Tab(icon: Icon(Icons.bar_chart, size: 18), text: 'المبيعات'),
+              Tab(icon: Icon(Icons.inventory_2, size: 18), text: 'المخزون'),
+              Tab(icon: Icon(Icons.payments, size: 18), text: 'الديون'),
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Expanded(
           child: TabBarView(
             controller: _tabController,
@@ -121,19 +123,69 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Widget _buildSummaryTab(DatabaseService db) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        DropdownButton<String>(
-          value: _period,
-          items: const [
-            DropdownMenuItem(value: 'daily', child: Text('يومي')),
-            DropdownMenuItem(value: 'monthly', child: Text('شهري')),
-            DropdownMenuItem(value: 'yearly', child: Text('سنوي')),
-          ],
-          onChanged: (v) => setState(() => _period = v ?? 'daily'),
+        Container(
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: scheme.outline.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: DropdownButton<String>(
+            value: _period,
+            style: TextStyle(
+              fontSize: 12,
+              color: scheme.onSurface,
+            ),
+            dropdownColor: scheme.surface,
+            iconEnabledColor: scheme.onSurface,
+            iconDisabledColor: scheme.onSurface.withOpacity(0.5),
+            iconSize: 20,
+            underline: const SizedBox.shrink(),
+            borderRadius: BorderRadius.circular(8),
+            items: [
+              DropdownMenuItem(
+                value: 'daily',
+                child: Text(
+                  'يومي',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+              DropdownMenuItem(
+                value: 'monthly',
+                child: Text(
+                  'شهري',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+              DropdownMenuItem(
+                value: 'yearly',
+                child: Text(
+                  'سنوي',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+            onChanged: (v) => setState(() => _period = v ?? 'daily'),
+          ),
         ),
-        const SizedBox(width: 8),
-        OutlinedButton.icon(
+        const SizedBox(width: 6),
+        OutlinedButton(
           onPressed: () async {
             final picked = await showDatePicker(
               context: context,
@@ -143,11 +195,24 @@ class _ReportsScreenState extends State<ReportsScreen>
             );
             if (picked != null) setState(() => _selected = picked);
           },
-          icon: const Icon(Icons.date_range),
-          label: Text(_selected.toString().substring(0, 10)),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            minimumSize: const Size(0, 32),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.date_range, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                _selected.toString().substring(0, 10),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
         ),
         const Spacer(),
-        OutlinedButton.icon(
+        OutlinedButton(
           onPressed: () async {
             final data = await (() async {
               DateTime from;
@@ -184,11 +249,21 @@ class _ReportsScreenState extends State<ReportsScreen>
                   SnackBar(content: Text('تم حفظ التقرير في: $saved')));
             }
           },
-          icon: const Icon(Icons.picture_as_pdf),
-          label: const Text('تصدير PDF'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            minimumSize: const Size(0, 32),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.picture_as_pdf, size: 16),
+              SizedBox(width: 4),
+              Text('PDF', style: TextStyle(fontSize: 12)),
+            ],
+          ),
         )
       ]),
-      const SizedBox(height: 12),
+      const SizedBox(height: 8),
       FutureBuilder<Map<String, double>>(
         future: () async {
           DateTime from;
@@ -241,9 +316,9 @@ class _ReportsScreenState extends State<ReportsScreen>
           children: [
             Row(children: [
               const Text('تفصيل حسب نوع الدفع',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
               const Spacer(),
-              OutlinedButton.icon(
+              OutlinedButton(
                 onPressed: () async {
                   final csv = <List<String>>[
                     ['النوع', 'القيمة'],
@@ -256,25 +331,36 @@ class _ReportsScreenState extends State<ReportsScreen>
                     rows: csv.skip(1).toList(),
                   );
                 },
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('تصدير PDF'),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.picture_as_pdf, size: 16),
+                    SizedBox(width: 4),
+                    Text('PDF', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
               ),
             ]),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: 8,
+              runSpacing: 8,
               children: totals.entries
                   .map((e) => _tile(
                       e.key, Formatters.currencyIQD(e.value), Colors.indigo))
                   .toList(),
             ),
-            const SizedBox(height: 12),
-            const Divider(),
             const SizedBox(height: 8),
-            const Text('آخر 10 فواتير',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Divider(),
             const SizedBox(height: 6),
+            const Text('آخر 10 فواتير',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            const SizedBox(height: 4),
             Expanded(
               child: ListView.builder(
                 itemCount: rows.length.clamp(0, 10),
@@ -282,15 +368,21 @@ class _ReportsScreenState extends State<ReportsScreen>
                   final r = rows[i];
                   return ListTile(
                     dense: true,
-                    leading: const Icon(Icons.receipt_long),
+                    visualDensity: VisualDensity.compact,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                    leading: const Icon(Icons.receipt_long, size: 18),
                     title: Text(
-                        '#${r['id']} - ${_typeText((r['type'] as String?) ?? '')}'),
+                        '#${r['id']} - ${_typeText((r['type'] as String?) ?? '')}',
+                        style: const TextStyle(fontSize: 12)),
                     subtitle: Text(
-                        (r['created_at'] as String?)?.substring(0, 16) ?? ''),
+                        (r['created_at'] as String?)?.substring(0, 16) ?? '',
+                        style: const TextStyle(fontSize: 10)),
                     trailing: Text(
                       Formatters.currencyIQD(
                           ((r['total'] as num?)?.toDouble() ?? 0)),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   );
                 },
@@ -335,9 +427,11 @@ class _ReportsScreenState extends State<ReportsScreen>
             Row(children: [
               Text('المخزون المنخفض والبطيء',
                   style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.blue)),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                      fontSize: 12)),
               const Spacer(),
-              OutlinedButton.icon(
+              OutlinedButton(
                 onPressed: () async {
                   final rows = <List<String>>[
                     ['النوع', 'المنتج', 'الكمية'],
@@ -359,11 +453,22 @@ class _ReportsScreenState extends State<ReportsScreen>
                     rows: rows.skip(1).toList(),
                   );
                 },
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('تصدير PDF'),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.picture_as_pdf, size: 16),
+                    SizedBox(width: 4),
+                    Text('PDF', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
               ),
             ]),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Expanded(
               child: Row(
                 children: [
@@ -382,26 +487,35 @@ class _ReportsScreenState extends State<ReportsScreen>
   Widget _listBox(String title, List<Map<String, Object?>> items) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title,
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-            const SizedBox(height: 8),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                    fontSize: 12)),
+            const SizedBox(height: 6),
             Expanded(
               child: items.isEmpty
-                  ? const Center(child: Text('لا توجد بيانات'))
+                  ? const Center(
+                      child: Text('لا توجد بيانات',
+                          style: TextStyle(fontSize: 12)))
                   : ListView.builder(
                       itemCount: items.length,
                       itemBuilder: (context, i) {
                         final p = items[i];
                         return ListTile(
                           dense: true,
-                          leading: const Icon(Icons.inventory_2),
-                          title: Text((p['name'] ?? '').toString()),
-                          trailing: Text('${p['quantity']}'),
+                          visualDensity: VisualDensity.compact,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 0),
+                          leading: const Icon(Icons.inventory_2, size: 18),
+                          title: Text((p['name'] ?? '').toString(),
+                              style: const TextStyle(fontSize: 12)),
+                          trailing: Text('${p['quantity']}',
+                              style: const TextStyle(fontSize: 12)),
                         );
                       },
                     ),
@@ -452,9 +566,9 @@ class _ReportsScreenState extends State<ReportsScreen>
             const SizedBox(height: 12),
             Row(children: [
               const Text('فواتير متأخرة',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
               const Spacer(),
-              OutlinedButton.icon(
+              OutlinedButton(
                 onPressed: () async {
                   final overdue = await db.creditSales(overdueOnly: true);
                   final rows = <List<String>>[
@@ -473,18 +587,31 @@ class _ReportsScreenState extends State<ReportsScreen>
                     rows: rows.skip(1).toList(),
                   );
                 },
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('تصدير PDF'),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.picture_as_pdf, size: 16),
+                    SizedBox(width: 4),
+                    Text('PDF', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
               ),
             ]),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Expanded(
               child: FutureBuilder<List<Map<String, Object?>>>(
                 future: db.creditSales(overdueOnly: true),
                 builder: (context, snap) {
                   final rows = snap.data ?? const [];
                   if (rows.isEmpty) {
-                    return const Center(child: Text('لا توجد فواتير متأخرة'));
+                    return const Center(
+                        child: Text('لا توجد فواتير متأخرة',
+                            style: TextStyle(fontSize: 12)));
                   }
                   return ListView.builder(
                     itemCount: rows.length,
@@ -492,15 +619,22 @@ class _ReportsScreenState extends State<ReportsScreen>
                       final r = rows[i];
                       return ListTile(
                         dense: true,
-                        leading: const Icon(Icons.warning, color: Colors.red),
+                        visualDensity: VisualDensity.compact,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 0),
+                        leading: const Icon(Icons.warning,
+                            color: Colors.red, size: 18),
                         title: Text(
-                            '#${r['id']} - ${(r['customer_name'] ?? '').toString()}'),
+                            '#${r['id']} - ${(r['customer_name'] ?? '').toString()}',
+                            style: const TextStyle(fontSize: 12)),
                         subtitle: Text(
-                            'استحقاق: ${(r['due_date'] ?? '').toString().substring(0, 10)}'),
+                            'استحقاق: ${(r['due_date'] ?? '').toString().substring(0, 10)}',
+                            style: const TextStyle(fontSize: 10)),
                         trailing: Text(
                           Formatters.currencyIQD(
                               ((r['total'] as num?)?.toDouble() ?? 0)),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       );
                     },
@@ -516,19 +650,19 @@ class _ReportsScreenState extends State<ReportsScreen>
 
   Widget _tile(String title, String value, Color color) {
     return SizedBox(
-      width: 240,
-      height: 100,
+      width: 180,
+      height: 70,
       child: Card(
         color: color.withOpacity(0.08),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title),
+            Text(title, style: const TextStyle(fontSize: 11)),
             const Spacer(),
             Text(value,
                 style: TextStyle(
-                    color: color, fontWeight: FontWeight.bold, fontSize: 18)),
+                    color: color, fontWeight: FontWeight.bold, fontSize: 14)),
           ]),
         ),
       ),

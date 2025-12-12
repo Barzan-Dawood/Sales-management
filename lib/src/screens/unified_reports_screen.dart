@@ -121,9 +121,11 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
           unselectedLabelColor:
               isDark ? scheme.onSurface.withOpacity(0.7) : Colors.grey,
           indicatorColor: isDark ? scheme.primary : Colors.black,
+          labelStyle: const TextStyle(fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontSize: 11),
           tabs: _categories.map((category) {
             return Tab(
-              icon: Icon(category.icon),
+              icon: Icon(category.icon, size: 18),
               text: category.title,
             );
           }).toList(),
@@ -162,17 +164,17 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
     final db = context.read<DatabaseService>();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildCategoryHeader(
             'تقارير المبيعات',
-            'تفصيل المبيعات حسب نوع الدفع والفترة',
+            'تفصيل المبيعات حسب نوع الدفع',
             Icons.receipt_long,
             Colors.purple,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           FutureBuilder<List<Map<String, Object?>>>(
             future: db.getSalesHistory(sortDescending: true),
             builder: (context, snap) {
@@ -207,7 +209,7 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                   // إحصائيات حسب نوع الدفع
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -216,12 +218,12 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                               const Text(
                                 'تفصيل حسب نوع الدفع',
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const Spacer(),
-                              OutlinedButton.icon(
+                              OutlinedButton(
                                 onPressed: () async {
                                   final csv = <List<String>>[
                                     ['النوع', 'القيمة'],
@@ -241,15 +243,28 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                                     ),
                                   );
                                 },
-                                icon: const Icon(Icons.picture_as_pdf),
-                                label: const Text('تصدير PDF'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  minimumSize: const Size(0, 32),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.picture_as_pdf, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('PDF', style: TextStyle(fontSize: 12)),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 10),
                           Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: totals.entries
                                 .map((e) => _buildStatCard(
                                       e.key,
@@ -263,38 +278,48 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   // آخر الفواتير
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'آخر 20 فاتورة',
+                            'آخر 15 فاتورة',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            itemCount: rows.length.clamp(0, 20),
+                            itemCount: rows.length.clamp(0, 15),
                             itemBuilder: (context, i) {
                               final r = rows[i];
                               return ListTile(
                                 dense: true,
-                                leading: const Icon(Icons.receipt_long),
+                                visualDensity: VisualDensity.compact,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 0,
+                                ),
+                                leading: const Icon(
+                                  Icons.receipt_long,
+                                  size: 18,
+                                ),
                                 title: Text(
                                   '#${r['id']} - ${_getPaymentTypeText((r['type'] as String?) ?? '')}',
+                                  style: const TextStyle(fontSize: 12),
                                 ),
                                 subtitle: Text(
                                   (r['created_at'] as String?)
                                           ?.substring(0, 16) ??
                                       '',
+                                  style: const TextStyle(fontSize: 10),
                                 ),
                                 trailing: Text(
                                   Formatters.currencyIQD(
@@ -302,6 +327,7 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                                   ),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 12,
                                   ),
                                 ),
                               );
@@ -325,7 +351,7 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
     final db = context.read<DatabaseService>();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -335,7 +361,7 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
             Icons.payments,
             Colors.red,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           FutureBuilder<Map<String, double>>(
             future: db.getDebtStatistics(),
             builder: (context, snap) {
@@ -368,8 +394,8 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                 children: [
                   // إحصائيات الديون
                   Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       _buildStatCard(
                         'إجمالي الديون',
@@ -397,11 +423,11 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   // فواتير متأخرة
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -410,12 +436,12 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                               const Text(
                                 'فواتير متأخرة',
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const Spacer(),
-                              OutlinedButton.icon(
+                              OutlinedButton(
                                 onPressed: () async {
                                   final overdue =
                                       await db.creditSales(overdueOnly: true);
@@ -448,12 +474,25 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                                     ),
                                   );
                                 },
-                                icon: const Icon(Icons.picture_as_pdf),
-                                label: const Text('تصدير PDF'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  minimumSize: const Size(0, 32),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.picture_as_pdf, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('PDF', style: TextStyle(fontSize: 12)),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           FutureBuilder<List<Map<String, Object?>>>(
                             future: db.creditSales(overdueOnly: true),
                             builder: (context, snap) {
@@ -461,8 +500,11 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                               if (rows.isEmpty) {
                                 return const Center(
                                   child: Padding(
-                                    padding: EdgeInsets.all(32.0),
-                                    child: Text('لا توجد فواتير متأخرة'),
+                                    padding: EdgeInsets.all(16.0),
+                                    child: Text(
+                                      'لا توجد فواتير متأخرة',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
                                   ),
                                 );
                               }
@@ -474,15 +516,23 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                                   final r = rows[i];
                                   return ListTile(
                                     dense: true,
+                                    visualDensity: VisualDensity.compact,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 0,
+                                    ),
                                     leading: const Icon(
                                       Icons.warning,
                                       color: Colors.red,
+                                      size: 18,
                                     ),
                                     title: Text(
                                       '#${r['id']} - ${(r['customer_name'] ?? '').toString()}',
+                                      style: const TextStyle(fontSize: 12),
                                     ),
                                     subtitle: Text(
                                       'استحقاق: ${(r['due_date'] ?? '').toString().substring(0, 10)}',
+                                      style: const TextStyle(fontSize: 10),
                                     ),
                                     trailing: Text(
                                       Formatters.currencyIQD(
@@ -490,6 +540,7 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                                       ),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
+                                        fontSize: 12,
                                       ),
                                     ),
                                   );
@@ -517,16 +568,16 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(width: 16),
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -534,16 +585,16 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 11,
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -566,39 +617,44 @@ class _UnifiedReportsScreenState extends State<UnifiedReportsScreen>
   ) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.3), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 8),
+                Icon(icon, color: color, size: 16),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               value,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

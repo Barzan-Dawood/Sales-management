@@ -216,12 +216,12 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildReportHeader('قائمة الدخل', _selectedDate),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // الإيرادات
               _buildFinancialCard(
@@ -386,9 +386,9 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 5,
-                childAspectRatio: 1.1,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+                childAspectRatio: 1.0,
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 6,
                 children: [
                   _buildKPICard(
                     'إجمالي المبيعات',
@@ -578,16 +578,16 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
 
   Widget _buildReportHeader(String title, DateTime date) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
           Icon(Icons.assessment,
-              color: Theme.of(context).colorScheme.onPrimary, size: 32),
-          const SizedBox(width: 16),
+              color: Theme.of(context).colorScheme.onPrimary, size: 20),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,7 +596,7 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                   title,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimary,
-                    fontSize: 24,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -607,7 +607,7 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                         .colorScheme
                         .onPrimary
                         .withOpacity(0.85),
-                    fontSize: 16,
+                    fontSize: 11,
                   ),
                 ),
               ],
@@ -622,32 +622,32 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
       String title, double amount, Color color, IconData icon,
       {bool isHighlight = false}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: isHighlight ? Border.all(color: color, width: 2) : null,
+        borderRadius: BorderRadius.circular(8),
+        border: isHighlight ? Border.all(color: color, width: 1.5) : null,
         boxShadow: [
           BoxShadow(
             color: DarkModeUtils.getShadowColor(context),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            spreadRadius: 0.5,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -655,16 +655,16 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   Formatters.currencyIQD(amount),
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
@@ -697,42 +697,46 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
   Widget _buildKPICard(
       String title, double value, String unit, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: DarkModeUtils.getShadowColor(context),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            spreadRadius: 0.5,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 6),
+          Icon(icon, color: color, size: 16),
+          const SizedBox(height: 4),
           Text(
             title,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             _formatKPIValue(value, unit),
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
               color: color,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -849,53 +853,38 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
 
   Widget _buildBalanceSheetChart(
       double assets, double liabilities, double equity) {
+    final scheme = Theme.of(context).colorScheme;
+    final maxValue =
+        [assets, liabilities, equity].reduce((a, b) => a > b ? a : b) * 1.2;
+
     return Container(
-      height: 450,
-      padding: const EdgeInsets.all(20),
+      height: 350,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            Colors.grey.shade50,
-          ],
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: scheme.outline.withOpacity(0.2),
+          width: 1,
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
-            spreadRadius: 2,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Text(
-              'الميزانية العمومية',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
-              ),
+          Text(
+            'الميزانية العمومية',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Expanded(
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
-                maxY: [assets, liabilities, equity]
-                        .reduce((a, b) => a > b ? a : b) *
-                    1.3,
+                maxY: maxValue,
+                minY: 0,
                 barTouchData: BarTouchData(
                   enabled: true,
                   touchTooltipData: BarTouchTooltipData(
@@ -904,8 +893,9 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                       return BarTooltipItem(
                         '${titles[group.x.toInt()]}\n${Formatters.currencyIQD(rod.toY)}',
                         TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: scheme.onSurface,
                           fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
                       );
                     },
@@ -922,75 +912,88 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 50,
                       getTitlesWidget: (double value, TitleMeta meta) {
                         const titles = ['الأصول', 'الخصوم', 'حقوق الملكية'];
                         const colors = [Colors.green, Colors.red, Colors.blue];
-                        return SideTitleWidget(
-                          axisSide: meta.axisSide,
-                          child: Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: colors[value.toInt()].withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: colors[value.toInt()].withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
+                        if (value.toInt() >= 0 &&
+                            value.toInt() < titles.length) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
                             child: Text(
                               titles[value.toInt()],
                               style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
                                 color: colors[value.toInt()],
                               ),
                               textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        );
+                          );
+                        }
+                        return const Text('');
                       },
                     ),
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 80,
+                      interval: maxValue / 5,
                       getTitlesWidget: (double value, TitleMeta meta) {
-                        return Container(
-                          padding: const EdgeInsets.only(right: 8),
+                        if (value == 0) {
+                          return const Text('');
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 4),
                           child: Text(
                             Formatters.currencyIQD(value),
-                            style: const TextStyle(
-                              fontSize: 11,
+                            style: TextStyle(
+                              fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: Colors.grey,
+                              color: scheme.onSurface.withOpacity(0.7),
                             ),
                             textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         );
                       },
                     ),
                   ),
                 ),
-                borderData: FlBorderData(show: false),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: maxValue / 5,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: scheme.outline.withOpacity(0.1),
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: scheme.outline.withOpacity(0.3),
+                      width: 1,
+                    ),
+                    left: BorderSide(
+                      color: scheme.outline.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                ),
                 barGroups: [
                   BarChartGroupData(
                     x: 0,
                     barRods: [
                       BarChartRodData(
                         toY: assets,
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.green.shade300,
-                            Colors.green.shade600,
-                          ],
-                        ),
-                        width: 30,
+                        color: Colors.green,
+                        width: 40,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(4),
                           topRight: Radius.circular(4),
@@ -1003,15 +1006,8 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                     barRods: [
                       BarChartRodData(
                         toY: liabilities,
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.red.shade300,
-                            Colors.red.shade600,
-                          ],
-                        ),
-                        width: 30,
+                        color: Colors.red,
+                        width: 40,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(4),
                           topRight: Radius.circular(4),
@@ -1024,15 +1020,8 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                     barRods: [
                       BarChartRodData(
                         toY: equity,
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.blue.shade300,
-                            Colors.blue.shade600,
-                          ],
-                        ),
-                        width: 30,
+                        color: Colors.blue,
+                        width: 40,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(4),
                           topRight: Radius.circular(4),
@@ -1044,54 +1033,123 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
               ),
             ),
           ),
+          const SizedBox(height: 8),
+          // Legend
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendItem('الأصول', Colors.green),
+              const SizedBox(width: 16),
+              _buildLegendItem('الخصوم', Colors.red),
+              const SizedBox(width: 16),
+              _buildLegendItem('حقوق الملكية', Colors.blue),
+            ],
+          ),
         ],
       ),
     );
   }
 
+  Widget _buildLegendItem(String label, Color color) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: scheme.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTrendChart(List<dynamic> monthlyData) {
+    final scheme = Theme.of(context).colorScheme;
+
     if (monthlyData.isEmpty) {
       return Container(
-        height: 300,
+        height: 350,
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: scheme.outline.withOpacity(0.2),
+            width: 1,
+          ),
         ),
-        child: const Center(
-          child: Text('لا توجد بيانات للعرض'),
+        child: Center(
+          child: Text(
+            'لا توجد بيانات للعرض',
+            style: TextStyle(
+              fontSize: 12,
+              color: scheme.onSurface.withOpacity(0.7),
+            ),
+          ),
         ),
       );
     }
 
+    // حساب القيم القصوى والدنيا
+    final revenues = monthlyData
+        .map((data) => (data['total_revenue'] as num?)?.toDouble() ?? 0.0)
+        .toList();
+    final maxRevenue = revenues.reduce((a, b) => a > b ? a : b);
+    final minRevenue = revenues.reduce((a, b) => a < b ? a : b);
+    final range = maxRevenue - minRevenue;
+    final maxY = maxRevenue + (range * 0.2);
+    final minY = minRevenue > 0 ? minRevenue - (range * 0.1) : 0.0;
+    final interval = (maxY - minY) / 5;
+
     return Container(
-      height: 300,
-      padding: const EdgeInsets.all(16),
+      height: 350,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: DarkModeUtils.getShadowColor(context),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: scheme.outline.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
-          const Text(
+          Text(
             'اتجاه المبيعات الشهرية',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
+              color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Expanded(
             child: LineChart(
               LineChartData(
-                gridData: FlGridData(show: true),
+                minY: minY,
+                maxY: maxY,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: interval,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: scheme.outline.withOpacity(0.1),
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
                 titlesData: FlTitlesData(
                   show: true,
                   rightTitles: AxisTitles(
@@ -1103,19 +1161,26 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 40,
                       getTitlesWidget: (double value, TitleMeta meta) {
-                        if (value.toInt() < monthlyData.length) {
+                        if (value.toInt() >= 0 &&
+                            value.toInt() < monthlyData.length) {
                           final month =
                               monthlyData[value.toInt()]['month'] as String? ??
                                   '';
-                          return Text(
-                            month.substring(5), // عرض الشهر فقط
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
-                            ),
-                          );
+                          if (month.length > 5) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                month.substring(5), // عرض الشهر فقط
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.onSurface.withOpacity(0.7),
+                                ),
+                              ),
+                            );
+                          }
                         }
                         return const Text('');
                       },
@@ -1124,20 +1189,43 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 85,
+                      interval: interval,
                       getTitlesWidget: (double value, TitleMeta meta) {
-                        return Text(
-                          Formatters.currencyIQD(value),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
+                        if (value == minY) {
+                          return const Text('');
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Text(
+                            Formatters.currencyIQD(value),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurface.withOpacity(0.7),
+                            ),
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         );
                       },
                     ),
                   ),
                 ),
-                borderData: FlBorderData(show: true),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: scheme.outline.withOpacity(0.3),
+                      width: 1,
+                    ),
+                    left: BorderSide(
+                      color: scheme.outline.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                ),
                 lineBarsData: [
                   LineChartBarData(
                     spots: monthlyData.asMap().entries.map((entry) {
@@ -1147,11 +1235,47 @@ class _AdvancedReportsScreenState extends State<AdvancedReportsScreen>
                       return FlSpot(index.toDouble(), revenue);
                     }).toList(),
                     isCurved: true,
-                    color: Colors.blue,
+                    color: scheme.primary,
                     barWidth: 3,
-                    dotData: FlDotData(show: true),
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 4,
+                          color: scheme.primary,
+                          strokeWidth: 2,
+                          strokeColor: scheme.surface,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: scheme.primary.withOpacity(0.1),
+                    ),
                   ),
                 ],
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                      return touchedSpots.map((LineBarSpot touchedSpot) {
+                        final index = touchedSpot.x.toInt();
+                        if (index >= 0 && index < monthlyData.length) {
+                          final month =
+                              monthlyData[index]['month'] as String? ?? '';
+                          return LineTooltipItem(
+                            '${month.length > 5 ? month.substring(5) : month}\n${Formatters.currencyIQD(touchedSpot.y)}',
+                            TextStyle(
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          );
+                        }
+                        return null;
+                      }).toList();
+                    },
+                  ),
+                ),
               ),
             ),
           ),
