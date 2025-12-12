@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -9,6 +10,7 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/db/database_service.dart';
 import '../services/auto_backup_service.dart';
+import '../services/excel_service.dart';
 import '../utils/dark_mode_utils.dart';
 
 class DatabaseSettingsDialog extends StatefulWidget {
@@ -28,7 +30,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadSettings();
   }
 
@@ -222,6 +224,11 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                         size: isSmallScreen ? 18 : 20),
                     text: isSmallScreen ? 'الحذف' : 'حذف البيانات',
                   ),
+                  Tab(
+                    icon:
+                        Icon(Icons.table_chart, size: isSmallScreen ? 18 : 20),
+                    text: isSmallScreen ? 'Excel' : 'Excel',
+                  ),
                 ],
               ),
             ),
@@ -235,6 +242,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   _buildRestoreTab(),
                   _buildSettingsTab(),
                   _buildDeleteTab(),
+                  _buildExcelTab(),
                 ],
               ),
             ),
@@ -2205,6 +2213,560 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         Navigator.of(context).pop();
       }
       _showSnackBar('خطأ في حذف الموردين: $e', Colors.red);
+    }
+  }
+
+  Widget _buildExcelTab() {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+    final db = context.read<DatabaseService>();
+    final excelService = ExcelService(db);
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'التصدير والاستيراد',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 16 : 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // تصدير البيانات
+          _buildExportImportSectionHeader(
+            'تصدير البيانات',
+            Icons.download,
+            Colors.green,
+          ),
+          const SizedBox(height: 16),
+          _buildExportCard(
+            'تصدير المنتجات',
+            'تصدير جميع بيانات المنتجات إلى ملف Excel',
+            Icons.inventory_2,
+            Colors.blue,
+            () => _exportData(excelService.exportProducts(), 'المنتجات'),
+          ),
+          const SizedBox(height: 12),
+          _buildExportCard(
+            'تصدير العملاء',
+            'تصدير جميع بيانات العملاء إلى ملف Excel',
+            Icons.people,
+            Colors.purple,
+            () => _exportData(excelService.exportCustomers(), 'العملاء'),
+          ),
+          const SizedBox(height: 12),
+          _buildExportCard(
+            'تصدير الموردين',
+            'تصدير جميع بيانات الموردين إلى ملف Excel',
+            Icons.local_shipping,
+            Colors.orange,
+            () => _exportData(excelService.exportSuppliers(), 'الموردين'),
+          ),
+          const SizedBox(height: 12),
+          _buildExportCard(
+            'تصدير المبيعات',
+            'تصدير سجل المبيعات إلى ملف Excel',
+            Icons.receipt_long,
+            Colors.teal,
+            () => _exportData(excelService.exportSales(), 'المبيعات'),
+          ),
+          const SizedBox(height: 24),
+
+          // استيراد البيانات
+          _buildExportImportSectionHeader(
+            'استيراد البيانات',
+            Icons.upload,
+            Colors.blue,
+          ),
+          const SizedBox(height: 16),
+          _buildImportCard(
+            'استيراد المنتجات',
+            'استيراد بيانات المنتجات من ملف Excel',
+            Icons.inventory_2,
+            Colors.green,
+            () => _importData(excelService.importProducts()),
+          ),
+          const SizedBox(height: 12),
+          _buildImportCard(
+            'استيراد العملاء',
+            'استيراد بيانات العملاء من ملف Excel',
+            Icons.people,
+            Colors.indigo,
+            () => _importData(excelService.importCustomers()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExportImportSectionHeader(
+    String title,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExportCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade800
+              : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: isSmallScreen ? 24 : 28),
+            ),
+            SizedBox(width: isSmallScreen ? 12 : 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 2 : 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 11 : 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: color,
+              size: isSmallScreen ? 16 : 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImportCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 600;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade800
+              : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: isSmallScreen ? 24 : 28),
+            ),
+            SizedBox(width: isSmallScreen ? 12 : 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 2 : 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 11 : 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: color,
+              size: isSmallScreen ? 16 : 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportData(
+      Future<String?> exportFuture, String dataType) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    BuildContext? loadingContext;
+
+    try {
+      // عرض مؤشر التحميل
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          loadingContext = dialogContext;
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+
+      // إضافة timeout للعملية
+      String? path;
+      try {
+        path = await exportFuture.timeout(
+          const Duration(seconds: 90),
+          onTimeout: () {
+            throw Exception('انتهت مهلة العملية. يرجى المحاولة مرة أخرى.');
+          },
+        );
+      } finally {
+        // إغلاق مؤشر التحميل في جميع الحالات
+        if (loadingContext != null && context.mounted) {
+          try {
+            Navigator.of(loadingContext!, rootNavigator: true).pop();
+          } catch (e) {
+            debugPrint('خطأ في إغلاق مؤشر التحميل: $e');
+          }
+        }
+      }
+
+      // التحقق من context قبل عرض الرسالة
+      if (!context.mounted) return;
+
+      if (path != null) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('تم تصدير $dataType بنجاح\nالمسار: $path'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      } else {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('تم إلغاء التصدير'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('خطأ في تصدير $dataType: $e');
+      debugPrint('Stack trace: $stackTrace');
+
+      // التأكد من إغلاق مؤشر التحميل في حالة الخطأ
+      if (loadingContext != null && context.mounted) {
+        try {
+          Navigator.of(loadingContext!, rootNavigator: true).pop();
+        } catch (_) {
+          // تجاهل الخطأ إذا كان الحوار مغلقاً بالفعل
+        }
+      }
+
+      // عرض رسالة الخطأ
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في التصدير: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _importData(Future<Map<String, dynamic>> importFuture) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    BuildContext? loadingContext;
+
+    try {
+      // التحقق من context قبل عرض مؤشر التحميل
+      if (!context.mounted) return;
+
+      // عرض مؤشر التحميل
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          loadingContext = dialogContext;
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+
+      // تنفيذ الاستيراد
+      Map<String, dynamic> result;
+      try {
+        result = await importFuture.timeout(
+          const Duration(seconds: 120),
+          onTimeout: () {
+            return {
+              'success': false,
+              'message': 'انتهت مهلة العملية. يرجى المحاولة مرة أخرى.',
+            };
+          },
+        );
+      } finally {
+        // إغلاق مؤشر التحميل في جميع الحالات
+        if (loadingContext != null && context.mounted) {
+          try {
+            Navigator.of(loadingContext!, rootNavigator: true).pop();
+          } catch (e) {
+            debugPrint('خطأ في إغلاق مؤشر التحميل: $e');
+          }
+        }
+      }
+
+      // التحقق من context قبل عرض النتائج
+      if (!context.mounted) {
+        debugPrint('Context غير متاح لعرض النتائج');
+        return;
+      }
+
+      debugPrint(
+          'نتيجة الاستيراد: success=${result['success']}, message=${result['message']}');
+      debugPrint(
+          'successCount: ${result['successCount']}, errorCount: ${result['errorCount']}');
+
+      final success = result['success'] as bool? ?? false;
+      final successCount = result['successCount'] as int? ?? 0;
+      final errorCount = result['errorCount'] as int? ?? 0;
+      final skippedCount = result['skippedCount'] as int? ?? 0;
+
+      if (success && successCount > 0) {
+        final message = result['message'] as String? ?? 'تم الاستيراد بنجاح';
+        final errors = result['errors'] as List<String>? ?? [];
+
+        String fullMessage = message;
+        if (skippedCount > 0) {
+          fullMessage += '\n\nتم تخطي $skippedCount صف';
+        }
+        if (errorCount > 0) {
+          fullMessage += '\n\nعدد الأخطاء: $errorCount';
+          if (errors.isNotEmpty && errors.length <= 10) {
+            fullMessage += '\n\nالأخطاء:\n${errors.join('\n')}';
+          } else if (errors.length > 10) {
+            fullMessage +=
+                '\n\nالأخطاء (عرض أول 10):\n${errors.take(10).join('\n')}';
+            fullMessage += '\n... و ${errors.length - 10} خطأ آخر';
+          }
+        }
+
+        debugPrint('عرض حوار النجاح: $fullMessage');
+
+        // عرض حوار النجاح
+        await showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (dialogContext) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 28),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'نجح الاستيراد',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fullMessage,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  if (successCount > 0) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Colors.green, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'تم استيراد $successCount عنصر بنجاح',
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop();
+                  }
+                },
+                child: const Text('حسناً', style: TextStyle(fontSize: 16)),
+              ),
+            ],
+          ),
+        );
+
+        debugPrint('تم إغلاق حوار النجاح');
+
+        // تحديث الشاشة
+        if (mounted) {
+          setState(() {});
+          debugPrint('تم تحديث الواجهة');
+        }
+      } else {
+        // عرض رسالة الفشل
+        final message = result['message'] as String? ?? 'فشل الاستيراد';
+        debugPrint('عرض رسالة الفشل: $message');
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'إغلاق',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('خطأ في الاستيراد: $e');
+      debugPrint('Stack trace: $stackTrace');
+
+      // التأكد من إغلاق مؤشر التحميل في حالة الخطأ
+      if (loadingContext != null && context.mounted) {
+        try {
+          Navigator.of(loadingContext!, rootNavigator: true).pop();
+        } catch (_) {
+          // تجاهل الخطأ إذا كان الحوار مغلقاً بالفعل
+        }
+      }
+
+      // عرض رسالة الخطأ
+      if (context.mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('خطأ في الاستيراد: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 }

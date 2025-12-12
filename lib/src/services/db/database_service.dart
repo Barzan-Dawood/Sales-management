@@ -822,56 +822,112 @@ class DatabaseService {
     }
   }
 
+  /// التحقق من وجود عمود في جدول
+  Future<bool> _columnExists(
+      Database db, String tableName, String columnName) async {
+    try {
+      final columns = await db.rawQuery("PRAGMA table_info('$tableName')");
+      return columns.any((col) => col['name']?.toString() == columnName);
+    } catch (e) {
+      debugPrint('خطأ في التحقق من وجود العمود $columnName في $tableName: $e');
+      return false;
+    }
+  }
+
+  /// التحقق من وجود جدول
+  Future<bool> _tableExists(Database db, String tableName) async {
+    try {
+      final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        [tableName],
+      );
+      return tables.isNotEmpty;
+    } catch (e) {
+      debugPrint('خطأ في التحقق من وجود الجدول $tableName: $e');
+      return false;
+    }
+  }
+
   Future<void> _createIndexes(Database db) async {
     // Products
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)');
+    if (await _tableExists(db, 'products')) {
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)');
+      if (await _columnExists(db, 'products', 'category_id')) {
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)');
+      }
+    }
 
     // Sales
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_id)');
-    await db
-        .execute('CREATE INDEX IF NOT EXISTS idx_sales_type ON sales(type)');
+    if (await _tableExists(db, 'sales')) {
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at)');
+      if (await _columnExists(db, 'sales', 'customer_id')) {
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_id)');
+      }
+      await db
+          .execute('CREATE INDEX IF NOT EXISTS idx_sales_type ON sales(type)');
+    }
 
     // Sale items
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_sale_items_product ON sale_items(product_id)');
+    if (await _tableExists(db, 'sale_items')) {
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_sale_items_product ON sale_items(product_id)');
+    }
 
     // Customers
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)');
+    if (await _tableExists(db, 'customers')) {
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)');
+    }
 
     // Payments
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date)');
+    if (await _tableExists(db, 'payments')) {
+      if (await _columnExists(db, 'payments', 'customer_id')) {
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id)');
+      }
+      if (await _columnExists(db, 'payments', 'payment_date')) {
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date)');
+      }
+    }
 
     // Expenses
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)');
+    if (await _tableExists(db, 'expenses')) {
+      // التحقق من وجود عمود expense_date قبل إنشاء الفهرس
+      if (await _columnExists(db, 'expenses', 'expense_date')) {
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)');
+      }
+      // التحقق من وجود عمود category قبل إنشاء الفهرس
+      if (await _columnExists(db, 'expenses', 'category')) {
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)');
+      }
+    }
 
     // Event Log
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_event_log_event_type ON event_log(event_type)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_event_log_entity_type ON event_log(entity_type)');
-    await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
+    if (await _tableExists(db, 'event_log')) {
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_event_log_event_type ON event_log(event_type)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_event_log_entity_type ON event_log(entity_type)');
+      if (await _columnExists(db, 'event_log', 'user_id')) {
+        await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
+      }
+    }
   }
 
   Future<void> _createSchema(Database db) async {
@@ -4125,6 +4181,78 @@ class DatabaseService {
     }
   }
 
+  /// تشغيل جميع الـ migrations المطلوبة على قاعدة البيانات
+  Future<void> _runAllMigrations(Database db) async {
+    try {
+      // الحصول على إصدار قاعدة البيانات الحالي
+      final versionResult = await db.rawQuery('PRAGMA user_version');
+      final currentVersion = (versionResult.first['user_version'] as int?) ?? 0;
+
+      debugPrint(
+          'إصدار قاعدة البيانات الحالي: $currentVersion، الإصدار المطلوب: $_dbVersion');
+
+      // تشغيل جميع الـ migrations المطلوبة
+      if (currentVersion < 2) {
+        await _migrateToV2(db);
+      }
+      if (currentVersion < 3) {
+        await _migrateToV3(db);
+      }
+      if (currentVersion < 4) {
+        await _migrateToV4(db);
+      }
+      if (currentVersion < 5) {
+        await _migrateToV5(db);
+      }
+      if (currentVersion < 6) {
+        await _migrateToV6(db);
+      }
+      if (currentVersion < 7) {
+        await _migrateToV7(db);
+      }
+      if (currentVersion < 8) {
+        await _migrateToV8(db);
+      }
+      if (currentVersion < 9) {
+        await _migrateToV9(db);
+      }
+      if (currentVersion < 10) {
+        await _migrateToV10(db);
+      }
+      if (currentVersion < 11) {
+        await _migrateToV11(db);
+      }
+      if (currentVersion < 12) {
+        await _migrateToV12(db);
+      }
+      if (currentVersion < 13) {
+        await _migrateToV13(db);
+      }
+      if (currentVersion < 14) {
+        await _migrateToV14(db);
+      }
+
+      // تحديث إصدار قاعدة البيانات
+      await db.execute('PRAGMA user_version = $_dbVersion');
+
+      // التأكد من وجود جميع الجداول والأعمدة المطلوبة
+      await _cleanupOrphanObjects(db);
+      await _ensureCategorySchemaOn(db);
+      await _ensureEventLogTable(db);
+      // ملاحظة: _ensureReturnsTable() تستخدم _db داخلياً
+      // await _ensureReturnsTable();
+      await _ensureReturnsTableColumns(db);
+      await _ensureReturnsStatusColumn(db);
+      await _ensureDeletedItemsTable(db);
+      await _ensureSaleItemsDiscountColumn(db);
+
+      debugPrint('تم تشغيل جميع الـ migrations بنجاح');
+    } catch (e) {
+      debugPrint('خطأ في تشغيل الـ migrations: $e');
+      rethrow;
+    }
+  }
+
   /// استعادة نسخة احتياطية كاملة محسنة
   Future<void> restoreFullBackup(String backupFilePath) async {
     try {
@@ -4194,10 +4322,12 @@ class DatabaseService {
         // التحقق من صحة البيانات المستعادة
         await _db.rawQuery('PRAGMA integrity_check');
 
-        // إعادة بناء الفهارس والتنظيف
+        // تشغيل جميع الـ migrations المطلوبة قبل إنشاء الفهارس
+        debugPrint('بدء تشغيل الـ migrations بعد الاستعادة...');
+        await _runAllMigrations(_db);
+
+        // إعادة بناء الفهارس والتنظيف بعد الـ migrations
         await _createIndexes(_db);
-        await _cleanupOrphanObjects(_db);
-        await _ensureCategorySchemaOn(_db);
 
         // تحسين قاعدة البيانات بعد الاستعادة
         await _db.execute('PRAGMA optimize');
