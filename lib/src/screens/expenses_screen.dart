@@ -24,6 +24,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   DateTime? _fromDate;
   DateTime? _toDate;
   String? _selectedPeriodName;
+  int _refreshKey = 0; // مفتاح لإعادة تحميل البيانات
   List<String> _categories = [
     'إيجار',
     'رواتب',
@@ -337,6 +338,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               const SizedBox(height: 12),
               // بطاقات التحليل المالي - تصميم عصري وجذاب
               FutureBuilder<Map<String, double>>(
+                key: ValueKey(
+                    'profit_loss_${_fromDate?.toIso8601String()}_${_toDate?.toIso8601String()}_$_refreshKey'),
                 future: context.read<DatabaseService>().profitAndLoss(
                       from: _fromDate,
                       to: _toDate,
@@ -384,6 +387,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               // قائمة المصروفات
               Expanded(
                 child: FutureBuilder<List<Map<String, dynamic>>>(
+                  key: ValueKey(
+                      'expenses_${_fromDate?.toIso8601String()}_${_toDate?.toIso8601String()}_$_selectedCategory$_refreshKey'),
                   future: context.read<DatabaseService>().getExpenses(
                         from: _fromDate,
                         to: _toDate,
@@ -930,7 +935,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
 
     if (result != null && mounted) {
-      setState(() {});
+      setState(() {
+        _refreshKey++; // إعادة تحميل البيانات بعد إضافة/تعديل مصروف
+      });
     }
   }
 
@@ -959,16 +966,18 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         final auth = context.read<AuthProvider>();
         final currentUser = auth.currentUser;
         await context.read<DatabaseService>().deleteExpense(
-          id,
-          userId: currentUser?.id,
-          username: currentUser?.username,
-          name: currentUser?.name,
-        );
+              id,
+              userId: currentUser?.id,
+              username: currentUser?.username,
+              name: currentUser?.name,
+            );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('تم حذف المصروف بنجاح')),
           );
-          setState(() {});
+          setState(() {
+            _refreshKey++; // إعادة تحميل البيانات بعد حذف مصروف
+          });
         }
       } catch (e) {
         if (mounted) {

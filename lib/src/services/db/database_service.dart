@@ -100,6 +100,8 @@ class DatabaseService {
         await _ensureReturnsStatusColumn(db);
         // التأكد من وجود جدول deleted_items
         await _ensureDeletedItemsTable(db);
+        // التأكد من وجود عمود expense_date في جدول expenses
+        await _ensureExpensesTableColumns(db);
       },
     );
     // إعدادات أساسية فقط
@@ -114,6 +116,8 @@ class DatabaseService {
     await _ensureReturnsStatusColumn(_db);
     // التأكد من وجود جدول deleted_items
     await _ensureDeletedItemsTable(_db);
+    // التأكد من وجود عمود expense_date في جدول expenses
+    await _ensureExpensesTableColumns(_db);
 
     await _createIndexes(_db);
 
@@ -2938,6 +2942,13 @@ class DatabaseService {
 
   Future<Map<String, double>> profitAndLoss(
       {DateTime? from, DateTime? to}) async {
+    // التأكد من وجود الأعمدة المطلوبة
+    await _ensureExpensesTableColumns(_db);
+
+    // التحقق من وجود عمود expense_date
+    final hasExpenseDate = await _columnExists(_db, 'expenses', 'expense_date');
+    final dateColumn = hasExpenseDate ? 'expense_date' : 'created_at';
+
     final String where = (from != null && to != null)
         ? "WHERE s.created_at BETWEEN ? AND ?"
         : '';
@@ -2947,10 +2958,9 @@ class DatabaseService {
     final sales = await _db.rawQuery(
         'SELECT IFNULL(SUM(total),0) t, IFNULL(SUM(profit),0) p FROM sales s $where',
         args);
-    // استخدام expense_date بدلاً من created_at للمصروفات
-    final expensesWhere = (from != null && to != null)
-        ? 'WHERE expense_date BETWEEN ? AND ?'
-        : '';
+    // استخدام expense_date أو created_at حسب التوفر
+    final expensesWhere =
+        (from != null && to != null) ? 'WHERE $dateColumn BETWEEN ? AND ?' : '';
     final expensesArgs = (from != null && to != null)
         ? [from.toIso8601String(), to.toIso8601String()]
         : <Object?>[];
@@ -5562,18 +5572,39 @@ class DatabaseService {
     DateTime? expenseDate,
   }) async {
     try {
+      // التأكد من وجود الأعمدة المطلوبة
+      await _ensureExpensesTableColumns(_db);
+
       final now = DateTime.now().toIso8601String();
       final expenseDateStr = (expenseDate ?? DateTime.now()).toIso8601String();
 
-      final id = await _db.insert('expenses', {
+      final hasExpenseDate =
+          await _columnExists(_db, 'expenses', 'expense_date');
+      final hasCategory = await _columnExists(_db, 'expenses', 'category');
+      final hasDescription =
+          await _columnExists(_db, 'expenses', 'description');
+      final hasUpdatedAt = await _columnExists(_db, 'expenses', 'updated_at');
+
+      final data = <String, dynamic>{
         'title': title,
         'amount': amount,
-        'category': category,
-        'description': description,
-        'expense_date': expenseDateStr,
         'created_at': now,
-        'updated_at': now,
-      });
+      };
+
+      if (hasExpenseDate) {
+        data['expense_date'] = expenseDateStr;
+      }
+      if (hasCategory) {
+        data['category'] = category;
+      }
+      if (hasDescription && description != null) {
+        data['description'] = description;
+      }
+      if (hasUpdatedAt) {
+        data['updated_at'] = now;
+      }
+
+      final id = await _db.insert('expenses', data);
 
       return id;
     } catch (e) {
@@ -5591,19 +5622,40 @@ class DatabaseService {
     DateTime? expenseDate,
   }) async {
     try {
+      // التأكد من وجود الأعمدة المطلوبة
+      await _ensureExpensesTableColumns(_db);
+
       final now = DateTime.now().toIso8601String();
       final expenseDateStr = (expenseDate ?? DateTime.now()).toIso8601String();
 
+      final hasExpenseDate =
+          await _columnExists(_db, 'expenses', 'expense_date');
+      final hasCategory = await _columnExists(_db, 'expenses', 'category');
+      final hasDescription =
+          await _columnExists(_db, 'expenses', 'description');
+      final hasUpdatedAt = await _columnExists(_db, 'expenses', 'updated_at');
+
+      final data = <String, dynamic>{
+        'title': title,
+        'amount': amount,
+      };
+
+      if (hasExpenseDate) {
+        data['expense_date'] = expenseDateStr;
+      }
+      if (hasCategory) {
+        data['category'] = category;
+      }
+      if (hasDescription) {
+        data['description'] = description;
+      }
+      if (hasUpdatedAt) {
+        data['updated_at'] = now;
+      }
+
       await _db.update(
         'expenses',
-        {
-          'title': title,
-          'amount': amount,
-          'category': category,
-          'description': description,
-          'expense_date': expenseDateStr,
-          'updated_at': now,
-        },
+        data,
         where: 'id = ?',
         whereArgs: [id],
       );
@@ -5656,22 +5708,33 @@ class DatabaseService {
     String? category,
   }) async {
     try {
+      // التأكد من وجود الأعمدة المطلوبة
+      await _ensureExpensesTableColumns(_db);
+
+      // التحقق من وجود عمود expense_date
+      final hasExpenseDate =
+          await _columnExists(_db, 'expenses', 'expense_date');
+      final dateColumn = hasExpenseDate ? 'expense_date' : 'created_at';
+
       final where = <String>[];
       final whereArgs = <Object?>[];
 
       if (from != null) {
-        where.add('expense_date >= ?');
+        where.add('$dateColumn >= ?');
         whereArgs.add(from.toIso8601String());
       }
 
       if (to != null) {
-        where.add('expense_date <= ?');
+        where.add('$dateColumn <= ?');
         whereArgs.add(to.toIso8601String());
       }
 
       if (category != null && category.isNotEmpty) {
-        where.add('category = ?');
-        whereArgs.add(category);
+        final hasCategory = await _columnExists(_db, 'expenses', 'category');
+        if (hasCategory) {
+          where.add('category = ?');
+          whereArgs.add(category);
+        }
       }
 
       final whereClause =
@@ -5680,7 +5743,7 @@ class DatabaseService {
       return await _db.rawQuery('''
         SELECT * FROM expenses
         $whereClause
-        ORDER BY expense_date DESC, created_at DESC
+        ORDER BY $dateColumn DESC, created_at DESC
       ''', whereArgs);
     } catch (e) {
       throw Exception('خطأ في جلب المصروفات: $e');
@@ -5710,22 +5773,33 @@ class DatabaseService {
     String? category,
   }) async {
     try {
+      // التأكد من وجود الأعمدة المطلوبة
+      await _ensureExpensesTableColumns(_db);
+
+      // التحقق من وجود عمود expense_date
+      final hasExpenseDate =
+          await _columnExists(_db, 'expenses', 'expense_date');
+      final dateColumn = hasExpenseDate ? 'expense_date' : 'created_at';
+
       final where = <String>[];
       final whereArgs = <Object?>[];
 
       if (from != null) {
-        where.add('expense_date >= ?');
+        where.add('$dateColumn >= ?');
         whereArgs.add(from.toIso8601String());
       }
 
       if (to != null) {
-        where.add('expense_date <= ?');
+        where.add('$dateColumn <= ?');
         whereArgs.add(to.toIso8601String());
       }
 
       if (category != null && category.isNotEmpty) {
-        where.add('category = ?');
-        whereArgs.add(category);
+        final hasCategory = await _columnExists(_db, 'expenses', 'category');
+        if (hasCategory) {
+          where.add('category = ?');
+          whereArgs.add(category);
+        }
       }
 
       final whereClause =
@@ -5856,29 +5930,42 @@ class DatabaseService {
 
       // إضافة المصروفات
       if (transactionType == null || transactionType == 'expenses') {
+        // التأكد من وجود الأعمدة المطلوبة
+        await _ensureExpensesTableColumns(_db);
+
+        // التحقق من وجود عمود expense_date
+        final hasExpenseDate =
+            await _columnExists(_db, 'expenses', 'expense_date');
+        final dateColumn = hasExpenseDate ? 'expense_date' : 'created_at';
+
         final where = <String>[];
         final args = <Object?>[];
 
         if (from != null && to != null) {
-          where.add('e.expense_date BETWEEN ? AND ?');
+          where.add('e.$dateColumn BETWEEN ? AND ?');
           args.addAll([from.toIso8601String(), to.toIso8601String()]);
         }
+
+        final hasCategory = await _columnExists(_db, 'expenses', 'category');
+        final categorySelect =
+            hasCategory ? 'e.category' : '\'عام\' as category';
+        final categoryLabel = hasCategory ? 'e.category' : '\'عام\'';
 
         final expenses = await _db.rawQuery('''
           SELECT 
             e.id,
-            e.expense_date as transaction_date,
+            e.$dateColumn as transaction_date,
             e.amount,
             e.title,
-            e.category,
-            e.description,
+            $categorySelect,
+            ${await _columnExists(_db, 'expenses', 'description') ? 'e.description' : 'NULL as description'},
             NULL as profit,
             'expense' as transaction_type,
             'مصروفات' as transaction_type_label,
-            e.category as type_label
+            $categoryLabel as type_label
           FROM expenses e
           ${where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : ''}
-          ORDER BY e.expense_date DESC
+          ORDER BY e.$dateColumn DESC
         ''', args);
 
         transactions.addAll(expenses.map((e) => {
@@ -6019,6 +6106,78 @@ class DatabaseService {
       }
     } catch (e) {
       debugPrint('خطأ في التأكد من عمود status في جدول returns: $e');
+    }
+  }
+
+  /// التأكد من وجود جميع الأعمدة المطلوبة في جدول expenses
+  Future<void> _ensureExpensesTableColumns([Database? db]) async {
+    try {
+      final database = db ?? _db;
+      // التحقق من وجود الجدول أولاً
+      final tables = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='expenses'");
+
+      if (tables.isEmpty) {
+        debugPrint('جدول expenses غير موجود، سيتم إنشاؤه في migration');
+        return;
+      }
+
+      final columns = await database.rawQuery("PRAGMA table_info(expenses)");
+      final columnNames =
+          columns.map((c) => c['name']?.toString().toLowerCase()).toSet();
+
+      // إضافة عمود expense_date إذا لم يكن موجوداً
+      if (!columnNames.contains('expense_date')) {
+        debugPrint('إضافة عمود expense_date إلى جدول expenses...');
+        try {
+          await database
+              .execute('ALTER TABLE expenses ADD COLUMN expense_date TEXT');
+          // نسخ created_at إلى expense_date للبيانات الموجودة
+          await database.execute(
+              'UPDATE expenses SET expense_date = created_at WHERE expense_date IS NULL');
+          debugPrint('تم إضافة عمود expense_date بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في إضافة عمود expense_date: $e');
+        }
+      }
+
+      // إضافة عمود category إذا لم يكن موجوداً
+      if (!columnNames.contains('category')) {
+        debugPrint('إضافة عمود category إلى جدول expenses...');
+        try {
+          await database.execute(
+              'ALTER TABLE expenses ADD COLUMN category TEXT NOT NULL DEFAULT \'عام\'');
+          debugPrint('تم إضافة عمود category بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في إضافة عمود category: $e');
+        }
+      }
+
+      // إضافة عمود description إذا لم يكن موجوداً
+      if (!columnNames.contains('description')) {
+        debugPrint('إضافة عمود description إلى جدول expenses...');
+        try {
+          await database
+              .execute('ALTER TABLE expenses ADD COLUMN description TEXT');
+          debugPrint('تم إضافة عمود description بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في إضافة عمود description: $e');
+        }
+      }
+
+      // إضافة عمود updated_at إذا لم يكن موجوداً
+      if (!columnNames.contains('updated_at')) {
+        debugPrint('إضافة عمود updated_at إلى جدول expenses...');
+        try {
+          await database
+              .execute('ALTER TABLE expenses ADD COLUMN updated_at TEXT');
+          debugPrint('تم إضافة عمود updated_at بنجاح');
+        } catch (e) {
+          debugPrint('خطأ في إضافة عمود updated_at: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('خطأ في التأكد من أعمدة جدول expenses: $e');
     }
   }
 
