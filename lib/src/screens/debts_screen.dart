@@ -9,6 +9,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../services/store_config.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/db/database_service.dart';
 import '../services/auth/auth_provider.dart';
@@ -2688,7 +2689,13 @@ class _DebtsScreenState extends State<DebtsScreen>
                                       DateTime? dt;
                                       try {
                                         dt = DateTime.parse(raw);
-                                      } catch (_) {}
+                                      } catch (e) {
+                                        // تجاهل خطأ تحليل التاريخ والاستمرار بالقيمة الافتراضية
+                                        if (kDebugMode) {
+                                          debugPrint(
+                                              'خطأ في تحليل التاريخ: $e');
+                                        }
+                                      }
                                       final formatted = dt != null
                                           ? DateFormat('yyyy/MM/dd').format(dt)
                                           : raw.toString().split('T').first;

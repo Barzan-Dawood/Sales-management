@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:encrypt/encrypt.dart';
 import 'hardware_service.dart';
@@ -48,7 +49,12 @@ class LicenseService {
           deviceFingerprint = await _hardwareService.getDeviceFingerprint();
           persistentTrialStart =
               await _readPersistentTrialStart(deviceFingerprint);
-        } catch (_) {}
+        } catch (e) {
+          // تجاهل خطأ الحصول على بصمة الجهاز
+          if (kDebugMode) {
+            debugPrint('خطأ في الحصول على بصمة الجهاز: $e');
+          }
+        }
 
         // اختر أقدم تاريخ كبداية فعلية للتجربة لتجنب إعادة الضبط
         String? effectiveStart;
@@ -154,12 +160,22 @@ class LicenseService {
               }
               return LicenseStatus.trialExpired;
             }
-          } catch (_) {}
+          } catch (e) {
+            // تجاهل خطأ قراءة تاريخ بداية التجربة
+            if (kDebugMode) {
+              debugPrint('خطأ في قراءة تاريخ بداية التجربة: $e');
+            }
+          }
           final nowIso = DateTime.now().toIso8601String();
           await prefs.setString(_trialStartDateKey, nowIso);
           return LicenseStatus.trialActive;
         }
-      } catch (_) {}
+      } catch (e) {
+        // تجاهل خطأ التحقق من حالة الترخيص
+        if (kDebugMode) {
+          debugPrint('خطأ في التحقق من حالة الترخيص: $e');
+        }
+      }
       return LicenseStatus.trialExpired;
     }
   }
@@ -289,7 +305,12 @@ class LicenseService {
             data = parsed;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        // تجاهل خطأ قراءة ملف التجربة
+        if (kDebugMode) {
+          debugPrint('خطأ في قراءة ملف التجربة: $e');
+        }
+      }
       // احتفظ بأقدم تاريخ إن وجد
       if (data.containsKey(fingerprint)) {
         final existing = DateTime.tryParse(data[fingerprint] as String? ?? '');

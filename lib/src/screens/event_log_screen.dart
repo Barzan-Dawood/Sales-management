@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
@@ -293,11 +294,11 @@ class _EventLogScreenState extends State<EventLogScreen> {
               ),
             ),
             child: Row(
-              children: [  
+              children: [
                 Expanded(
                   child: _buildSummaryCard(
                     'إجمالي الأحداث',
-                    '${_events.length}',      
+                    '${_events.length}',
                     Icons.event_note,
                     Colors.blue,
                   ),
@@ -461,7 +462,12 @@ class _EventLogScreenState extends State<EventLogScreen> {
     DateTime? date;
     try {
       date = DateTime.tryParse(createdAt);
-    } catch (_) {}
+    } catch (e) {
+      // تجاهل خطأ تحليل التاريخ والاستمرار بالقيمة الافتراضية
+      if (kDebugMode) {
+        debugPrint('خطأ في تحليل تاريخ الحدث: $e');
+      }
+    }
 
     final icon = _eventTypeIcons[eventType] ?? Icons.info;
     final color = _eventTypeColors[eventType] ?? scheme.primary;

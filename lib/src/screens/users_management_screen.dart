@@ -61,12 +61,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
           IconButton(
             icon: const Icon(Icons.group),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const GroupsManagementScreen(),
-                ),
-              );
+              GroupsManagementScreen.show(context);
             },
             tooltip: 'إدارة المجموعات',
           ),
@@ -83,12 +78,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
               color: DarkModeUtils.getCardColor(context),
               child: InkWell(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const GroupsManagementScreen(),
-                    ),
-                  );
+                  GroupsManagementScreen.show(context);
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(16),

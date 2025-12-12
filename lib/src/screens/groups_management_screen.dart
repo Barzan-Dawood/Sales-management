@@ -8,6 +8,13 @@ import '../utils/dark_mode_utils.dart';
 class GroupsManagementScreen extends StatefulWidget {
   const GroupsManagementScreen({super.key});
 
+  static Future<void> show(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder: (context) => const GroupsManagementScreen(),
+    );
+  }
+
   @override
   State<GroupsManagementScreen> createState() => _GroupsManagementScreenState();
 }
@@ -71,13 +78,12 @@ class _GroupsManagementScreenState extends State<GroupsManagementScreen> {
 
     // التحقق من الصلاحية
     if (!authProvider.hasPermission(UserPermission.manageUsers)) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('إدارة المجموعات'),
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+      return Dialog(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.8,
+          padding: const EdgeInsets.all(24),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.lock,
@@ -88,66 +94,86 @@ class _GroupsManagementScreenState extends State<GroupsManagementScreen> {
               Text(
                 'ليس لديك صلاحية للوصول إلى هذه الصفحة',
                 style: TextStyle(fontSize: 18),
+                textAlign: TextAlign.center,
               ),
+              SizedBox(height: 16),
             ],
           ),
         ),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('إدارة المجموعات والصلاحيات'),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showAddEditGroupDialog(),
-            tooltip: 'إضافة مجموعة جديدة',
-          ),
-        ],
-      ),
-      backgroundColor: DarkModeUtils.getBackgroundColor(context),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadGroups,
-              child: _groups.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.group_outlined,
-                            size: 64,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'لا توجد مجموعات',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey,
+    return Dialog(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.85,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              title: const Text('إدارة المجموعات والصلاحيات'),
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              automaticallyImplyLeading: false,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () => _showAddEditGroupDialog(),
+                  tooltip: 'إضافة مجموعة جديدة',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                  tooltip: 'إغلاق',
+                ),
+              ],
+            ),
+            Flexible(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: _loadGroups,
+                      child: _groups.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.group_outlined,
+                                    size: 64,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'لا توجد مجموعات',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _showAddEditGroupDialog,
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('إضافة مجموعة جديدة'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _groups.length,
+                              itemBuilder: (context, index) {
+                                final group = _groups[index];
+                                return _buildGroupCard(group);
+                              },
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: _showAddEditGroupDialog,
-                            icon: const Icon(Icons.add),
-                            label: const Text('إضافة مجموعة جديدة'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _groups.length,
-                      itemBuilder: (context, index) {
-                        final group = _groups[index];
-                        return _buildGroupCard(group);
-                      },
                     ),
             ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -471,8 +497,10 @@ class _GroupEditDialogState extends State<_GroupEditDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxHeight: 600),
+        width: MediaQuery.of(context).size.width * 0.7,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

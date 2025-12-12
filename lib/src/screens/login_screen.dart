@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -113,7 +114,12 @@ class _LoginScreenState extends State<LoginScreen> {
           _selectedUserType = 'manager';
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      // تجاهل خطأ تحميل اسم المستخدم الأخير
+      if (kDebugMode) {
+        debugPrint('خطأ في تحميل اسم المستخدم الأخير: $e');
+      }
+    }
     // Ensure consistency after loading
     if (mounted) _reconcileUserTypeAndUsername();
   }
@@ -205,7 +211,12 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_username', _usernameController.text.trim());
-    } catch (_) {}
+    } catch (e) {
+      // تجاهل خطأ حفظ اسم المستخدم الأخير
+      if (kDebugMode) {
+        debugPrint('خطأ في حفظ اسم المستخدم الأخير: $e');
+      }
+    }
     final authProvider = context.read<AuthProvider>();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
