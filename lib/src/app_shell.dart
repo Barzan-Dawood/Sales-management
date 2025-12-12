@@ -1034,6 +1034,52 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  // دالة لإرجاع اللون المناسب لكل صفحة
+  Color _getPageColor(int index) {
+    switch (index) {
+      case 0: // Dashboard
+        return const Color(0xFF2196F3); // أزرق
+      case 1: // Sales
+        return const Color(0xFF4CAF50); // أخضر
+      case 2: // Sales History
+        return const Color(0xFF03A9F4); // أزرق فاتح
+      case 3: // Products
+        return const Color(0xFFFF9800); // برتقالي
+      case 4: // Categories
+        return const Color(0xFF9C27B0); // بنفسجي
+      case 5: // Inventory
+        return const Color(0xFF1976D2); // أزرق داكن
+      case 6: // Customers
+        return const Color(0xFF00BCD4); // أزرق سماوي
+      case 7: // Suppliers
+        return const Color(0xFFFF5722); // برتقالي محمر
+      case 8: // Expenses
+        return const Color(0xFFF44336); // أحمر
+      case 9: // Returns
+        return const Color(0xFFFF6F00); // برتقالي داكن
+      case 10: // Debts
+        return const Color(0xFFE91E63); // وردي/أحمر
+      case 11: // Reports
+        return const Color(0xFF3F51B5); // أزرق بنفسجي
+      case 12: // Analytics
+        return const Color(0xFF009688); // أخضر مزرق
+      case 13: // Financial Reports
+        return const Color(0xFF8BC34A); // أخضر فاتح
+      case 14: // Inventory Reports
+        return const Color(0xFF00ACC1); // أزرق سماوي
+      case 15: // Event Log
+        return const Color(0xFF607D8B); // رمادي مزرق
+      case 16: // Deleted Items
+        return const Color(0xFFD32F2F); // أحمر داكن
+      case 17: // Settings
+        return const Color(0xFF757575); // رمادي
+      case 18: // Users Management
+        return const Color(0xFF7B1FA2); // بنفسجي داكن
+      default:
+        return const Color(0xFF2196F3); // أزرق افتراضي
+    }
+  }
+
   Widget _buildMobileNavItem({
     required IconData icon,
     required String label,
@@ -1041,6 +1087,9 @@ class _AppShellState extends State<AppShell> {
     required bool isSelected,
     required bool canAccess,
   }) {
+    final pageColor = _getPageColor(index);
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
@@ -1056,13 +1105,12 @@ class _AppShellState extends State<AppShell> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                  : Colors.transparent,
+              color:
+                  isSelected ? pageColor.withOpacity(0.1) : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: isSelected
                   ? Border.all(
-                      color: Theme.of(context).colorScheme.primary,
+                      color: pageColor,
                       width: 2,
                     )
                   : null,
@@ -1073,21 +1121,13 @@ class _AppShellState extends State<AppShell> {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                        : Theme.of(context)
-                            .colorScheme
-                            .surface
-                            .withOpacity(0.3),
+                        ? pageColor.withOpacity(0.2)
+                        : pageColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     icon,
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.7),
+                    color: isSelected ? pageColor : pageColor.withOpacity(0.8),
                     size: 20,
                   ),
                 ),
@@ -1096,9 +1136,7 @@ class _AppShellState extends State<AppShell> {
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.onSurface,
+                      color: isSelected ? pageColor : scheme.onSurface,
                       fontSize: 16,
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -1110,7 +1148,7 @@ class _AppShellState extends State<AppShell> {
                     width: 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
+                      color: pageColor,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -1130,6 +1168,7 @@ class _AppShellState extends State<AppShell> {
   }) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageColor = _getPageColor(index);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1144,14 +1183,14 @@ class _AppShellState extends State<AppShell> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               color: isSelected
-                  ? scheme.primary.withOpacity(isDark ? 0.25 : 0.18)
+                  ? pageColor.withOpacity(isDark ? 0.25 : 0.18)
                   : (isDark
                       ? Colors.transparent
                       : scheme.surfaceContainerHighest.withOpacity(0.3)),
               borderRadius: BorderRadius.circular(10),
               border: isSelected
                   ? Border.all(
-                      color: scheme.primary.withOpacity(isDark ? 0.5 : 0.6),
+                      color: pageColor.withOpacity(isDark ? 0.5 : 0.6),
                       width: 1.5,
                     )
                   : (isDark
@@ -1167,19 +1206,13 @@ class _AppShellState extends State<AppShell> {
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? scheme.primary.withOpacity(isDark ? 0.25 : 0.2)
-                        : (isDark
-                            ? scheme.surface.withOpacity(0.5)
-                            : scheme.surfaceContainerHighest.withOpacity(0.6)),
+                        ? pageColor.withOpacity(isDark ? 0.25 : 0.2)
+                        : pageColor.withOpacity(isDark ? 0.15 : 0.1),
                     borderRadius: BorderRadius.circular(7),
                   ),
                   child: Icon(
                     icon,
-                    color: isSelected
-                        ? scheme.primary
-                        : (isDark
-                            ? scheme.onSurface.withOpacity(0.7)
-                            : scheme.onSurface.withOpacity(0.8)),
+                    color: isSelected ? pageColor : pageColor.withOpacity(0.8),
                     size: 18,
                   ),
                 ),
@@ -1189,7 +1222,7 @@ class _AppShellState extends State<AppShell> {
                     label,
                     style: TextStyle(
                       color: isSelected
-                          ? scheme.primary
+                          ? pageColor
                           : (isDark
                               ? scheme.onSurface.withOpacity(0.85)
                               : scheme.onSurface.withOpacity(0.9)),
@@ -1208,7 +1241,7 @@ class _AppShellState extends State<AppShell> {
                     height: 4,
                     margin: const EdgeInsets.only(left: 4),
                     decoration: BoxDecoration(
-                      color: scheme.primary,
+                      color: pageColor,
                       shape: BoxShape.circle,
                     ),
                   ),

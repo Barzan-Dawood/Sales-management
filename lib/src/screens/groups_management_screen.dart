@@ -23,26 +23,37 @@ class _GroupsManagementScreenState extends State<GroupsManagementScreen> {
   }
 
   Future<void> _loadGroups() async {
+    if (!mounted) return;
+
     setState(() {
       _loading = true;
     });
 
     try {
+      if (!mounted) return;
       final db = context.read<DatabaseService>();
       final groups = await db.getAllGroups();
 
-      // تحميل الصلاحيات لكل مجموعة
+      if (!mounted) return;
+
+      // تحميل الصلاحيات لكل مجموعة وإنشاء نسخة قابلة للتعديل
+      final groupsWithPermissions = <Map<String, dynamic>>[];
       for (final group in groups) {
         final groupId = group['id'] as int;
         final permissions = await db.getGroupPermissions(groupId);
-        group['permissions'] = permissions;
+        // إنشاء نسخة جديدة من Map لتجنب مشكلة read-only
+        final groupCopy = Map<String, dynamic>.from(group);
+        groupCopy['permissions'] = permissions;
+        groupsWithPermissions.add(groupCopy);
       }
 
+      if (!mounted) return;
       setState(() {
-        _groups = groups;
+        _groups = groupsWithPermissions;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
       });
@@ -296,6 +307,7 @@ class _GroupsManagementScreenState extends State<GroupsManagementScreen> {
     // تحميل الصلاحيات الحالية للمجموعة
     Map<SystemSection, List<UserPermission>> currentPermissions = {};
     if (group != null) {
+      if (!mounted) return;
       final db = context.read<DatabaseService>();
       currentPermissions = await db.getGroupPermissions(group['id'] as int);
     }
@@ -339,16 +351,22 @@ class _GroupsManagementScreenState extends State<GroupsManagementScreen> {
           );
         }
 
-        _loadGroups();
+        if (mounted) {
+          _loadGroups();
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('خطأ: $e')),
+          );
+        }
       }
     }
   }
 
   Future<void> _toggleGroupStatus(Map<String, dynamic> group) async {
+    if (!mounted) return;
+
     final db = context.read<DatabaseService>();
     final isActive = (group['active'] ?? 1) == 1;
 
@@ -364,9 +382,8 @@ class _GroupsManagementScreenState extends State<GroupsManagementScreen> {
             content: Text(isActive ? 'تم تعطيل المجموعة' : 'تم تفعيل المجموعة'),
           ),
         );
+        _loadGroups();
       }
-
-      _loadGroups();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -407,9 +424,8 @@ class _GroupsManagementScreenState extends State<GroupsManagementScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('تم حذف المجموعة بنجاح')),
           );
+          _loadGroups();
         }
-
-        _loadGroups();
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -444,7 +460,11 @@ class _GroupEditDialogState extends State<_GroupEditDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedPermissions = Map.from(widget.initialPermissions);
+    // عمل deep copy للصلاحيات لتجنب تعديل القيم الأصلية
+    _selectedPermissions = {};
+    for (final entry in widget.initialPermissions.entries) {
+      _selectedPermissions[entry.key] = List.from(entry.value);
+    }
   }
 
   @override
@@ -587,9 +607,16 @@ class _GroupEditDialogState extends State<_GroupEditDialog> {
                   onSelected: (selected) {
                     setState(() {
                       if (selected) {
-                        _selectedPermissions
-                            .putIfAbsent(section, () => [])
-                            .add(permission);
+                        // الحصول على القائمة أو إنشاء واحدة جديدة
+                        final permissionsList =
+                            _selectedPermissions.putIfAbsent(
+                          section,
+                          () => <UserPermission>[],
+                        );
+                        // إضافة الصلاحية إذا لم تكن موجودة
+                        if (!permissionsList.contains(permission)) {
+                          permissionsList.add(permission);
+                        }
                       } else {
                         _selectedPermissions[section]?.remove(permission);
                         if (_selectedPermissions[section]?.isEmpty == true) {
