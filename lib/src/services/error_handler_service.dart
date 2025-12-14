@@ -61,6 +61,10 @@ class ErrorHandlerService {
         onError();
       }
 
+      if (!context.mounted) {
+        return;
+      }
+
       if (customErrorMessage != null) {
         _showCustomError(context, customErrorMessage, showSnackBar, false);
       } else {
@@ -202,6 +206,9 @@ class ErrorHandlerService {
     bool showProgressDialog = true,
   }) async {
     if (showProgressDialog) {
+      if (!context.mounted) {
+        return false;
+      }
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -227,23 +234,25 @@ class ErrorHandlerService {
     try {
       await operation();
 
-      if (showProgressDialog) {
+      if (showProgressDialog && context.mounted) {
         Navigator.of(context).pop();
       }
 
       return true;
     } catch (error) {
-      if (showProgressDialog) {
+      if (showProgressDialog && context.mounted) {
         Navigator.of(context).pop();
       }
 
       logError(error, context: operationName ?? 'Critical Operation');
 
-      ErrorDialog.show(
-        context,
-        error,
-        dismissLabel: 'إغلاق',
-      );
+      if (context.mounted) {
+        ErrorDialog.show(
+          context,
+          error,
+          dismissLabel: 'إغلاق',
+        );
+      }
 
       return false;
     }

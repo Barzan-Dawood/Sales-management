@@ -103,7 +103,7 @@ class _EventLogScreenState extends State<EventLogScreen> {
           _isLoading = false;
         });
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -462,7 +462,6 @@ class _EventLogScreenState extends State<EventLogScreen> {
       date = DateTime.tryParse(createdAt);
     } catch (e) {
       // تجاهل خطأ تحليل التاريخ والاستمرار بالقيمة الافتراضية
-      if (kDebugMode) {}
     }
 
     final icon = _eventTypeIcons[eventType] ?? Icons.info;

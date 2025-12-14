@@ -1,4 +1,4 @@
-// ignore_for_file: curly_braces_in_flow_control_structures, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 
 import 'dart:ui' as ui show TextDirection;
 import 'package:flutter/material.dart';
@@ -296,13 +296,17 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
   /// عرض تفاصيل المرتجع
   Future<void> _showReturnDetails(Map<String, dynamic> returnItem) async {
     final saleId = returnItem['sale_id'] as int?;
-    if (saleId == null) return;
+    if (saleId == null) {
+      return;
+    }
 
     try {
       final db = context.read<DatabaseService>();
       final saleItems = await db.getSaleItems(saleId);
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       showDialog(
         context: context,
@@ -427,7 +431,9 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
   Future<void> _updateReturnStatus(
       Map<String, dynamic> returnItem, String newStatus) async {
     final id = returnItem['id'] as int?;
-    if (id == null) return;
+    if (id == null) {
+      return;
+    }
 
     try {
       final auth = context.read<AuthProvider>();
@@ -462,7 +468,9 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
   /// حذف مرتجع
   Future<void> _deleteReturn(Map<String, dynamic> returnItem) async {
     final id = returnItem['id'] as int?;
-    if (id == null) return;
+    if (id == null) {
+      return;
+    }
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -483,7 +491,9 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
     try {
       await context.read<DatabaseService>().deleteReturn(id);
@@ -1162,15 +1172,21 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
   }
 
   bool _canCreateReturn() {
-    if (_selectedSaleId == null || _saleItems.isEmpty) return false;
+    if (_selectedSaleId == null || _saleItems.isEmpty) {
+      return false;
+    }
     return _returnQuantities.values.any((qty) => qty > 0);
   }
 
   Future<void> _createReturn() async {
-    if (!_canCreateReturn()) return;
+    if (!_canCreateReturn()) {
+      return;
+    }
 
     final total = _calculateTotal();
-    if (total <= 0) return;
+    if (total <= 0) {
+      return;
+    }
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1203,7 +1219,9 @@ class _AddReturnDialogState extends State<_AddReturnDialog> {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true) {
+      return;
+    }
 
     setState(() => _isLoading = true);
 

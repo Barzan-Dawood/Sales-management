@@ -1,4 +1,4 @@
-// ignore_for_file: curly_braces_in_flow_control_structures, deprecated_member_use
+// ignore_for_file: deprecated_member_use
 
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -131,7 +131,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     if (ok == true) {
       try {
         final deletedRows = await db.deleteCategory(id);
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
 
         if (deletedRows > 0) {
           setState(() {});
@@ -150,7 +152,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           );
         }
       } catch (e) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         String errorMessage = 'خطأ في حذف القسم';
         if (e.toString().contains('FOREIGN KEY constraint failed')) {
           errorMessage = 'لا يمكن حذف القسم لأنه يحتوي على منتجات';
@@ -375,7 +379,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                           children: [
                             FilledButton(
                               onPressed: () {
-                                if (!formKey.currentState!.validate()) return;
+                                if (!formKey.currentState!.validate()) {
+                                  return;
+                                }
                                 Navigator.pop(context, true);
                               },
                               child: const Text('حفظ'),
@@ -402,7 +408,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         'icon': selectedIcon,
         'color': selectedColor
       }, id: category?['id'] as int?);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {});
     }
   }

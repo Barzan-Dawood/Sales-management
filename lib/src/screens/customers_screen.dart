@@ -1,5 +1,3 @@
-// ignore_for_file: curly_braces_in_flow_control_structures
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -397,7 +395,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true) {
+      return;
+    }
 
     try {
       final auth = context.read<AuthProvider>();
@@ -408,7 +408,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
         username: currentUser?.username,
         name: currentUser?.name,
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       if (deletedRows > 0) {
         setState(() {});
@@ -427,7 +429,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
         );
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       String errorMessage = 'خطأ في حذف العميل';
       if (e.toString().contains('FOREIGN KEY constraint failed')) {
         errorMessage = 'لا يمكن حذف العميل لأنه مرتبط بفواتير أو مدفوعات';
@@ -504,7 +508,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
         'phone': phone.text.trim(),
         'address': address.text.trim()
       }, id: customer?['id'] as int?);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {});
     }
   }

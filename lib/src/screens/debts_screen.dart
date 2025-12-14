@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, curly_braces_in_flow_control_structures, use_build_context_synchronously, unused_local_variable
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously, unused_local_variable
 
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -1346,14 +1346,18 @@ class _DebtsScreenState extends State<DebtsScreen>
         title: 'تقرير الديون',
         rows: rows,
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       if (saved != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('تم حفظ التقرير في: $saved')),
         );
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('فشل تصدير تقرير الديون: $e')),
       );
@@ -1729,7 +1733,9 @@ class _DebtsScreenState extends State<DebtsScreen>
                 final matchesSearch =
                     customerName.contains(query) || phone.contains(query);
 
-                if (!matchesSearch) return false;
+                if (!matchesSearch) {
+                  return false;
+                }
 
                 // فلترة بالحالة
                 final isPaid = (installment['paid'] as int) == 1;
@@ -1748,7 +1754,9 @@ class _DebtsScreenState extends State<DebtsScreen>
                 }
               }).where((installment) {
                 // فلترة بالتاريخ
-                if (_fromDate == null && _toDate == null) return true;
+                if (_fromDate == null && _toDate == null) {
+                  return true;
+                }
 
                 final dueDate = DateTime.parse(installment['due_date']);
 

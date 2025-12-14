@@ -987,36 +987,36 @@ class _AppShellState extends State<AppShell> {
                       isSelected: _selectedIndex == 14,
                       canAccess: true,
                     ),
-                  if (canAccessIndex(13))
+                  if (canAccessIndex(15))
                     _buildMobileNavItem(
                       icon: Icons.history,
                       label: 'سجل الأحداث',
-                      index: 13,
-                      isSelected: _selectedIndex == 13,
-                      canAccess: true,
-                    ),
-                  if (canAccessIndex(14))
-                    _buildMobileNavItem(
-                      icon: Icons.delete_outline,
-                      label: 'سلة المحذوفات',
-                      index: 14,
-                      isSelected: _selectedIndex == 14,
-                      canAccess: true,
-                    ),
-                  if (canAccessIndex(15))
-                    _buildMobileNavItem(
-                      icon: Icons.settings,
-                      label: 'الإعدادات',
                       index: 15,
                       isSelected: _selectedIndex == 15,
                       canAccess: true,
                     ),
                   if (canAccessIndex(16))
                     _buildMobileNavItem(
-                      icon: Icons.people,
-                      label: 'إدارة المستخدمين',
+                      icon: Icons.delete_outline,
+                      label: 'سلة المحذوفات',
                       index: 16,
                       isSelected: _selectedIndex == 16,
+                      canAccess: true,
+                    ),
+                  if (canAccessIndex(17))
+                    _buildMobileNavItem(
+                      icon: Icons.settings,
+                      label: 'الإعدادات',
+                      index: 17,
+                      isSelected: _selectedIndex == 17,
+                      canAccess: true,
+                    ),
+                  if (canAccessIndex(18))
+                    _buildMobileNavItem(
+                      icon: Icons.people,
+                      label: 'إدارة المستخدمين',
+                      index: 18,
+                      isSelected: _selectedIndex == 18,
                       canAccess: true,
                     ),
                 ],

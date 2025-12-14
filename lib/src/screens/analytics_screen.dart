@@ -1,4 +1,4 @@
-// ignore_for_file: curly_braces_in_flow_control_structures, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 
 import 'dart:ui' as ui show TextDirection;
 import 'package:flutter/material.dart';

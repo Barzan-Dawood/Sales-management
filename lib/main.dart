@@ -40,26 +40,20 @@ Future<void> main() async {
     // للمنصات المكتبية: استخدام محرك FFI للتوافق والأداء
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    if (kDebugMode) {}
   } else {
     // للمنصات المحمولة (Android/iOS): استخدام المحرك الافتراضي
-    if (kDebugMode) {}
   }
 
   final databaseService = DatabaseService();
 
   try {
     await databaseService.initialize();
-    if (kDebugMode) {}
   } catch (e) {
-    if (kDebugMode) {}
     // محاولة تنظيف بسيط فقط
     try {
       await databaseService.forceCleanup();
       await databaseService.initialize();
-      if (kDebugMode) {}
     } catch (cleanupError) {
-      if (kDebugMode) {}
       rethrow;
     }
   }

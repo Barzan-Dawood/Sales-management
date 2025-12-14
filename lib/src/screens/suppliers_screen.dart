@@ -1,5 +1,3 @@
-// ignore_for_file: curly_braces_in_flow_control_structures
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -348,11 +346,15 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true) {
+      return;
+    }
 
     try {
       final deletedRows = await db.deleteSupplier(id);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       if (deletedRows > 0) {
         setState(() {});
@@ -371,7 +373,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         );
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       String errorMessage = 'خطأ في حذف المورد';
       if (e.toString().contains('FOREIGN KEY constraint failed')) {
         errorMessage = 'لا يمكن حذف المورد لأنه مرتبط بمنتجات';
@@ -437,7 +441,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         'phone': phone.text.trim(),
         'address': address.text.trim()
       }, id: supplier?['id'] as int?);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {});
     }
   }

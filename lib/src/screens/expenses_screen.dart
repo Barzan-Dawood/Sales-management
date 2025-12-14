@@ -1,4 +1,4 @@
-// ignore_for_file: curly_braces_in_flow_control_structures, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 
 import 'dart:ui' as ui show TextDirection;
 import 'package:flutter/material.dart';
@@ -415,7 +415,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
                     final expenses = snapshot.data ?? [];
                     final filteredExpenses = expenses.where((expense) {
-                      if (_query.isEmpty) return true;
+                      if (_query.isEmpty) {
+                        return true;
+                      }
                       final title =
                           expense['title']?.toString().toLowerCase() ?? '';
                       final description =

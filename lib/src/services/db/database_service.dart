@@ -1,5 +1,3 @@
-// ignore_for_file: curly_braces_in_flow_control_structures, unused_local_variable
-
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -247,7 +245,7 @@ class DatabaseService {
           'CREATE INDEX IF NOT EXISTS idx_discount_coupons_code ON discount_coupons(code)');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_discount_coupons_active ON discount_coupons(active)');
-    } catch (e, stackTrace) {
+    } catch (e) {
       // لا نعيد throw لأننا نريد أن يستمر التطبيق حتى لو فشل إنشاء الجداول
     }
   }
@@ -285,7 +283,7 @@ class DatabaseService {
         await db.execute(
             'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       rethrow;
     }
   }
@@ -1793,31 +1791,33 @@ class DatabaseService {
       for (final perm in allPermissions) {
         // تحديد القسم لكل صلاحية
         String section = 'system';
-        if (perm.startsWith('manageUsers'))
+        if (perm.startsWith('manageUsers')) {
           section = 'hr';
-        else if (perm.contains('Sales') ||
+        } else if (perm.contains('Sales') ||
             perm.contains('Discount') ||
             perm.contains('Price') ||
             perm.contains('refund') ||
             perm.contains('void') ||
             perm.contains('CashDrawer') ||
-            perm.contains('Customers'))
+            perm.contains('Customers')) {
           section = 'sales';
-        else if (perm.contains('Product') ||
+        } else if (perm.contains('Product') ||
             perm.contains('Inventory') ||
             perm.contains('Stock') ||
             perm.contains('Cost') ||
             perm.contains('Purchase') ||
             perm.contains('Supplier') ||
-            perm.contains('Categor'))
+            perm.contains('Categor')) {
           section = 'inventory';
-        else if (perm.contains('Report') || perm.contains('Profit'))
+        } else if (perm.contains('Report') || perm.contains('Profit')) {
           section = 'reports';
-        else if (perm.contains('Backup') ||
+        } else if (perm.contains('Backup') ||
             perm.contains('Licensing') ||
-            perm.contains('Settings'))
+            perm.contains('Settings')) {
           section = 'system';
-        else if (perm.contains('Profit')) section = 'finance';
+        } else if (perm.contains('Profit')) {
+          section = 'finance';
+        }
 
         await db.insert('group_permissions', {
           'group_id': adminGroupId,
@@ -1891,10 +1891,7 @@ class DatabaseService {
           'CREATE INDEX IF NOT EXISTS idx_group_permissions_section ON group_permissions(section)');
 
       debugPrint('انتهى Migration V12 بنجاح');
-    } catch (e, stackTrace) {
-      debugPrint('خطأ في Migration V12: $e');
-      debugPrint('Stack trace: $stackTrace');
-    }
+    } catch (e) {}
   }
 
   Future<void> _migrateToV13(Database db) async {
@@ -6347,9 +6344,7 @@ class DatabaseService {
           }
         }
       }
-    } catch (e, stackTrace) {
-      debugPrint('خطأ في إنشاء جدول المرتجعات: $e');
-      debugPrint('Stack trace: $stackTrace');
+    } catch (e) {
       // لا نرمي الخطأ هنا لأن الجدول قد يكون موجوداً بالفعل
     }
   }
@@ -6405,9 +6400,7 @@ class DatabaseService {
                 'total_amount': (r['total_amount'] as num?)?.toDouble() ?? 0.0,
               })
           .toList();
-    } catch (e, stackTrace) {
-      debugPrint('خطأ في getReturns: $e');
-      debugPrint('Stack trace: $stackTrace');
+    } catch (e) {
       // إرجاع قائمة فارغة بدلاً من رمي خطأ
       return [];
     }
@@ -7148,9 +7141,7 @@ class DatabaseService {
 
       final result = await _db.rawQuery(query, args);
       return result;
-    } catch (e, stackTrace) {
-      debugPrint('خطأ في جلب سجل الأحداث: $e');
-      debugPrint('Stack trace: $stackTrace');
+    } catch (e) {
       // التحقق من وجود الجدول
       try {
         await _db.rawQuery(
@@ -7764,9 +7755,7 @@ class DatabaseService {
           debugPrint('خطأ في التحقق من/إضافة عمود deleted_by_name: $e');
         }
       }
-    } catch (e, stackTrace) {
-      debugPrint('خطأ في التحقق من/إنشاء جدول deleted_items: $e');
-      debugPrint('Stack trace: $stackTrace');
+    } catch (e) {
       // لا نرمي الخطأ هنا لأن الجدول قد يكون موجوداً بالفعل
     }
   }
