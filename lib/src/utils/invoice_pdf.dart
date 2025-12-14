@@ -123,6 +123,8 @@ class InvoicePdf {
     List<Map<String, Object?>>? installments, // معلومات الأقساط
     double? totalDebt, // إجمالي الدين
     double? downPayment, // المبلغ المقدم
+    double? couponDiscount, // خصم الكوبون
+    double? subtotal, // الإجمالي قبل الكوبون
   }) async {
     // فحص البيانات قبل المعالجة (للتشخيص فقط)
     // يمكن إزالة هذا الجزء بعد التأكد من استقرار النظام
@@ -134,13 +136,25 @@ class InvoicePdf {
     // تحميل الخط العربي
     final arabicFont = await _loadArabicFont();
 
-    double total = 0;
+    // حساب الإجمالي قبل الكوبون
+    double calculatedSubtotal = 0.0;
     for (final it in items) {
-      final price = _cleanNumber(it['price'] as num, defaultValue: 0.0);
+      final basePrice = _cleanNumber(it['price'] as num, defaultValue: 0.0);
       final quantity = _cleanNumber(it['quantity'] as num, defaultValue: 0.0);
-
-      total += price * quantity;
+      final discountPercent =
+          _cleanNumber((it['discount_percent'] ?? 0) as num, defaultValue: 0.0)
+              .clamp(0, 100);
+      final price = basePrice * (1 - (discountPercent / 100));
+      calculatedSubtotal += price * quantity;
     }
+
+    // استخدام subtotal الممرر أو المحسوب
+    final finalSubtotal = subtotal ?? calculatedSubtotal;
+    final finalCouponDiscount = couponDiscount ?? 0.0;
+
+    // حساب الإجمالي النهائي
+    double total =
+        (finalSubtotal - finalCouponDiscount).clamp(0.0, double.infinity);
 
     // تحديد نوع الورق
     final format = _pageFormats[pageFormat] ?? PdfPageFormat.roll80;
@@ -165,7 +179,9 @@ class InvoicePdf {
         arabicFont,
         installments: installments,
         totalDebt: totalDebt,
-        downPayment: downPayment);
+        downPayment: downPayment,
+        couponDiscount: finalCouponDiscount,
+        subtotal: finalSubtotal);
 
     return doc.save();
   }
@@ -190,7 +206,9 @@ class InvoicePdf {
       pw.Font arabicFont,
       {List<Map<String, Object?>>? installments,
       double? totalDebt,
-      double? downPayment}) {
+      double? downPayment,
+      double? couponDiscount,
+      double? subtotal}) {
     // إذا كان هناك أقساط، أنشئ صفحات منفصلة للأقساط أولاً
     if (installments != null &&
         installments.isNotEmpty &&
@@ -233,7 +251,9 @@ class InvoicePdf {
         arabicFont,
         installments: installments,
         totalDebt: totalDebt,
-        downPayment: downPayment);
+        downPayment: downPayment,
+        couponDiscount: couponDiscount,
+        subtotal: subtotal);
   }
 
   // إضافة صفحات الأقساط
@@ -341,7 +361,9 @@ class InvoicePdf {
       pw.Font arabicFont,
       {List<Map<String, Object?>>? installments,
       double? totalDebt,
-      double? downPayment}) {
+      double? downPayment,
+      double? couponDiscount,
+      double? subtotal}) {
     // حساب عدد المنتجات التي يمكن عرضها في الصفحة الواحدة
     final maxItemsPerPage = _calculateMaxItemsPerPage(format);
 
@@ -403,7 +425,9 @@ class InvoicePdf {
 
                         // Items Table
                         _buildItemsTable(pageItems, format, arabicFont,
-                            startIndex: pageIndex * maxItemsPerPage),
+                            startIndex: pageIndex * maxItemsPerPage,
+                            couponDiscount: couponDiscount,
+                            subtotal: subtotal),
 
                         // Total Section - قسم المجموع (في الصفحة الأخيرة فقط)
                         if (isLastPage) ...[
@@ -487,7 +511,9 @@ class InvoicePdf {
 
                       // Items Table - جدول المنتجات
                       _buildItemsTable(pageItems, format, arabicFont,
-                          startIndex: pageIndex * maxItemsPerPage),
+                          startIndex: pageIndex * maxItemsPerPage,
+                          couponDiscount: couponDiscount,
+                          subtotal: subtotal),
 
                       pw.SizedBox(height: 8),
 
@@ -995,29 +1021,41 @@ class InvoicePdf {
   // بناء جدول المنتجات العادي
   static pw.Widget _buildItemsTable(List<Map<String, Object?>> items,
       PdfPageFormat format, pw.Font arabicFont,
-      {int startIndex = 0}) {
+      {int startIndex = 0, double? couponDiscount, double? subtotal}) {
     // تحديد نوع الورق حسب العرض
     final width = format.width;
 
     // طابعة حرارية 58mm - عرض محدود جداً
     if (width < 70) {
       return _buildCompactThermalItemsTable(items, format, arabicFont,
-          is58mm: true, startIndex: startIndex);
+          is58mm: true,
+          startIndex: startIndex,
+          couponDiscount: couponDiscount,
+          subtotal: subtotal);
     }
     // طابعة حرارية 80mm - عرض متوسط
     else if (width < 120) {
       return _buildCompactThermalItemsTable(items, format, arabicFont,
-          is58mm: false, startIndex: startIndex);
+          is58mm: false,
+          startIndex: startIndex,
+          couponDiscount: couponDiscount,
+          subtotal: subtotal);
     }
     // ورقة A5 - عرض جيد
     else if (width < 450) {
       return _buildStandardItemsTable(items, format, arabicFont,
-          isA5: true, startIndex: startIndex);
+          isA5: true,
+          startIndex: startIndex,
+          couponDiscount: couponDiscount,
+          subtotal: subtotal);
     }
     // ورقة A4 - عرض كبير
     else {
       return _buildStandardItemsTable(items, format, arabicFont,
-          isA5: false, startIndex: startIndex);
+          isA5: false,
+          startIndex: startIndex,
+          couponDiscount: couponDiscount,
+          subtotal: subtotal);
     }
   }
 
@@ -1027,7 +1065,9 @@ class InvoicePdf {
       PdfPageFormat format,
       pw.Font arabicFont,
       {required bool is58mm,
-      int startIndex = 0}) {
+      int startIndex = 0,
+      double? couponDiscount,
+      double? subtotal}) {
     return pw.Column(
       children: [
         // خط فاصل علوي - أرق
@@ -1050,10 +1090,20 @@ class InvoicePdf {
                   (e['discount_percent'] ?? 0) as num,
                   defaultValue: 0.0)
               .clamp(0, 100);
-          final price = basePrice * (1 - (discountPercent / 100));
+          final priceAfterDiscount = basePrice * (1 - (discountPercent / 100));
+
+          // حساب السعر بعد الكوبون
+          var lineTotalBeforeCoupon = priceAfterDiscount * quantity;
+          var lineTotal = lineTotalBeforeCoupon;
+          if (couponDiscount != null &&
+              couponDiscount > 0 &&
+              subtotal != null &&
+              subtotal > 0) {
+            final couponDiscountRatio = couponDiscount / subtotal;
+            lineTotal = lineTotalBeforeCoupon * (1 - couponDiscountRatio);
+          }
 
           final qty = quantity.isFinite ? quantity.toInt() : 0;
-          final lineTotal = price * qty;
 
           // تقصير اسم المنتج أكثر للطابعات الحرارية
           String shortName = name;
@@ -1091,32 +1141,44 @@ class InvoicePdf {
               ),
 
               // تفاصيل السعر والكمية - مضغوط
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
-                  // الكمية والسعر - حجم أصغر
-                  pw.Expanded(
-                    flex: 2,
-                    child: pw.Text(
-                      discountPercent > 0
-                          ? '$qty × ${Formatters.currencyIQD(basePrice)}  خصم ${discountPercent.toStringAsFixed(0)}%'
-                          : '$qty × ${Formatters.currencyIQD(basePrice)}',
-                      style: _getArabicTextStyle(arabicFont, is58mm ? 4 : 5),
+                  // السعر الأصلي
+                  pw.Text(
+                    'أصلي: ${Formatters.currencyIQD(basePrice * qty)}',
+                    style: _getArabicTextStyle(arabicFont, is58mm ? 3 : 4,
+                        color: PdfColors.grey600),
+                    textAlign: pw.TextAlign.right,
+                  ),
+                  // السعر بعد الخصم
+                  if (discountPercent > 0)
+                    pw.Text(
+                      'بعد خصم ${discountPercent.toStringAsFixed(0)}%: ${Formatters.currencyIQD(lineTotalBeforeCoupon)}',
+                      style: _getArabicTextStyle(arabicFont, is58mm ? 3 : 4,
+                          color: PdfColors.blue700),
                       textAlign: pw.TextAlign.right,
-                      maxLines: 1,
                     ),
-                  ),
-                  // الإجمالي - حجم أصغر
-                  pw.Expanded(
-                    flex: 1,
-                    child: pw.Text(
-                      Formatters.currencyIQD(lineTotal),
-                      style: _getArabicTextStyle(arabicFont, is58mm ? 5 : 6,
+                  // السعر بعد الكوبون
+                  if (couponDiscount != null &&
+                      couponDiscount > 0 &&
+                      subtotal != null &&
+                      subtotal > 0 &&
+                      lineTotal < lineTotalBeforeCoupon)
+                    pw.Text(
+                      'بعد كوبون: ${Formatters.currencyIQD(lineTotal)}',
+                      style: _getArabicTextStyle(arabicFont, is58mm ? 4 : 5,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.green700),
+                      textAlign: pw.TextAlign.right,
+                    )
+                  else
+                    pw.Text(
+                      'الإجمالي: ${Formatters.currencyIQD(lineTotal)}',
+                      style: _getArabicTextStyle(arabicFont, is58mm ? 4 : 5,
                           fontWeight: pw.FontWeight.bold),
-                      textAlign: pw.TextAlign.left,
-                      maxLines: 1,
+                      textAlign: pw.TextAlign.right,
                     ),
-                  ),
                 ],
               ),
 
@@ -1146,7 +1208,10 @@ class InvoicePdf {
   // بناء جدول عادي للأوراق الكبيرة
   static pw.Widget _buildStandardItemsTable(List<Map<String, Object?>> items,
       PdfPageFormat format, pw.Font arabicFont,
-      {required bool isA5, int startIndex = 0}) {
+      {required bool isA5,
+      int startIndex = 0,
+      double? couponDiscount,
+      double? subtotal}) {
     // تكييف أبعاد الأعمدة حسب حجم الورق
     Map<int, pw.TableColumnWidth> columnWidths;
     double fontSize;
@@ -1255,10 +1320,21 @@ class InvoicePdf {
                     (e['discount_percent'] ?? 0) as num,
                     defaultValue: 0.0)
                 .clamp(0, 100);
-            final price = basePrice * (1 - (discountPercent / 100));
+            final priceAfterDiscount =
+                basePrice * (1 - (discountPercent / 100));
+
+            // حساب السعر بعد الكوبون
+            var lineTotalBeforeCoupon = priceAfterDiscount * quantity;
+            var lineTotal = lineTotalBeforeCoupon;
+            if (couponDiscount != null &&
+                couponDiscount > 0 &&
+                subtotal != null &&
+                subtotal > 0) {
+              final couponDiscountRatio = couponDiscount / subtotal;
+              lineTotal = lineTotalBeforeCoupon * (1 - couponDiscountRatio);
+            }
 
             final qty = quantity.isFinite ? quantity.toInt() : 0;
-            final lineTotal = price * qty;
 
             return pw.TableRow(
               decoration: pw.BoxDecoration(
@@ -1279,17 +1355,51 @@ class InvoicePdf {
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
-                // السعر
+                // السعر - عرض الأسعار الثلاثة
                 pw.Padding(
                   padding: pw.EdgeInsets.all(padding),
-                  child: pw.Text(
-                    discountPercent > 0
-                        ? '${NumberFormat.currency(locale: 'ar_IQ', symbol: '', decimalDigits: 0).format(price)}\n(خصم ${discountPercent.toStringAsFixed(0)}%)'
-                        : NumberFormat.currency(
-                                locale: 'ar_IQ', symbol: '', decimalDigits: 0)
-                            .format(price),
-                    style: _getArabicTextStyle(arabicFont, fontSize),
-                    textAlign: pw.TextAlign.center,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      // السعر الأصلي
+                      pw.Text(
+                        'أصلي: ${NumberFormat.currency(locale: 'ar_IQ', symbol: '', decimalDigits: 0).format(basePrice * qty)}',
+                        style: _getArabicTextStyle(arabicFont, fontSize - 1,
+                            color: PdfColors.grey600),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                      // السعر بعد الخصم
+                      if (discountPercent > 0)
+                        pw.Text(
+                          'بعد خصم: ${NumberFormat.currency(locale: 'ar_IQ', symbol: '', decimalDigits: 0).format(lineTotalBeforeCoupon)}',
+                          style: _getArabicTextStyle(arabicFont, fontSize - 1,
+                              color: PdfColors.blue700),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      // السعر بعد الكوبون
+                      if (couponDiscount != null &&
+                          couponDiscount > 0 &&
+                          subtotal != null &&
+                          subtotal > 0 &&
+                          lineTotal < lineTotalBeforeCoupon)
+                        pw.Text(
+                          'بعد كوبون: ${NumberFormat.currency(locale: 'ar_IQ', symbol: '', decimalDigits: 0).format(lineTotal)}',
+                          style: _getArabicTextStyle(arabicFont, fontSize,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.green700),
+                          textAlign: pw.TextAlign.center,
+                        )
+                      else
+                        pw.Text(
+                          NumberFormat.currency(
+                                  locale: 'ar_IQ', symbol: '', decimalDigits: 0)
+                              .format(lineTotal),
+                          style: _getArabicTextStyle(arabicFont, fontSize,
+                              fontWeight: pw.FontWeight.bold),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                    ],
                   ),
                 ),
                 // الكمية

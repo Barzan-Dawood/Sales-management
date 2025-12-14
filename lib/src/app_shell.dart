@@ -30,6 +30,8 @@ import 'screens/returns_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/event_log_screen.dart';
 import 'screens/deleted_items_screen.dart';
+import 'screens/product_discounts_screen.dart';
+import 'screens/discount_coupons_screen.dart';
 import 'models/user_model.dart';
 
 class AppShell extends StatefulWidget {
@@ -89,6 +91,8 @@ class _AppShellState extends State<AppShell> {
       const SalesHistoryScreen(),
       const ProductsScreen(),
       const CategoriesScreen(),
+      const ProductDiscountsScreen(), // خصومات المنتجات
+      const DiscountCouponsScreen(), // كوبونات الخصم
       const InventoryScreen(),
       const CustomersScreen(),
       const SuppliersScreen(),
@@ -116,30 +120,36 @@ class _AppShellState extends State<AppShell> {
         case 4:
           return auth.hasPermission(UserPermission.manageCategories);
         case 5:
-          return auth.hasPermission(UserPermission.manageInventory);
+          return auth
+              .hasPermission(UserPermission.manageProducts); // خصومات المنتجات
         case 6:
-          return auth.hasPermission(UserPermission.manageCustomers);
+          return auth
+              .hasPermission(UserPermission.manageProducts); // كوبونات الخصم
         case 7:
-          return auth.hasPermission(UserPermission.manageSuppliers);
+          return auth.hasPermission(UserPermission.manageInventory);
         case 8:
-          return auth.hasPermission(UserPermission.viewReports); // المصروفات
+          return auth.hasPermission(UserPermission.manageCustomers);
         case 9:
-          return auth.hasPermission(UserPermission.manageSales); // المرتجعات
+          return auth.hasPermission(UserPermission.manageSuppliers);
         case 10:
-          return auth.hasPermission(UserPermission.viewReports); // الديون
+          return auth.hasPermission(UserPermission.viewReports); // المصروفات
         case 11:
+          return auth.hasPermission(UserPermission.manageSales); // المرتجعات
+        case 12:
+          return auth.hasPermission(UserPermission.viewReports); // الديون
+        case 13:
           return auth
               .hasPermission(UserPermission.viewReports); // التقارير الموحدة
-        case 12:
-          return auth.hasPermission(UserPermission.viewReports); // التحليلات
-        case 13:
-          return auth.hasPermission(UserPermission.viewReports); // سجل الأحداث
         case 14:
+          return auth.hasPermission(UserPermission.viewReports); // التحليلات
+        case 15:
+          return auth.hasPermission(UserPermission.viewReports); // سجل الأحداث
+        case 16:
           return auth
               .hasPermission(UserPermission.viewReports); // سلة المحذوفات
-        case 15:
+        case 17:
           return auth.hasPermission(UserPermission.systemSettings);
-        case 16:
+        case 18:
           return auth.hasPermission(UserPermission.manageUsers);
         default:
           return false;
@@ -534,88 +544,102 @@ class _AppShellState extends State<AppShell> {
                       ),
                     if (canAccessIndex(5))
                       _buildNavItem(
-                        icon: Icons.warehouse,
-                        label: AppStrings.inventory,
+                        icon: Icons.local_offer,
+                        label: 'خصومات المنتجات',
                         index: 5,
                         isSelected: _selectedIndex == 5,
                       ),
                     if (canAccessIndex(6))
                       _buildNavItem(
-                        icon: Icons.people_alt,
-                        label: AppStrings.customers,
+                        icon: Icons.card_giftcard,
+                        label: 'كوبونات الخصم',
                         index: 6,
                         isSelected: _selectedIndex == 6,
                       ),
                     if (canAccessIndex(7))
                       _buildNavItem(
-                        icon: Icons.local_shipping,
-                        label: AppStrings.suppliers,
+                        icon: Icons.warehouse,
+                        label: AppStrings.inventory,
                         index: 7,
                         isSelected: _selectedIndex == 7,
                       ),
                     if (canAccessIndex(8))
                       _buildNavItem(
-                        icon: Icons.receipt_long,
-                        label: 'المصروفات',
+                        icon: Icons.people_alt,
+                        label: AppStrings.customers,
                         index: 8,
                         isSelected: _selectedIndex == 8,
                       ),
                     if (canAccessIndex(9))
                       _buildNavItem(
-                        icon: Icons.assignment_return,
-                        label: 'المرتجعات',
+                        icon: Icons.local_shipping,
+                        label: AppStrings.suppliers,
                         index: 9,
                         isSelected: _selectedIndex == 9,
                       ),
                     if (canAccessIndex(10))
                       _buildNavItem(
-                        icon: Icons.payments,
-                        label: AppStrings.debts,
+                        icon: Icons.receipt_long,
+                        label: 'المصروفات',
                         index: 10,
                         isSelected: _selectedIndex == 10,
                       ),
                     if (canAccessIndex(11))
                       _buildNavItem(
-                        icon: Icons.assessment,
-                        label: 'التقارير الموحدة',
+                        icon: Icons.assignment_return,
+                        label: 'المرتجعات',
                         index: 11,
                         isSelected: _selectedIndex == 11,
                       ),
                     if (canAccessIndex(12))
                       _buildNavItem(
-                        icon: Icons.analytics,
-                        label: 'التحليلات',
+                        icon: Icons.payments,
+                        label: AppStrings.debts,
                         index: 12,
                         isSelected: _selectedIndex == 12,
                       ),
                     if (canAccessIndex(13))
                       _buildNavItem(
-                        icon: Icons.history,
-                        label: 'سجل الأحداث',
+                        icon: Icons.assessment,
+                        label: 'التقارير الموحدة',
                         index: 13,
                         isSelected: _selectedIndex == 13,
                       ),
                     if (canAccessIndex(14))
                       _buildNavItem(
-                        icon: Icons.delete_outline,
-                        label: 'سلة المحذوفات',
+                        icon: Icons.analytics,
+                        label: 'التحليلات',
                         index: 14,
                         isSelected: _selectedIndex == 14,
                       ),
-                    // إدارة المستخدمين - للمديرين فقط
+                    if (canAccessIndex(15))
+                      _buildNavItem(
+                        icon: Icons.history,
+                        label: 'سجل الأحداث',
+                        index: 15,
+                        isSelected: _selectedIndex == 15,
+                      ),
                     if (canAccessIndex(16))
                       _buildNavItem(
-                        icon: Icons.people,
-                        label: 'إدارة المستخدمين',
+                        icon: Icons.delete_outline,
+                        label: 'سلة المحذوفات',
                         index: 16,
                         isSelected: _selectedIndex == 16,
                       ),
-                    if (canAccessIndex(15))
+                    // إدارة المستخدمين - للمديرين فقط
+                    if (canAccessIndex(18))
+                      _buildNavItem(
+                        icon: Icons.people,
+                        label: 'إدارة المستخدمين',
+                        index: 18,
+                        isSelected: _selectedIndex == 18,
+                      ),
+                    if (canAccessIndex(17))
                       _buildNavItem(
                         icon: Icons.settings,
                         label: AppStrings.settings,
-                        index: 15,
-                        isSelected: _selectedIndex == 15,
+                        index: 17,
+                        isSelected: _selectedIndex == 17,
                       ),
                   ],
                 ),
@@ -771,12 +795,12 @@ class _AppShellState extends State<AppShell> {
               icon: Icon(Icons.inventory_2),
               label: 'المنتجات',
             );
-          case 6:
+          case 8:
             return const BottomNavigationBarItem(
               icon: Icon(Icons.people_alt),
               label: 'العملاء',
             );
-          case 13:
+          case 17:
             return const BottomNavigationBarItem(
               icon: Icon(Icons.settings),
               label: 'الإعدادات',
@@ -885,74 +909,82 @@ class _AppShellState extends State<AppShell> {
                     ),
                   if (canAccessIndex(5))
                     _buildMobileNavItem(
-                      icon: Icons.warehouse,
-                      label: 'المخزون',
+                      icon: Icons.local_offer,
+                      label: 'خصومات المنتجات',
                       index: 5,
                       isSelected: _selectedIndex == 5,
                       canAccess: true,
                     ),
                   if (canAccessIndex(6))
                     _buildMobileNavItem(
-                      icon: Icons.people_alt,
-                      label: 'العملاء',
+                      icon: Icons.card_giftcard,
+                      label: 'كوبونات الخصم',
                       index: 6,
                       isSelected: _selectedIndex == 6,
                       canAccess: true,
                     ),
                   if (canAccessIndex(7))
                     _buildMobileNavItem(
-                      icon: Icons.local_shipping,
-                      label: 'الموردين',
+                      icon: Icons.warehouse,
+                      label: 'المخزون',
                       index: 7,
                       isSelected: _selectedIndex == 7,
                       canAccess: true,
                     ),
                   if (canAccessIndex(8))
                     _buildMobileNavItem(
-                      icon: Icons.account_balance,
-                      label: 'المحاسبة',
+                      icon: Icons.people_alt,
+                      label: 'العملاء',
                       index: 8,
                       isSelected: _selectedIndex == 8,
                       canAccess: true,
                     ),
                   if (canAccessIndex(9))
                     _buildMobileNavItem(
-                      icon: Icons.receipt_long,
-                      label: 'المصروفات',
-                      index: 9,
-                      isSelected: _selectedIndex == 9,
-                      canAccess: true,
-                    ),
-                  if (canAccessIndex(9))
-                    _buildMobileNavItem(
-                      icon: Icons.assignment_return,
-                      label: 'المرتجعات',
+                      icon: Icons.local_shipping,
+                      label: 'الموردين',
                       index: 9,
                       isSelected: _selectedIndex == 9,
                       canAccess: true,
                     ),
                   if (canAccessIndex(10))
                     _buildMobileNavItem(
-                      icon: Icons.payments,
-                      label: 'الديون',
+                      icon: Icons.receipt_long,
+                      label: 'المصروفات',
                       index: 10,
                       isSelected: _selectedIndex == 10,
                       canAccess: true,
                     ),
                   if (canAccessIndex(11))
                     _buildMobileNavItem(
-                      icon: Icons.assessment,
-                      label: 'التقارير الموحدة',
+                      icon: Icons.assignment_return,
+                      label: 'المرتجعات',
                       index: 11,
                       isSelected: _selectedIndex == 11,
                       canAccess: true,
                     ),
                   if (canAccessIndex(12))
                     _buildMobileNavItem(
-                      icon: Icons.analytics,
-                      label: 'التحليلات',
+                      icon: Icons.payments,
+                      label: 'الديون',
                       index: 12,
                       isSelected: _selectedIndex == 12,
+                      canAccess: true,
+                    ),
+                  if (canAccessIndex(13))
+                    _buildMobileNavItem(
+                      icon: Icons.assessment,
+                      label: 'التقارير الموحدة',
+                      index: 13,
+                      isSelected: _selectedIndex == 13,
+                      canAccess: true,
+                    ),
+                  if (canAccessIndex(14))
+                    _buildMobileNavItem(
+                      icon: Icons.analytics,
+                      label: 'التحليلات',
+                      index: 14,
+                      isSelected: _selectedIndex == 14,
                       canAccess: true,
                     ),
                   if (canAccessIndex(13))

@@ -56,6 +56,14 @@ class _SalesScreenState extends State<SalesScreen> {
   List<Map<String, Object?>>? _lastInstallments;
   double? _lastTotalDebt;
   double? _lastDownPayment;
+  double? _lastCouponDiscount;
+  double? _lastSubtotal;
+
+// Coupon system variables
+  String? _couponCode;
+  int? _couponId;
+  double _couponDiscount = 0.0;
+  Map<String, Object?>? _appliedCoupon;
 
 // Print settings
   String _selectedPrintType = '80'; // نوع الطباعة المختار
@@ -113,10 +121,20 @@ class _SalesScreenState extends State<SalesScreen> {
       );
     }
 
-    final total = _cart
-        .fold<num>(
-            0, (p, e) => p + ((e['price'] as num) * (e['quantity'] as num)))
-        .toDouble();
+    // حساب الإجمالي مع الخصومات
+    double subtotal = 0.0;
+    for (final item in _cart) {
+      final price = (item['price'] as num).toDouble();
+      final quantity = (item['quantity'] as num).toInt();
+      final discountPercent =
+          ((item['discount_percent'] ?? 0) as num).toDouble();
+      final itemTotal =
+          price * (1 - (discountPercent.clamp(0, 100) / 100)) * quantity;
+      subtotal += itemTotal;
+    }
+
+    // تطبيق خصم الكوبون
+    final total = (subtotal - _couponDiscount).clamp(0.0, double.infinity);
 
     InputDecoration pill(String hint, IconData icon) => InputDecoration(
           hintText: hint,
@@ -1334,8 +1352,19 @@ class _SalesScreenState extends State<SalesScreen> {
                                                 .clamp(0, 100);
                                         final effPrice =
                                             basePrice * (1 - (discount / 100));
-                                        final lineTotal =
+                                        // السعر قبل تطبيق الكوبون
+                                        final lineTotalBeforeCoupon =
                                             effPrice * (c['quantity'] as num);
+                                        var lineTotal = lineTotalBeforeCoupon;
+
+                                        // تطبيق خصم الكوبون على السعر بشكل متناسب
+                                        if (_couponDiscount > 0 &&
+                                            subtotal > 0) {
+                                          final couponDiscountRatio =
+                                              _couponDiscount / subtotal;
+                                          lineTotal = lineTotal *
+                                              (1 - couponDiscountRatio);
+                                        }
 
                                         return Container(
                                           decoration: BoxDecoration(
@@ -1663,20 +1692,72 @@ class _SalesScreenState extends State<SalesScreen> {
 
                                                 const SizedBox(width: 12),
 
-                                                // Price only (delete moved)
+                                                // Price with discount display
                                                 Column(
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.end,
                                                   children: [
+                                                    // السعر بعد الخصم والكوبون
                                                     Text(
                                                       Formatters.currencyIQD(
                                                           lineTotal),
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         fontWeight:
                                                             FontWeight.bold,
-                                                        fontSize: 12,
+                                                        fontSize: 13,
+                                                        color: discount > 0 ||
+                                                                (_couponDiscount >
+                                                                        0 &&
+                                                                    subtotal >
+                                                                        0)
+                                                            ? Colors
+                                                                .green.shade700
+                                                            : Theme.of(context)
+                                                                .colorScheme
+                                                                .onSurface,
                                                       ),
                                                     ),
+                                                    // عرض السعر قبل الكوبون إذا كان هناك كوبون
+                                                    if (_couponDiscount > 0 &&
+                                                        subtotal > 0 &&
+                                                        lineTotal <
+                                                            lineTotalBeforeCoupon)
+                                                      Text(
+                                                        Formatters.currencyIQD(
+                                                            lineTotalBeforeCoupon),
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          color: Theme.of(
+                                                                  context)
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withOpacity(0.6),
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .lineThrough,
+                                                        ),
+                                                      ),
+                                                    // عرض السعر الأصلي إذا كان هناك خصم على العنصر فقط (بدون كوبون)
+                                                    if (discount > 0 &&
+                                                        !(_couponDiscount > 0 &&
+                                                            subtotal > 0))
+                                                      Text(
+                                                        Formatters.currencyIQD(
+                                                            basePrice *
+                                                                (c['quantity']
+                                                                    as num)),
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          color: Theme.of(
+                                                                  context)
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withOpacity(0.6),
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .lineThrough,
+                                                        ),
+                                                      ),
                                                   ],
                                                 ),
                                               ],
@@ -1718,22 +1799,250 @@ class _SalesScreenState extends State<SalesScreen> {
                                             .withOpacity(0.2),
                                       ),
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                    child: Column(
                                       children: [
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.calculate,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary,
-                                              size: 16,
+                                        // Coupon Section
+                                        if (_cart.isNotEmpty)
+                                          Container(
+                                            margin: const EdgeInsets.only(
+                                                bottom: 8),
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: _appliedCoupon != null
+                                                  ? Theme.of(context)
+                                                      .colorScheme
+                                                      .primaryContainer
+                                                      .withOpacity(0.3)
+                                                  : Theme.of(context)
+                                                      .colorScheme
+                                                      .surfaceContainerHighest
+                                                      .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: _appliedCoupon != null
+                                                    ? Theme.of(context)
+                                                        .colorScheme
+                                                        .primary
+                                                    : Theme.of(context)
+                                                        .dividerColor
+                                                        .withOpacity(0.3),
+                                              ),
                                             ),
-                                            const SizedBox(width: 6),
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: _appliedCoupon != null
+                                                      ? Row(
+                                                          children: [
+                                                            Icon(
+                                                              Icons.local_offer,
+                                                              color: Theme.of(
+                                                                      context)
+                                                                  .colorScheme
+                                                                  .primary,
+                                                              size: 16,
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 6),
+                                                            Expanded(
+                                                              child: Text(
+                                                                'كوبون: ${_appliedCoupon!['code']} - خصم: ${Formatters.currencyIQD(_couponDiscount)}',
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 11,
+                                                                  color: Theme.of(
+                                                                          context)
+                                                                      .colorScheme
+                                                                      .primary,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            IconButton(
+                                                              icon: const Icon(
+                                                                  Icons.close,
+                                                                  size: 16),
+                                                              onPressed: () {
+                                                                setState(() {
+                                                                  _couponCode =
+                                                                      null;
+                                                                  _couponId =
+                                                                      null;
+                                                                  _couponDiscount =
+                                                                      0.0;
+                                                                  _appliedCoupon =
+                                                                      null;
+                                                                });
+                                                              },
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .zero,
+                                                              constraints:
+                                                                  const BoxConstraints(),
+                                                            ),
+                                                          ],
+                                                        )
+                                                      : TextField(
+                                                          onSubmitted:
+                                                              (value) async {
+                                                            if (value
+                                                                .trim()
+                                                                .isEmpty)
+                                                              return;
+                                                            await _applyCoupon(
+                                                                value.trim());
+                                                          },
+                                                          decoration:
+                                                              InputDecoration(
+                                                            hintText:
+                                                                'أدخل كود الكوبون',
+                                                            hintStyle:
+                                                                const TextStyle(
+                                                                    fontSize:
+                                                                        11),
+                                                            isDense: true,
+                                                            prefixIcon: const Icon(
+                                                                Icons
+                                                                    .local_offer,
+                                                                size: 16),
+                                                            prefixIconConstraints:
+                                                                const BoxConstraints(
+                                                              minWidth: 32,
+                                                              minHeight: 32,
+                                                            ),
+                                                            suffixIcon:
+                                                                IconButton(
+                                                              icon: const Icon(
+                                                                  Icons.check,
+                                                                  size: 16),
+                                                              onPressed:
+                                                                  () async {
+                                                                final controller =
+                                                                    TextEditingController();
+                                                                await showDialog(
+                                                                  context:
+                                                                      context,
+                                                                  builder:
+                                                                      (context) =>
+                                                                          AlertDialog(
+                                                                    title: const Text(
+                                                                        'إدخال كود الكوبون'),
+                                                                    content:
+                                                                        TextField(
+                                                                      controller:
+                                                                          controller,
+                                                                      decoration:
+                                                                          const InputDecoration(
+                                                                        hintText:
+                                                                            'أدخل كود الكوبون',
+                                                                      ),
+                                                                      autofocus:
+                                                                          true,
+                                                                    ),
+                                                                    actions: [
+                                                                      TextButton(
+                                                                        onPressed:
+                                                                            () =>
+                                                                                Navigator.pop(context),
+                                                                        child: const Text(
+                                                                            'إلغاء'),
+                                                                      ),
+                                                                      TextButton(
+                                                                        onPressed:
+                                                                            () {
+                                                                          Navigator.pop(
+                                                                              context,
+                                                                              controller.text);
+                                                                        },
+                                                                        child: const Text(
+                                                                            'تطبيق'),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ).then((value) {
+                                                                  if (value !=
+                                                                          null &&
+                                                                      value
+                                                                          .toString()
+                                                                          .trim()
+                                                                          .isNotEmpty) {
+                                                                    _applyCoupon(value
+                                                                        .toString()
+                                                                        .trim());
+                                                                  }
+                                                                });
+                                                              },
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .zero,
+                                                              constraints:
+                                                                  const BoxConstraints(),
+                                                            ),
+                                                            filled: true,
+                                                            fillColor: Theme.of(
+                                                                    context)
+                                                                .colorScheme
+                                                                .surface,
+                                                            border:
+                                                                OutlineInputBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          6),
+                                                              borderSide:
+                                                                  BorderSide
+                                                                      .none,
+                                                            ),
+                                                            contentPadding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                              horizontal: 8,
+                                                              vertical: 6,
+                                                            ),
+                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                  fontSize: 11),
+                                                        ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        // Total Section
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.calculate,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary,
+                                                  size: 16,
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'الإجمالي:',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
                                             Text(
-                                              'الإجمالي:',
+                                              Formatters.currencyIQD(total),
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodyMedium
@@ -1742,22 +2051,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     color: Theme.of(context)
                                                         .colorScheme
                                                         .primary,
+                                                    fontSize: 14,
                                                   ),
                                             ),
                                           ],
-                                        ),
-                                        Text(
-                                          Formatters.currencyIQD(total),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .primary,
-                                                fontSize: 14,
-                                              ),
                                         ),
                                       ],
                                     ),
@@ -1796,6 +2093,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     _cart.clear();
                                                     _addedToCartProducts
                                                         .clear();
+                                                    _couponCode = null;
+                                                    _couponId = null;
+                                                    _couponDiscount = 0.0;
+                                                    _appliedCoupon = null;
                                                   });
 
                                                   ScaffoldMessenger.of(context)
@@ -1938,6 +2239,11 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             : 'credit',
                                                     items: _cart,
                                                     decrementStock: false,
+                                                    couponId: _couponId,
+                                                    couponDiscount:
+                                                        _couponDiscount > 0
+                                                            ? _couponDiscount
+                                                            : null,
                                                     customerName: (_type ==
                                                                 'credit' ||
                                                             _type ==
@@ -2008,6 +2314,31 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     _lastDownPayment = null;
                                                   }
 
+                                                  // حساب subtotal للفاتورة
+                                                  double invoiceSubtotal = 0.0;
+                                                  for (final item in _cart) {
+                                                    final price =
+                                                        (item['price'] as num)
+                                                            .toDouble();
+                                                    final quantity =
+                                                        (item['quantity']
+                                                                as num)
+                                                            .toInt();
+                                                    final discountPercent =
+                                                        ((item['discount_percent'] ??
+                                                                0) as num)
+                                                            .toDouble();
+                                                    final itemTotal = price *
+                                                        (1 -
+                                                            (discountPercent
+                                                                    .clamp(0,
+                                                                        100) /
+                                                                100)) *
+                                                        quantity;
+                                                    invoiceSubtotal +=
+                                                        itemTotal;
+                                                  }
+
                                                   setState(() {
                                                     _lastInvoiceItems = _cart
                                                         .map((e) => Map<String,
@@ -2025,6 +2356,14 @@ class _SalesScreenState extends State<SalesScreen> {
                                                         _customerPhone;
                                                     _lastCustomerAddress =
                                                         _customerAddress;
+
+                                                    // Save coupon info for invoice
+                                                    _lastCouponDiscount =
+                                                        _couponDiscount > 0
+                                                            ? _couponDiscount
+                                                            : null;
+                                                    _lastSubtotal =
+                                                        invoiceSubtotal;
 
                                                     // Don't clear cart or customer fields here - they will be cleared when dialog is closed
                                                   });
@@ -3273,7 +3612,7 @@ class _SalesScreenState extends State<SalesScreen> {
     return '${input.substring(0, head)}…${input.substring(input.length - tail)}';
   }
 
-  void _addToCart(Map<String, Object?> p) {
+  Future<void> _addToCart(Map<String, Object?> p) async {
     // Check if product is already in cart
     final existing = _cart.indexWhere((e) => e['product_id'] == p['id']);
     if (existing >= 0) {
@@ -3294,6 +3633,26 @@ class _SalesScreenState extends State<SalesScreen> {
           behavior: SnackBarBehavior.floating));
       return;
     }
+
+    // الحصول على خصم المنتج التلقائي
+    double productDiscount = 0.0;
+    try {
+      final db = context.read<DatabaseService>();
+      final discount = await db.getActiveProductDiscount(p['id'] as int);
+      if (discount != null) {
+        if (discount['discount_percent'] != null) {
+          productDiscount = (discount['discount_percent'] as num).toDouble();
+        } else if (discount['discount_amount'] != null) {
+          final price = (p['price'] as num).toDouble();
+          final discountAmount =
+              (discount['discount_amount'] as num).toDouble();
+          productDiscount = (discountAmount / price) * 100;
+        }
+      }
+    } catch (e) {
+      debugPrint('خطأ في جلب خصم المنتج: $e');
+    }
+
     // Reserve one immediately
     context.read<DatabaseService>().adjustProductQuantity(p['id'] as int, -1);
     setState(() {
@@ -3305,7 +3664,7 @@ class _SalesScreenState extends State<SalesScreen> {
         'quantity': 1,
         'available': currentStock - 1,
         'barcode': p['barcode'],
-        'discount_percent': 0,
+        'discount_percent': productDiscount,
       });
       _addedToCartProducts.add(p['id'] as int);
     });
@@ -3344,6 +3703,57 @@ class _SalesScreenState extends State<SalesScreen> {
     context.read<DatabaseService>().adjustProductQuantity(productId, 1);
   }
 
+  Future<void> _applyCoupon(String code) async {
+    if (code.trim().isEmpty) return;
+
+    try {
+      final db = context.read<DatabaseService>();
+
+      // حساب الإجمالي الحالي
+      double subtotal = 0.0;
+      for (final item in _cart) {
+        final price = (item['price'] as num).toDouble();
+        final quantity = (item['quantity'] as num).toInt();
+        final discountPercent =
+            ((item['discount_percent'] ?? 0) as num).toDouble();
+        final itemTotal =
+            price * (1 - (discountPercent.clamp(0, 100) / 100)) * quantity;
+        subtotal += itemTotal;
+      }
+
+      // التحقق من صحة الكوبون وتطبيقه
+      final result = await db.validateAndApplyCoupon(code.trim(), subtotal);
+
+      setState(() {
+        _couponCode = code.trim().toUpperCase();
+        _couponId = result['coupon_id'] as int;
+        _couponDiscount = (result['discount_amount'] as num).toDouble();
+        _appliedCoupon = result['coupon'] as Map<String, Object?>;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'تم تطبيق الكوبون بنجاح! خصم: ${Formatters.currencyIQD(_couponDiscount)}'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _printInvoice(BuildContext context) async {
     final store = context.read<StoreConfig>();
     final shopName = store.shopName;
@@ -3374,6 +3784,8 @@ class _SalesScreenState extends State<SalesScreen> {
       installments: _lastInstallments, // معلومات الأقساط
       totalDebt: _lastTotalDebt, // إجمالي الدين
       downPayment: _lastDownPayment, // المبلغ المقدم
+      couponDiscount: _lastCouponDiscount, // خصم الكوبون
+      subtotal: _lastSubtotal, // الإجمالي قبل الكوبون
       context: context,
     );
 

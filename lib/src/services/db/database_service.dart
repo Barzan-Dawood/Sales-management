@@ -13,7 +13,7 @@ import '../../models/user_model.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
-  static const int _dbVersion = 14;
+  static const int _dbVersion = 15;
 
   late Database _db;
   late String _dbPath;
@@ -85,6 +85,9 @@ class DatabaseService {
         if (oldVersion < 14) {
           await _migrateToV14(db);
         }
+        if (oldVersion < 15) {
+          await _migrateToV15(db);
+        }
         // Ensure no legacy triggers/views remain that reference old temp tables
         await _cleanupOrphanObjects(db);
         await _ensureCategorySchemaOn(db);
@@ -102,6 +105,8 @@ class DatabaseService {
         await _ensureDeletedItemsTable(db);
         // التأكد من وجود عمود expense_date في جدول expenses
         await _ensureExpensesTableColumns(db);
+        // التأكد من وجود جداول الخصومات والكوبونات
+        await _ensureDiscountTables(db);
       },
     );
     // إعدادات أساسية فقط
@@ -118,6 +123,8 @@ class DatabaseService {
     await _ensureDeletedItemsTable(_db);
     // التأكد من وجود عمود expense_date في جدول expenses
     await _ensureExpensesTableColumns(_db);
+    // التأكد من وجود جداول الخصومات والكوبونات
+    await _ensureDiscountTables(_db);
 
     await _createIndexes(_db);
 
@@ -136,6 +143,8 @@ class DatabaseService {
     await _ensureReturnsTableColumns(_db);
     await _ensureReturnsStatusColumn(_db);
     await _ensureDeletedItemsTable(_db);
+    // التأكد من وجود جداول الخصومات والكوبونات
+    await _ensureDiscountTables(_db);
 
     await _createIndexes(_db);
     await _cleanupOrphanObjects(_db);
@@ -157,6 +166,107 @@ class DatabaseService {
       }
     } catch (e) {
       // ignore
+    }
+  }
+
+  /// Ensure discount tables exist
+  Future<void> ensureDiscountTables() async {
+    await _ensureDiscountTables(_db);
+  }
+
+  /// Ensure discount tables exist (internal)
+  Future<void> _ensureDiscountTables(DatabaseExecutor db) async {
+    try {
+      debugPrint('التحقق من وجود جداول الخصومات والكوبونات...');
+
+      // التحقق من وجود الجدول أولاً
+      final productDiscountsTable = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='product_discounts'");
+      if (productDiscountsTable.isEmpty) {
+        debugPrint('جدول product_discounts غير موجود، جاري إنشاؤه...');
+        // إنشاء جدول خصومات المنتجات
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS product_discounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            discount_percent REAL NOT NULL DEFAULT 0,
+            discount_amount REAL,
+            start_date TEXT,
+            end_date TEXT,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT,
+            FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
+          );
+        ''');
+        debugPrint('تم إنشاء جدول product_discounts بنجاح');
+      } else {
+        debugPrint('جدول product_discounts موجود بالفعل');
+      }
+
+      final discountCouponsTable = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='discount_coupons'");
+      if (discountCouponsTable.isEmpty) {
+        debugPrint('جدول discount_coupons غير موجود، جاري إنشاؤه...');
+        // إنشاء جدول كوبونات الخصم
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS discount_coupons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            discount_type TEXT NOT NULL CHECK(discount_type IN ('percent','amount')),
+            discount_value REAL NOT NULL,
+            min_purchase_amount REAL DEFAULT 0,
+            max_discount_amount REAL,
+            usage_limit INTEGER,
+            used_count INTEGER NOT NULL DEFAULT 0,
+            start_date TEXT,
+            end_date TEXT,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+          );
+        ''');
+        debugPrint('تم إنشاء جدول discount_coupons بنجاح');
+      } else {
+        debugPrint('جدول discount_coupons موجود بالفعل');
+      }
+
+      // إضافة حقول الكوبون إلى جدول sales إن لم تكن موجودة
+      try {
+        final salesCols = await db.rawQuery("PRAGMA table_info('sales')");
+        final hasCouponId =
+            salesCols.any((c) => (c['name']?.toString() ?? '') == 'coupon_id');
+        if (!hasCouponId) {
+          await db.execute('ALTER TABLE sales ADD COLUMN coupon_id INTEGER');
+          debugPrint('تم إضافة عمود coupon_id إلى جدول sales');
+        }
+        final hasCouponDiscount = salesCols
+            .any((c) => (c['name']?.toString() ?? '') == 'coupon_discount');
+        if (!hasCouponDiscount) {
+          await db.execute(
+              'ALTER TABLE sales ADD COLUMN coupon_discount REAL DEFAULT 0');
+          debugPrint('تم إضافة عمود coupon_discount إلى جدول sales');
+        }
+      } catch (e) {
+        debugPrint('خطأ في إضافة أعمدة الكوبون إلى sales: $e');
+      }
+
+      // إنشاء الفهارس
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_product_discounts_product_id ON product_discounts(product_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_product_discounts_active ON product_discounts(active)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_discount_coupons_code ON discount_coupons(code)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_discount_coupons_active ON discount_coupons(active)');
+
+      debugPrint('انتهى التحقق من جداول الخصومات والكوبونات');
+    } catch (e, stackTrace) {
+      debugPrint('خطأ في إنشاء جداول الخصومات: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // لا نعيد throw لأننا نريد أن يستمر التطبيق حتى لو فشل إنشاء الجداول
     }
   }
 
@@ -1120,6 +1230,42 @@ class DatabaseService {
         FOREIGN KEY(deleted_by_user_id) REFERENCES users(id)
       );
     ''');
+
+    // جدول خصومات المنتجات
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS product_discounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        discount_percent REAL NOT NULL DEFAULT 0,
+        discount_amount REAL,
+        start_date TEXT,
+        end_date TEXT,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT,
+        FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
+      );
+    ''');
+
+    // جدول كوبونات الخصم
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS discount_coupons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        discount_type TEXT NOT NULL CHECK(discount_type IN ('percent','amount')),
+        discount_value REAL NOT NULL,
+        min_purchase_amount REAL DEFAULT 0,
+        max_discount_amount REAL,
+        usage_limit INTEGER,
+        used_count INTEGER NOT NULL DEFAULT 0,
+        start_date TEXT,
+        end_date TEXT,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT
+      );
+    ''');
   }
 
   Future<void> _ensureCategorySchemaOn(Database db) async {
@@ -1562,6 +1708,73 @@ class DatabaseService {
       debugPrint('انتهى Migration V14 بنجاح');
     } catch (e) {
       debugPrint('خطأ في Migration V14: $e');
+    }
+  }
+
+  Future<void> _migrateToV15(Database db) async {
+    // إضافة نظام الخصومات والكوبونات
+    try {
+      debugPrint('بدء Migration V15 - إضافة نظام الخصومات والكوبونات...');
+
+      // إضافة حقول الكوبون إلى جدول sales
+      try {
+        await db.execute('ALTER TABLE sales ADD COLUMN coupon_id INTEGER');
+        await db.execute(
+            'ALTER TABLE sales ADD COLUMN coupon_discount REAL DEFAULT 0');
+        debugPrint('تم إضافة حقول الكوبون إلى جدول sales');
+      } catch (e) {
+        debugPrint('حقول الكوبون موجودة بالفعل أو خطأ: $e');
+      }
+
+      // إنشاء جدول خصومات المنتجات
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS product_discounts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER NOT NULL,
+          discount_percent REAL NOT NULL DEFAULT 0,
+          discount_amount REAL,
+          start_date TEXT,
+          end_date TEXT,
+          active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT,
+          FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
+        );
+      ''');
+
+      // إنشاء جدول كوبونات الخصم
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS discount_coupons (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT NOT NULL UNIQUE,
+          name TEXT NOT NULL,
+          discount_type TEXT NOT NULL CHECK(discount_type IN ('percent','amount')),
+          discount_value REAL NOT NULL,
+          min_purchase_amount REAL DEFAULT 0,
+          max_discount_amount REAL,
+          usage_limit INTEGER,
+          used_count INTEGER NOT NULL DEFAULT 0,
+          start_date TEXT,
+          end_date TEXT,
+          active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL,
+          updated_at TEXT
+        );
+      ''');
+
+      // إنشاء الفهارس
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_product_discounts_product_id ON product_discounts(product_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_product_discounts_active ON product_discounts(active)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_discount_coupons_code ON discount_coupons(code)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_discount_coupons_active ON discount_coupons(active)');
+
+      debugPrint('انتهى Migration V15 بنجاح');
+    } catch (e) {
+      debugPrint('خطأ في Migration V15: $e');
     }
   }
 
@@ -2710,6 +2923,9 @@ class DatabaseService {
       int? installmentCount,
       double? downPayment,
       DateTime? firstInstallmentDate,
+      // معاملات الكوبون
+      int? couponId,
+      double? couponDiscount,
       // Event logging parameters
       int? userId,
       String? username}) async {
@@ -2767,6 +2983,11 @@ class DatabaseService {
           }
         }
 
+        // تطبيق خصم الكوبون
+        if (couponDiscount != null && couponDiscount > 0) {
+          total = (total - couponDiscount).clamp(0.0, double.infinity);
+        }
+
         // التحقق من أن الإجمالي أكبر من صفر
         if (total <= 0) {
           throw Exception('إجمالي البيع يجب أن يكون أكبر من صفر');
@@ -2800,7 +3021,17 @@ class DatabaseService {
           'created_at': DateTime.now().toIso8601String(),
           'due_date': dueDate?.toIso8601String(),
           'down_payment': downPayment ?? 0.0,
+          'coupon_id': couponId,
+          'coupon_discount': couponDiscount ?? 0.0,
         });
+
+        // زيادة عدد استخدامات الكوبون إذا كان موجوداً
+        if (couponId != null) {
+          await txn.rawUpdate(
+            'UPDATE discount_coupons SET used_count = used_count + 1 WHERE id = ?',
+            [couponId],
+          );
+        }
 
         // إضافة عناصر البيع
         for (final it in items) {
@@ -4240,6 +4471,9 @@ class DatabaseService {
       }
       if (currentVersion < 14) {
         await _migrateToV14(db);
+      }
+      if (currentVersion < 15) {
+        await _migrateToV15(db);
       }
 
       // تحديث إصدار قاعدة البيانات
@@ -7667,5 +7901,226 @@ class DatabaseService {
       debugPrint('Stack trace: $stackTrace');
       // لا نرمي الخطأ هنا لأن الجدول قد يكون موجوداً بالفعل
     }
+  }
+
+  // ==================== نظام الخصومات والكوبونات ====================
+
+  /// الحصول على خصم منتج نشط
+  Future<Map<String, Object?>?> getActiveProductDiscount(int productId) async {
+    final now = DateTime.now().toIso8601String();
+    final discounts = await _db.query(
+      'product_discounts',
+      where:
+          'product_id = ? AND active = 1 AND (start_date IS NULL OR start_date <= ?) AND (end_date IS NULL OR end_date >= ?)',
+      whereArgs: [productId, now, now],
+      orderBy: 'created_at DESC',
+      limit: 1,
+    );
+    return discounts.isNotEmpty ? discounts.first : null;
+  }
+
+  /// الحصول على جميع خصومات المنتجات
+  Future<List<Map<String, Object?>>> getProductDiscounts(
+      {int? productId}) async {
+    final where = <String>[];
+    final args = <Object?>[];
+
+    if (productId != null) {
+      where.add('pd.product_id = ?');
+      args.add(productId);
+    }
+
+    return _db.rawQuery('''
+      SELECT pd.*, p.name as product_name
+      FROM product_discounts pd
+      LEFT JOIN products p ON pd.product_id = p.id
+      ${where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}'}
+      ORDER BY pd.created_at DESC
+    ''', where.isEmpty ? null : args);
+  }
+
+  /// إضافة خصم منتج
+  Future<int> insertProductDiscount(Map<String, Object?> values) async {
+    if (values['product_id'] == null) {
+      throw Exception('معرف المنتج مطلوب');
+    }
+    if (values['discount_percent'] == null &&
+        values['discount_amount'] == null) {
+      throw Exception('يجب تحديد نسبة أو مبلغ الخصم');
+    }
+
+    values['created_at'] = DateTime.now().toIso8601String();
+    return _db.insert('product_discounts', values);
+  }
+
+  /// تحديث خصم منتج
+  Future<void> updateProductDiscount(
+      int id, Map<String, Object?> values) async {
+    values['updated_at'] = DateTime.now().toIso8601String();
+    await _db
+        .update('product_discounts', values, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// حذف خصم منتج
+  Future<void> deleteProductDiscount(int id) async {
+    await _db.delete('product_discounts', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// الحصول على جميع الكوبونات
+  Future<List<Map<String, Object?>>> getDiscountCoupons(
+      {bool? activeOnly}) async {
+    final where = <String>[];
+    final args = <Object?>[];
+
+    if (activeOnly == true) {
+      where.add('active = 1');
+    }
+
+    return _db.query(
+      'discount_coupons',
+      where: where.isEmpty ? null : where.join(' AND '),
+      whereArgs: where.isEmpty ? null : args,
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  /// الحصول على كوبون بالكود
+  Future<Map<String, Object?>?> getDiscountCouponByCode(String code) async {
+    final coupons = await _db.query(
+      'discount_coupons',
+      where: 'code = ?',
+      whereArgs: [code.toUpperCase()],
+      limit: 1,
+    );
+    return coupons.isNotEmpty ? coupons.first : null;
+  }
+
+  /// التحقق من صحة الكوبون وتطبيقه
+  Future<Map<String, Object?>> validateAndApplyCoupon(
+    String code,
+    double totalAmount,
+  ) async {
+    final coupon = await getDiscountCouponByCode(code);
+
+    if (coupon == null) {
+      throw Exception('كوبون غير صحيح');
+    }
+
+    final active = (coupon['active'] as int?) ?? 0;
+    if (active != 1) {
+      throw Exception('الكوبون غير مفعّل');
+    }
+
+    // التحقق من تاريخ البداية والنهاية
+    final now = DateTime.now();
+    if (coupon['start_date'] != null) {
+      final startDate = DateTime.parse(coupon['start_date'] as String);
+      if (now.isBefore(startDate)) {
+        throw Exception('الكوبون لم يبدأ بعد');
+      }
+    }
+    if (coupon['end_date'] != null) {
+      final endDate = DateTime.parse(coupon['end_date'] as String);
+      if (now.isAfter(endDate)) {
+        throw Exception('الكوبون منتهي الصلاحية');
+      }
+    }
+
+    // التحقق من حد الاستخدام
+    final usageLimit = coupon['usage_limit'] as int?;
+    final usedCount = (coupon['used_count'] as int?) ?? 0;
+    if (usageLimit != null && usedCount >= usageLimit) {
+      throw Exception('تم الوصول إلى حد استخدام الكوبون');
+    }
+
+    // التحقق من الحد الأدنى للشراء
+    final minPurchase =
+        (coupon['min_purchase_amount'] as num?)?.toDouble() ?? 0.0;
+    if (totalAmount < minPurchase) {
+      throw Exception(
+          'يجب أن يكون إجمالي الشراء على الأقل ${minPurchase.toStringAsFixed(2)}');
+    }
+
+    // حساب الخصم
+    final discountType = coupon['discount_type'] as String;
+    final discountValue = (coupon['discount_value'] as num).toDouble();
+    double discountAmount = 0.0;
+
+    if (discountType == 'percent') {
+      discountAmount = totalAmount * (discountValue / 100);
+      final maxDiscount = (coupon['max_discount_amount'] as num?)?.toDouble();
+      if (maxDiscount != null && discountAmount > maxDiscount) {
+        discountAmount = maxDiscount;
+      }
+    } else {
+      discountAmount = discountValue;
+      if (discountAmount > totalAmount) {
+        discountAmount = totalAmount;
+      }
+    }
+
+    return {
+      'coupon_id': coupon['id'],
+      'coupon_code': code,
+      'discount_amount': discountAmount,
+      'coupon': coupon,
+    };
+  }
+
+  /// زيادة عدد استخدامات الكوبون
+  Future<void> incrementCouponUsage(int couponId) async {
+    await _db.rawUpdate(
+      'UPDATE discount_coupons SET used_count = used_count + 1 WHERE id = ?',
+      [couponId],
+    );
+  }
+
+  /// إضافة كوبون خصم
+  Future<int> insertDiscountCoupon(Map<String, Object?> values) async {
+    if (values['code'] == null || (values['code'] as String).trim().isEmpty) {
+      throw Exception('كود الكوبون مطلوب');
+    }
+    if (values['name'] == null || (values['name'] as String).trim().isEmpty) {
+      throw Exception('اسم الكوبون مطلوب');
+    }
+    if (values['discount_type'] == null) {
+      throw Exception('نوع الخصم مطلوب');
+    }
+    if (values['discount_value'] == null) {
+      throw Exception('قيمة الخصم مطلوبة');
+    }
+
+    // تحويل الكود إلى أحرف كبيرة
+    values['code'] = (values['code'] as String).toUpperCase().trim();
+
+    // التحقق من عدم تكرار الكود
+    final existing = await getDiscountCouponByCode(values['code'] as String);
+    if (existing != null) {
+      throw Exception('كود الكوبون موجود بالفعل');
+    }
+
+    values['created_at'] = DateTime.now().toIso8601String();
+    return _db.insert('discount_coupons', values);
+  }
+
+  /// تحديث كوبون خصم
+  Future<void> updateDiscountCoupon(int id, Map<String, Object?> values) async {
+    if (values['code'] != null) {
+      values['code'] = (values['code'] as String).toUpperCase().trim();
+      // التحقق من عدم تكرار الكود
+      final existing = await getDiscountCouponByCode(values['code'] as String);
+      if (existing != null && existing['id'] != id) {
+        throw Exception('كود الكوبون موجود بالفعل');
+      }
+    }
+
+    values['updated_at'] = DateTime.now().toIso8601String();
+    await _db
+        .update('discount_coupons', values, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// حذف كوبون خصم
+  Future<void> deleteDiscountCoupon(int id) async {
+    await _db.delete('discount_coupons', where: 'id = ?', whereArgs: [id]);
   }
 }

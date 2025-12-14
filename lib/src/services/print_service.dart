@@ -490,6 +490,8 @@ class PrintService {
     List<Map<String, Object?>>? installments, // معلومات الأقساط
     double? totalDebt, // إجمالي الدين
     double? downPayment, // المبلغ المقدم
+    double? couponDiscount, // خصم الكوبون
+    double? subtotal, // الإجمالي قبل الكوبون
     BuildContext? context,
   }) async {
     try {
@@ -536,6 +538,8 @@ class PrintService {
         installments: installments,
         totalDebt: totalDebt,
         downPayment: downPayment,
+        couponDiscount: couponDiscount,
+        subtotal: subtotal,
       );
 
       debugPrint('تم إنشاء PDF بنجاح، حجم الملف: ${pdfData.length} بايت');
