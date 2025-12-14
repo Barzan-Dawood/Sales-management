@@ -1095,9 +1095,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       if (saleDetails['due_date'] != null) {
         try {
           dueDate = DateTime.parse(saleDetails['due_date'] as String);
-        } catch (e) {
-          debugPrint('خطأ في تحليل تاريخ الاستحقاق: $e');
-        }
+        } catch (e) {}
       }
 
       // الحصول على معلومات الأقساط إذا كانت متوفرة
@@ -1110,9 +1108,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           installments = await db.getInstallments(saleId: saleId);
           totalDebt = saleDetails['total'] as double?;
           downPayment = saleDetails['down_payment'] as double?;
-        } catch (e) {
-          debugPrint('خطأ في الحصول على معلومات الأقساط: $e');
-        }
+        } catch (e) {}
       }
 
       // طباعة الفاتورة مع جميع التفاصيل والخيارات المختارة

@@ -26,9 +26,7 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
       // التأكد من وجود الجداول قبل التحميل
       try {
         await db.ensureDiscountTables();
-      } catch (e) {
-        debugPrint('خطأ في التأكد من الجداول: $e');
-      }
+      } catch (e) {}
       _loadCoupons();
     });
   }

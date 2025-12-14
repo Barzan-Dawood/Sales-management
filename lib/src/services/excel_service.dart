@@ -3,7 +3,6 @@
 import 'dart:io';
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../services/db/database_service.dart';
 
@@ -16,8 +15,6 @@ class ExcelService {
   /// تصدير المنتجات إلى Excel
   Future<String?> exportProducts() async {
     try {
-      debugPrint('بدء تصدير المنتجات...');
-
       // الحصول على المنتجات مع أسماء الفئات
       final products = await _db.database.rawQuery('''
         SELECT 
@@ -113,7 +110,6 @@ class ExcelService {
       return await _saveExcelFile(
           excel, 'منتجات_${DateTime.now().millisecondsSinceEpoch}.xlsx');
     } catch (e) {
-      debugPrint('خطأ في تصدير المنتجات: $e');
       rethrow;
     }
   }
@@ -188,7 +184,6 @@ class ExcelService {
       return await _saveExcelFile(
           excel, 'عملاء_${DateTime.now().millisecondsSinceEpoch}.xlsx');
     } catch (e) {
-      debugPrint('خطأ في تصدير العملاء: $e');
       rethrow;
     }
   }
@@ -263,7 +258,6 @@ class ExcelService {
       return await _saveExcelFile(
           excel, 'موردون_${DateTime.now().millisecondsSinceEpoch}.xlsx');
     } catch (e) {
-      debugPrint('خطأ في تصدير الموردين: $e');
       rethrow;
     }
   }
@@ -351,7 +345,6 @@ class ExcelService {
 
       return await _saveExcelFile(excel, fileName);
     } catch (e) {
-      debugPrint('خطأ في تصدير المبيعات: $e');
       rethrow;
     }
   }
@@ -359,16 +352,11 @@ class ExcelService {
   /// حفظ ملف Excel
   Future<String?> _saveExcelFile(Excel excel, String fileName) async {
     try {
-      debugPrint('بدء حفظ ملف Excel: $fileName');
-
       // إنشاء ملف Excel أولاً
       final fileBytes = excel.save();
       if (fileBytes == null) {
         throw Exception('فشل في إنشاء ملف Excel');
       }
-
-      debugPrint('تم إنشاء ملف Excel بنجاح، الحجم: ${fileBytes.length} بايت');
-      debugPrint('عدد الأوراق المحفوظة: ${excel.tables.length}');
 
       // استخدام FilePicker دائماً لإظهار نافذة الحفظ
       String? path;
@@ -381,12 +369,10 @@ class ExcelService {
         ).timeout(
           const Duration(seconds: 60),
           onTimeout: () {
-            debugPrint('انتهت مهلة نافذة حفظ الملف');
             return null;
           },
         );
       } catch (e) {
-        debugPrint('خطأ في فتح نافذة حفظ الملف: $e');
         // في حالة فشل FilePicker، حفظ الملف في مجلد Downloads كبديل
         try {
           final downloadsDir = await _getDownloadsDirectory();
@@ -405,32 +391,24 @@ class ExcelService {
               counter++;
             }
             path = finalPath;
-            debugPrint('سيتم حفظ الملف تلقائياً في: $finalPath');
           } else {
             throw Exception('لا يمكن الوصول إلى مجلد التنزيلات');
           }
         } catch (e2) {
-          debugPrint('فشل حفظ الملف في مجلد التنزيلات: $e2');
           rethrow;
         }
       }
 
       if (path == null) {
-        debugPrint('تم إلغاء حفظ الملف من قبل المستخدم');
         return null;
       }
-
-      debugPrint('تم اختيار المسار: $path');
 
       // كتابة الملف
       final file = File(path);
       await file.writeAsBytes(fileBytes, flush: true);
 
-      debugPrint('تم حفظ الملف بنجاح في: $path');
       return path;
-    } catch (e, stackTrace) {
-      debugPrint('خطأ في حفظ ملف Excel: $e');
-      debugPrint('Stack trace: $stackTrace');
+    } catch (e) {
       rethrow;
     }
   }
@@ -475,11 +453,9 @@ class ExcelService {
         }
         return null;
       } catch (e) {
-        debugPrint('خطأ في الحصول على مجلد المستندات: $e');
         return null;
       }
     } catch (e) {
-      debugPrint('خطأ في الحصول على مجلد التنزيلات: $e');
       return null;
     }
   }
@@ -487,8 +463,6 @@ class ExcelService {
   /// استيراد المنتجات من Excel
   Future<Map<String, dynamic>> importProducts() async {
     try {
-      debugPrint('بدء استيراد المنتجات من Excel...');
-
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['xlsx', 'xls'],
@@ -500,14 +474,10 @@ class ExcelService {
       }
 
       final filePath = result.files.single.path!;
-      debugPrint('تم اختيار الملف: $filePath');
 
       final bytes = File(filePath).readAsBytesSync();
-      debugPrint('حجم الملف: ${bytes.length} بايت');
 
       final excel = Excel.decodeBytes(bytes);
-      debugPrint('عدد الأوراق في الملف: ${excel.tables.length}');
-      debugPrint('أسماء الأوراق: ${excel.tables.keys.toList()}');
 
       if (excel.tables.isEmpty) {
         return {'success': false, 'message': 'الملف فارغ أو غير صالح'};
@@ -515,17 +485,12 @@ class ExcelService {
 
       // البحث عن الورقة الصحيحة - محاولة العثور على "المنتجات" أولاً
       Sheet? sheet;
-      String? sheetName;
 
       if (excel.tables.containsKey('المنتجات')) {
-        sheetName = 'المنتجات';
         sheet = excel.tables['المنتجات'];
-        debugPrint('تم العثور على ورقة "المنتجات"');
       } else {
         // استخدام أول ورقة متاحة
-        sheetName = excel.tables.keys.first;
         sheet = excel.tables.values.first;
-        debugPrint('استخدام الورقة الأولى: $sheetName');
       }
 
       if (sheet == null) {
@@ -534,9 +499,6 @@ class ExcelService {
           'message': 'لا يمكن العثور على ورقة في الملف'
         };
       }
-
-      debugPrint('اسم الورقة: $sheetName');
-      debugPrint('عدد الصفوف في الورقة: ${sheet.maxRows}');
 
       // التحقق من وجود بيانات فعلية
       int dataRowCount = 0;
@@ -561,8 +523,6 @@ class ExcelService {
         if (hasData) dataRowCount++;
       }
 
-      debugPrint('عدد الصفوف التي تحتوي على بيانات: $dataRowCount');
-
       if (dataRowCount < 2) {
         return {
           'success': false,
@@ -582,7 +542,7 @@ class ExcelService {
 
       // إذا كان maxRows = 0، نحاول البحث عن آخر صف يحتوي على بيانات
       if (maxDataRow == 0) {
-        debugPrint('maxRows = 0، البحث عن البيانات...');
+        // maxRows = 0، البحث عن البيانات...');
         for (int row = 0; row < 1000; row++) {
           bool hasData = false;
           for (int col = 0; col < 10; col++) {
@@ -604,7 +564,6 @@ class ExcelService {
             break;
           }
         }
-        debugPrint('تم العثور على $maxDataRow صف يحتوي على بيانات');
       }
 
       if (maxDataRow < 2) {
@@ -634,7 +593,6 @@ class ExcelService {
 
           if (name.isEmpty) {
             skippedCount++;
-            debugPrint('تم تخطي الصف ${row + 1}: الاسم فارغ');
             continue;
           }
 
@@ -650,26 +608,18 @@ class ExcelService {
           final costCell = sheet
               .cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: row));
           final cost = _parseDouble(costCell.value);
-          debugPrint(
-              'الصف ${row + 1} - سعر الشراء: نوع=${costCell.value.runtimeType}, قيمة=${costCell.value} -> $cost');
 
           final priceCell = sheet
               .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: row));
           final price = _parseDouble(priceCell.value);
-          debugPrint(
-              'الصف ${row + 1} - سعر البيع: نوع=${priceCell.value.runtimeType}, قيمة=${priceCell.value} -> $price');
 
           final quantityCell = sheet
               .cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: row));
           final quantity = _parseInt(quantityCell.value);
-          debugPrint(
-              'الصف ${row + 1} - الكمية: نوع=${quantityCell.value.runtimeType}, قيمة=${quantityCell.value} -> $quantity');
 
           final minQuantityCell = sheet
               .cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: row));
           final minQuantity = _parseInt(minQuantityCell.value);
-          debugPrint(
-              'الصف ${row + 1} - الحد الأدنى: نوع=${minQuantityCell.value.runtimeType}, قيمة=${minQuantityCell.value} -> $minQuantity');
 
           final barcode = (sheet
                       .cell(CellIndex.indexByColumnRow(
@@ -678,8 +628,6 @@ class ExcelService {
                       ?.toString() ??
                   '')
               .trim();
-
-          debugPrint('معالجة منتج: $name - السعر: $price - الكمية: $quantity');
 
           // التحقق من البيانات الأساسية
           if (price < 0) {
@@ -700,15 +648,11 @@ class ExcelService {
 
               if (category.isEmpty) {
                 categoryId = await _db.upsertCategory({'name': categoryName});
-                debugPrint(
-                    'تم إنشاء فئة جديدة: $categoryName (ID: $categoryId)');
+                // تم إنشاء فئة جديدة
               } else {
                 categoryId = category['id'] as int?;
-                debugPrint(
-                    'تم العثور على الفئة: $categoryName (ID: $categoryId)');
               }
             } catch (e) {
-              debugPrint('خطأ في معالجة الفئة $categoryName: $e');
               // نستمر بدون فئة
             }
           }
@@ -727,14 +671,11 @@ class ExcelService {
             });
 
             successCount++;
-            debugPrint('تم إضافة المنتج بنجاح: $name');
           } catch (e) {
             // إذا كان الخطأ بسبب الباركود الموجود، نحاول التحديث بدلاً من الإضافة
             if (e.toString().contains('الباركود موجود') ||
                 e.toString().contains('barcode') ||
                 e.toString().contains('موجود')) {
-              debugPrint(
-                  'المنتج موجود، محاولة التحديث: $name (الباركود: $barcode)');
               // نحاول العثور على المنتج بالباركود أولاً، ثم بالاسم
               try {
                 final products = await _db.getAllProducts();
@@ -751,12 +692,8 @@ class ExcelService {
                       },
                       orElse: () => <String, Object?>{},
                     );
-                    if (existingProduct.isNotEmpty) {
-                      debugPrint('تم العثور على المنتج بالباركود: $barcode');
-                    }
-                  } catch (e) {
-                    debugPrint('لم يتم العثور على المنتج بالباركود: $e');
-                  }
+                    if (existingProduct.isNotEmpty) {}
+                  } catch (e) {}
                 }
 
                 // إذا لم نجد بالباركود، نبحث بالاسم
@@ -770,17 +707,12 @@ class ExcelService {
                       },
                       orElse: () => <String, Object?>{},
                     );
-                    if (existingProduct.isNotEmpty) {
-                      debugPrint('تم العثور على المنتج بالاسم: $name');
-                    }
-                  } catch (e) {
-                    debugPrint('لم يتم العثور على المنتج بالاسم: $e');
-                  }
+                    if (existingProduct.isNotEmpty) {}
+                  } catch (e) {}
                 }
 
                 if (existingProduct != null && existingProduct.isNotEmpty) {
                   final productId = existingProduct['id'] as int;
-                  debugPrint('تحديث المنتج ID: $productId');
 
                   await _db.updateProduct(productId, {
                     'name': name,
@@ -793,11 +725,8 @@ class ExcelService {
                     'category_id': categoryId,
                   });
                   successCount++;
-                  debugPrint('تم تحديث المنتج بنجاح: $name (ID: $productId)');
                 } else {
                   // إذا لم نجد المنتج، نحاول إضافة منتج جديد بدون باركود
-                  debugPrint(
-                      'لم يتم العثور على المنتج، محاولة الإضافة بدون باركود');
                   try {
                     await _db.insertProduct({
                       'name': name,
@@ -810,18 +739,15 @@ class ExcelService {
                       'category_id': categoryId,
                     });
                     successCount++;
-                    debugPrint('تم إضافة المنتج بدون باركود: $name');
                   } catch (e3) {
                     errorCount++;
                     errors.add(
                         'صف ${row + 1} ($name): فشل في إضافة/تحديث المنتج - $e3');
-                    debugPrint('خطأ في إضافة المنتج بدون باركود $name: $e3');
                   }
                 }
               } catch (e2) {
                 errorCount++;
                 errors.add('صف ${row + 1} ($name): $e2');
-                debugPrint('خطأ في تحديث المنتج $name: $e2');
               }
             } else {
               rethrow;
@@ -831,7 +757,6 @@ class ExcelService {
           errorCount++;
           final errorMsg = 'صف ${row + 1}: $e';
           errors.add(errorMsg);
-          debugPrint('خطأ في معالجة الصف ${row + 1}: $e');
         }
       }
 
@@ -851,9 +776,7 @@ class ExcelService {
         'skippedCount': skippedCount,
         'errors': errors,
       };
-    } catch (e, stackTrace) {
-      debugPrint('خطأ في استيراد المنتجات: $e');
-      debugPrint('Stack trace: $stackTrace');
+    } catch (e) {
       return {'success': false, 'message': 'خطأ في استيراد المنتجات: $e'};
     }
   }
@@ -932,7 +855,6 @@ class ExcelService {
         'errors': errors,
       };
     } catch (e) {
-      debugPrint('خطأ في استيراد العملاء: $e');
       return {'success': false, 'message': 'خطأ في استيراد العملاء: $e'};
     }
   }
@@ -940,19 +862,17 @@ class ExcelService {
   /// مساعدات لتحويل القيم
   double _parseDouble(dynamic value) {
     if (value == null) {
-      debugPrint('_parseDouble: قيمة null');
+      // _parseDouble: قيمة null');
       return 0.0;
     }
 
     // إذا كانت القيمة من نوع CellValue
     if (value is DoubleCellValue) {
       final result = value.value;
-      debugPrint('_parseDouble: DoubleCellValue = $result');
       return result;
     }
     if (value is IntCellValue) {
       final result = value.value.toDouble();
-      debugPrint('_parseDouble: IntCellValue = $result');
       return result;
     }
     if (value is TextCellValue) {
@@ -970,10 +890,8 @@ class ExcelService {
         }
         str = str.replaceAll(',', '').replaceAll(RegExp(r'\s+'), '').trim();
         final parsed = double.tryParse(str);
-        debugPrint('_parseDouble: TextCellValue "$str" = ${parsed ?? 0.0}');
         return parsed ?? 0.0;
       } catch (e) {
-        debugPrint('_parseDouble: خطأ في تحويل TextCellValue: $e');
         // محاولة استخدام toString() مباشرة
         try {
           final str = value
@@ -991,7 +909,6 @@ class ExcelService {
 
     // إذا كانت القيمة رقمية مباشرة
     if (value is num) {
-      debugPrint('_parseDouble: num = ${value.toDouble()}');
       return value.toDouble();
     }
 
@@ -999,7 +916,6 @@ class ExcelService {
     if (value is String) {
       final str = value.replaceAll(',', '').replaceAll(' ', '').trim();
       final parsed = double.tryParse(str);
-      debugPrint('_parseDouble: String "$str" = ${parsed ?? 0.0}');
       return parsed ?? 0.0;
     }
 
@@ -1008,29 +924,25 @@ class ExcelService {
       final str =
           value.toString().replaceAll(',', '').replaceAll(' ', '').trim();
       final parsed = double.tryParse(str);
-      debugPrint('_parseDouble: toString() "$str" = ${parsed ?? 0.0}');
       return parsed ?? 0.0;
     } catch (e) {
-      debugPrint('_parseDouble: نوع غير معروف ${value.runtimeType}: $e');
       return 0.0;
     }
   }
 
   int _parseInt(dynamic value) {
     if (value == null) {
-      debugPrint('_parseInt: قيمة null');
+      // _parseInt: قيمة null');
       return 0;
     }
 
     // إذا كانت القيمة من نوع CellValue
     if (value is IntCellValue) {
       final result = value.value;
-      debugPrint('_parseInt: IntCellValue = $result');
       return result;
     }
     if (value is DoubleCellValue) {
       final result = value.value.toInt();
-      debugPrint('_parseInt: DoubleCellValue = $result');
       return result;
     }
     if (value is TextCellValue) {
@@ -1051,14 +963,11 @@ class ExcelService {
         final doubleParsed = double.tryParse(str);
         if (doubleParsed != null) {
           final result = doubleParsed.toInt();
-          debugPrint('_parseInt: TextCellValue "$str" = $result');
           return result;
         }
         final parsed = int.tryParse(str);
-        debugPrint('_parseInt: TextCellValue "$str" = ${parsed ?? 0}');
         return parsed ?? 0;
       } catch (e) {
-        debugPrint('_parseInt: خطأ في تحويل TextCellValue: $e');
         // محاولة استخدام toString() مباشرة
         try {
           final str = value
@@ -1080,7 +989,6 @@ class ExcelService {
 
     // إذا كانت القيمة رقمية مباشرة
     if (value is num) {
-      debugPrint('_parseInt: num = ${value.toInt()}');
       return value.toInt();
     }
 
@@ -1091,11 +999,9 @@ class ExcelService {
       final doubleParsed = double.tryParse(str);
       if (doubleParsed != null) {
         final result = doubleParsed.toInt();
-        debugPrint('_parseInt: String "$str" = $result');
         return result;
       }
       final parsed = int.tryParse(str);
-      debugPrint('_parseInt: String "$str" = ${parsed ?? 0}');
       return parsed ?? 0;
     }
 
@@ -1106,14 +1012,11 @@ class ExcelService {
       final doubleParsed = double.tryParse(str);
       if (doubleParsed != null) {
         final result = doubleParsed.toInt();
-        debugPrint('_parseInt: toString() "$str" = $result');
         return result;
       }
       final parsed = int.tryParse(str);
-      debugPrint('_parseInt: toString() "$str" = ${parsed ?? 0}');
       return parsed ?? 0;
     } catch (e) {
-      debugPrint('_parseInt: نوع غير معروف ${value.runtimeType}: $e');
       return 0;
     }
   }

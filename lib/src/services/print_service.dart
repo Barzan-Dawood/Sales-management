@@ -32,10 +32,6 @@ class PrintService {
     BuildContext? context,
   }) async {
     try {
-      debugPrint('=== بدء طباعة كشف الحساب ===');
-      debugPrint('اسم العميل: ${customer['name']}');
-      debugPrint('عدد المدفوعات: ${payments.length}');
-
       // إنشاء PDF لكشف الحساب
       final pdfBytes = await _generateStatementPDF(
         shopName: shopName,
@@ -54,10 +50,8 @@ class PrintService {
             'كشف_حساب_${customer['name']}_${DateTime.now().millisecondsSinceEpoch}',
       );
 
-      debugPrint('تم طباعة كشف الحساب بنجاح');
       return true;
     } catch (e) {
-      debugPrint('خطأ في طباعة كشف الحساب: $e');
       if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -449,7 +443,6 @@ class PrintService {
           .load('assets/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf');
       return pw.Font.ttf(fontData);
     } catch (e) {
-      debugPrint('خطأ في تحميل الخط العربي: $e');
       return pw.Font.helvetica();
     }
   }
@@ -496,15 +489,9 @@ class PrintService {
   }) async {
     try {
       // إضافة رسائل تشخيص
-      debugPrint('=== بدء عملية الطباعة ===');
-      debugPrint('عدد المنتجات: ${items.length}');
-      debugPrint('نوع الدفع: $paymentType');
-      debugPrint('اسم المحل: $shopName');
-      debugPrint('نوع الورق: $pageFormat');
 
       // فحص أن هناك منتجات للطباعة
       if (items.isEmpty) {
-        debugPrint('خطأ: لا توجد منتجات للطباعة');
         if (context != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -542,25 +529,19 @@ class PrintService {
         subtotal: subtotal,
       );
 
-      debugPrint('تم إنشاء PDF بنجاح، حجم الملف: ${pdfData.length} بايت');
-
       try {
         await Printing.layoutPdf(
           onLayout: (format) async => pdfData,
           name: 'فاتورة_${DateTime.now().millisecondsSinceEpoch}',
         );
-        debugPrint('تم فتح نافذة الطباعة بنجاح');
       } catch (layoutError) {
-        debugPrint('خطأ في فتح نافذة الطباعة: $layoutError');
         // محاولة بديلة - حفظ الملف وعرضه
         try {
           await Printing.sharePdf(
             bytes: pdfData,
             filename: 'فاتورة_${DateTime.now().millisecondsSinceEpoch}.pdf',
           );
-          debugPrint('تم مشاركة ملف PDF بنجاح');
         } catch (shareError) {
-          debugPrint('خطأ في مشاركة ملف PDF: $shareError');
           rethrow;
         }
       }
@@ -973,10 +954,6 @@ class PrintService {
     BuildContext? context,
   }) async {
     try {
-      debugPrint('=== بدء طباعة التقرير المالي ===');
-      debugPrint('نوع التقرير: $reportType');
-      debugPrint('العنوان: $title');
-
       final pdfBytes = await _generateFinancialReportPDF(
         reportType: reportType,
         title: title,
@@ -992,10 +969,8 @@ class PrintService {
         name: '${reportType}_${DateTime.now().millisecondsSinceEpoch}',
       );
 
-      debugPrint('تم طباعة التقرير المالي بنجاح');
       return true;
     } catch (e) {
-      debugPrint('خطأ في طباعة التقرير المالي: $e');
       if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1020,10 +995,6 @@ class PrintService {
     BuildContext? context,
   }) async {
     try {
-      debugPrint('=== بدء طباعة تقرير الجرد ===');
-      debugPrint('نوع التقرير: $reportType');
-      debugPrint('العنوان: $title');
-
       final pdfBytes = await _generateInventoryReportPDF(
         reportType: reportType,
         title: title,
@@ -1039,10 +1010,8 @@ class PrintService {
         name: '${reportType}_${DateTime.now().millisecondsSinceEpoch}',
       );
 
-      debugPrint('تم طباعة تقرير الجرد بنجاح');
       return true;
     } catch (e) {
-      debugPrint('خطأ في طباعة تقرير الجرد: $e');
       if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1068,11 +1037,6 @@ class PrintService {
     BuildContext? context,
   }) async {
     try {
-      debugPrint('=== بدء طباعة تقرير الجدول ===');
-      debugPrint('نوع التقرير: $reportType');
-      debugPrint('العنوان: $title');
-      debugPrint('عدد الصفوف: ${rows.length}');
-
       final pdfBytes = await _generateTableReportPDF(
         reportType: reportType,
         title: title,
@@ -1089,10 +1053,8 @@ class PrintService {
         name: '${reportType}_${DateTime.now().millisecondsSinceEpoch}',
       );
 
-      debugPrint('تم طباعة تقرير الجدول بنجاح');
       return true;
     } catch (e) {
-      debugPrint('خطأ في طباعة تقرير الجدول: $e');
       if (context != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -40,38 +40,26 @@ Future<void> main() async {
     // للمنصات المكتبية: استخدام محرك FFI للتوافق والأداء
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    if (kDebugMode) {
-      print('Main: Desktop platform - Using sqflite_common_ffi');
-    }
+    if (kDebugMode) {}
   } else {
     // للمنصات المحمولة (Android/iOS): استخدام المحرك الافتراضي
-    if (kDebugMode) {
-      print('Main: Mobile platform - Using default sqflite');
-    }
+    if (kDebugMode) {}
   }
 
   final databaseService = DatabaseService();
 
   try {
     await databaseService.initialize();
-    if (kDebugMode) {
-      print('تم تهيئة قاعدة البيانات بنجاح');
-    }
+    if (kDebugMode) {}
   } catch (e) {
-    if (kDebugMode) {
-      print('خطأ في تهيئة قاعدة البيانات: $e');
-    }
+    if (kDebugMode) {}
     // محاولة تنظيف بسيط فقط
     try {
       await databaseService.forceCleanup();
       await databaseService.initialize();
-      if (kDebugMode) {
-        print('تم إصلاح قاعدة البيانات وإعادة تهيئتها');
-      }
+      if (kDebugMode) {}
     } catch (cleanupError) {
-      if (kDebugMode) {
-        print('فشل في إصلاح قاعدة البيانات: $cleanupError');
-      }
+      if (kDebugMode) {}
       rethrow;
     }
   }

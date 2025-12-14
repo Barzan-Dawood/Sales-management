@@ -2484,9 +2484,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         if (loadingContext != null && context.mounted) {
           try {
             Navigator.of(loadingContext!, rootNavigator: true).pop();
-          } catch (e) {
-            debugPrint('خطأ في إغلاق مؤشر التحميل: $e');
-          }
+          } catch (e) {}
         }
       }
 
@@ -2510,10 +2508,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           ),
         );
       }
-    } catch (e, stackTrace) {
-      debugPrint('خطأ في تصدير $dataType: $e');
-      debugPrint('Stack trace: $stackTrace');
-
+    } catch (e) {
       // التأكد من إغلاق مؤشر التحميل في حالة الخطأ
       if (loadingContext != null && context.mounted) {
         try {
@@ -2573,22 +2568,14 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         if (loadingContext != null && context.mounted) {
           try {
             Navigator.of(loadingContext!, rootNavigator: true).pop();
-          } catch (e) {
-            debugPrint('خطأ في إغلاق مؤشر التحميل: $e');
-          }
+          } catch (e) {}
         }
       }
 
       // التحقق من context قبل عرض النتائج
       if (!context.mounted) {
-        debugPrint('Context غير متاح لعرض النتائج');
         return;
       }
-
-      debugPrint(
-          'نتيجة الاستيراد: success=${result['success']}, message=${result['message']}');
-      debugPrint(
-          'successCount: ${result['successCount']}, errorCount: ${result['errorCount']}');
 
       final success = result['success'] as bool? ?? false;
       final successCount = result['successCount'] as int? ?? 0;
@@ -2613,8 +2600,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             fullMessage += '\n... و ${errors.length - 10} خطأ آخر';
           }
         }
-
-        debugPrint('عرض حوار النجاح: $fullMessage');
 
         // عرض حوار النجاح
         await showDialog(
@@ -2682,17 +2667,13 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           ),
         );
 
-        debugPrint('تم إغلاق حوار النجاح');
-
         // تحديث الشاشة
         if (mounted) {
           setState(() {});
-          debugPrint('تم تحديث الواجهة');
         }
       } else {
         // عرض رسالة الفشل
         final message = result['message'] as String? ?? 'فشل الاستيراد';
-        debugPrint('عرض رسالة الفشل: $message');
 
         scaffoldMessenger.showSnackBar(
           SnackBar(
@@ -2707,10 +2688,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           ),
         );
       }
-    } catch (e, stackTrace) {
-      debugPrint('خطأ في الاستيراد: $e');
-      debugPrint('Stack trace: $stackTrace');
-
+    } catch (e) {
       // التأكد من إغلاق مؤشر التحميل في حالة الخطأ
       if (loadingContext != null && context.mounted) {
         try {

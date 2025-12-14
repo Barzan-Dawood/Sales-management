@@ -71,7 +71,6 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!validUsernames.contains(lastUsername.toLowerCase())) {
           // احذف القيمة غير الصحيحة
           await prefs.remove('last_username');
-          debugPrint('تم حذف اسم المستخدم غير الصحيح: $lastUsername');
 
           // إظهار رسالة للمستخدم
           if (mounted) {
@@ -86,9 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
       }
-    } catch (e) {
-      debugPrint('خطأ في مسح البيانات غير الصحيحة: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _loadLastUsername() async {
@@ -116,9 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       // تجاهل خطأ تحميل اسم المستخدم الأخير
-      if (kDebugMode) {
-        debugPrint('خطأ في تحميل اسم المستخدم الأخير: $e');
-      }
+      if (kDebugMode) {}
     }
     // Ensure consistency after loading
     if (mounted) _reconcileUserTypeAndUsername();
@@ -159,9 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {});
         _reconcileUserTypeAndUsername();
       }
-    } catch (e) {
-      debugPrint('خطأ في جلب أسماء المستخدمين: $e');
-    }
+    } catch (e) {}
   }
 
   void _autoSelectRoleFor(String username) {
@@ -213,9 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await prefs.setString('last_username', _usernameController.text.trim());
     } catch (e) {
       // تجاهل خطأ حفظ اسم المستخدم الأخير
-      if (kDebugMode) {
-        debugPrint('خطأ في حفظ اسم المستخدم الأخير: $e');
-      }
+      if (kDebugMode) {}
     }
     final authProvider = context.read<AuthProvider>();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -250,9 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final value = result.first['username']?.toString();
         if (value != null && value.isNotEmpty) return value;
       }
-    } catch (e) {
-      debugPrint('fetchUsernameForRole error for role=$role: $e');
-    }
+    } catch (e) {}
     // Fallbacks
     switch (role) {
       case 'manager':
@@ -446,7 +435,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                             _passwordController.text,
                                           );
 
-                                  debugPrint('نتيجة تسجيل الدخول: $ok');
                                   setState(() => _loading = false);
                                   if (!ok && mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(

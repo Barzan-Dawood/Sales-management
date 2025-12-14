@@ -27,10 +27,8 @@ class DatabaseService {
       // للمنصات المكتبية - استخدم sqflite_common_ffi
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
-      print('Desktop platform: Using sqflite_common_ffi');
     } else {
       // للمنصات المحمولة (Android/iOS) - استخدم sqflite العادي
-      print('Mobile platform: Using default sqflite');
     }
 
     final Directory appDir = await getApplicationDocumentsDirectory();
@@ -177,13 +175,10 @@ class DatabaseService {
   /// Ensure discount tables exist (internal)
   Future<void> _ensureDiscountTables(DatabaseExecutor db) async {
     try {
-      debugPrint('التحقق من وجود جداول الخصومات والكوبونات...');
-
       // التحقق من وجود الجدول أولاً
       final productDiscountsTable = await db.rawQuery(
           "SELECT name FROM sqlite_master WHERE type='table' AND name='product_discounts'");
       if (productDiscountsTable.isEmpty) {
-        debugPrint('جدول product_discounts غير موجود، جاري إنشاؤه...');
         // إنشاء جدول خصومات المنتجات
         await db.execute('''
           CREATE TABLE IF NOT EXISTS product_discounts (
@@ -199,15 +194,11 @@ class DatabaseService {
             FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
           );
         ''');
-        debugPrint('تم إنشاء جدول product_discounts بنجاح');
-      } else {
-        debugPrint('جدول product_discounts موجود بالفعل');
       }
 
       final discountCouponsTable = await db.rawQuery(
           "SELECT name FROM sqlite_master WHERE type='table' AND name='discount_coupons'");
       if (discountCouponsTable.isEmpty) {
-        debugPrint('جدول discount_coupons غير موجود، جاري إنشاؤه...');
         // إنشاء جدول كوبونات الخصم
         await db.execute('''
           CREATE TABLE IF NOT EXISTS discount_coupons (
@@ -227,9 +218,6 @@ class DatabaseService {
             updated_at TEXT
           );
         ''');
-        debugPrint('تم إنشاء جدول discount_coupons بنجاح');
-      } else {
-        debugPrint('جدول discount_coupons موجود بالفعل');
       }
 
       // إضافة حقول الكوبون إلى جدول sales إن لم تكن موجودة
@@ -239,17 +227,15 @@ class DatabaseService {
             salesCols.any((c) => (c['name']?.toString() ?? '') == 'coupon_id');
         if (!hasCouponId) {
           await db.execute('ALTER TABLE sales ADD COLUMN coupon_id INTEGER');
-          debugPrint('تم إضافة عمود coupon_id إلى جدول sales');
         }
         final hasCouponDiscount = salesCols
             .any((c) => (c['name']?.toString() ?? '') == 'coupon_discount');
         if (!hasCouponDiscount) {
           await db.execute(
               'ALTER TABLE sales ADD COLUMN coupon_discount REAL DEFAULT 0');
-          debugPrint('تم إضافة عمود coupon_discount إلى جدول sales');
         }
       } catch (e) {
-        debugPrint('خطأ في إضافة أعمدة الكوبون إلى sales: $e');
+        // تجاهل الأخطاء في إضافة الأعمدة
       }
 
       // إنشاء الفهارس
@@ -261,11 +247,7 @@ class DatabaseService {
           'CREATE INDEX IF NOT EXISTS idx_discount_coupons_code ON discount_coupons(code)');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_discount_coupons_active ON discount_coupons(active)');
-
-      debugPrint('انتهى التحقق من جداول الخصومات والكوبونات');
     } catch (e, stackTrace) {
-      debugPrint('خطأ في إنشاء جداول الخصومات: $e');
-      debugPrint('Stack trace: $stackTrace');
       // لا نعيد throw لأننا نريد أن يستمر التطبيق حتى لو فشل إنشاء الجداول
     }
   }
@@ -278,7 +260,6 @@ class DatabaseService {
           "SELECT name FROM sqlite_master WHERE type='table' AND name='event_log'");
 
       if (tables.isEmpty) {
-        debugPrint('جدول event_log غير موجود، جاري إنشاؤه...');
         await db.execute('''
           CREATE TABLE IF NOT EXISTS event_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -303,12 +284,8 @@ class DatabaseService {
             'CREATE INDEX IF NOT EXISTS idx_event_log_entity_type ON event_log(entity_type)');
         await db.execute(
             'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
-
-        debugPrint('تم إنشاء جدول event_log بنجاح');
       }
     } catch (e, stackTrace) {
-      debugPrint('خطأ في التحقق من/إنشاء جدول event_log: $e');
-      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -488,9 +465,7 @@ class DatabaseService {
           WHERE sale_id NOT IN (SELECT id FROM sales)
           OR product_id NOT IN (SELECT id FROM products)
         ''');
-      } catch (e) {
-        debugPrint('Error cleaning up orphaned sale_items: $e');
-      }
+      } catch (e) {}
 
       // If that doesn't work, completely rebuild sale_items
       try {
@@ -943,7 +918,6 @@ class DatabaseService {
       final columns = await db.rawQuery("PRAGMA table_info('$tableName')");
       return columns.any((col) => col['name']?.toString() == columnName);
     } catch (e) {
-      debugPrint('خطأ في التحقق من وجود العمود $columnName في $tableName: $e');
       return false;
     }
   }
@@ -957,7 +931,6 @@ class DatabaseService {
       );
       return tables.isNotEmpty;
     } catch (e) {
-      debugPrint('خطأ في التحقق من وجود الجدول $tableName: $e');
       return false;
     }
   }
@@ -1340,8 +1313,6 @@ class DatabaseService {
   Future<void> _migrateToV7(Database db) async {
     // تحديث جدول المستخدمين لدعم النظام الجديد
     try {
-      debugPrint('بدء Migration V7...');
-
       // إعادة إنشاء جدول المستخدمين لدعم supervisor
       await db.execute('PRAGMA foreign_keys=off');
 
@@ -1383,12 +1354,10 @@ class DatabaseService {
       await db.execute('ALTER TABLE users_new RENAME TO users');
 
       await db.execute('PRAGMA foreign_keys=on');
-      debugPrint('تم إعادة إنشاء جدول المستخدمين بنجاح');
 
       // تحديث البيانات الموجودة
       final now = DateTime.now().toIso8601String();
       final existingUsers = await db.query('users');
-      debugPrint('المستخدمون الموجودون: ${existingUsers.length}');
 
       for (final user in existingUsers) {
         await db.update(
@@ -1442,23 +1411,14 @@ class DatabaseService {
 
         if (existing.isEmpty) {
           await db.insert('users', user);
-          debugPrint('تم إضافة مستخدم: ${user['username']}');
-        } else {
-          debugPrint('المستخدم موجود بالفعل: ${user['username']}');
-        }
+        } else {}
       }
-
-      debugPrint('انتهى Migration V7 بنجاح');
-    } catch (e) {
-      debugPrint('خطأ في Migration V7: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _migrateToV8(Database db) async {
     // إصلاح جدول المستخدمين لدعم supervisor
     try {
-      debugPrint('بدء Migration V8 - إصلاح جدول المستخدمين...');
-
       // إعادة إنشاء جدول المستخدمين لدعم supervisor
       await db.execute('PRAGMA foreign_keys=off');
 
@@ -1500,7 +1460,6 @@ class DatabaseService {
       await db.execute('ALTER TABLE users_new RENAME TO users');
 
       await db.execute('PRAGMA foreign_keys=on');
-      debugPrint('تم إعادة إنشاء جدول المستخدمين بنجاح في V8');
 
       // إضافة المستخدمين الافتراضيين
       final now = DateTime.now().toIso8601String();
@@ -1543,23 +1502,14 @@ class DatabaseService {
 
         if (existing.isEmpty) {
           await db.insert('users', user);
-          debugPrint('تم إضافة مستخدم في V8: ${user['username']}');
-        } else {
-          debugPrint('المستخدم موجود بالفعل في V8: ${user['username']}');
-        }
+        } else {}
       }
-
-      debugPrint('انتهى Migration V8 بنجاح');
-    } catch (e) {
-      debugPrint('خطأ في Migration V8: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _migrateToV9(Database db) async {
     // تحديث جدول المصروفات لإضافة حقول جديدة
     try {
-      debugPrint('بدء Migration V9 - تحديث جدول المصروفات...');
-
       // التحقق من وجود الأعمدة الجديدة
       final cols = await db.rawQuery("PRAGMA table_info('expenses')");
       final columnNames = cols.map((c) => c['name']?.toString() ?? '').toList();
@@ -1568,12 +1518,10 @@ class DatabaseService {
       if (!columnNames.contains('category')) {
         await db.execute(
             'ALTER TABLE expenses ADD COLUMN category TEXT NOT NULL DEFAULT \'عام\'');
-        debugPrint('تم إضافة عمود category');
       }
 
       if (!columnNames.contains('description')) {
         await db.execute('ALTER TABLE expenses ADD COLUMN description TEXT');
-        debugPrint('تم إضافة عمود description');
       }
 
       if (!columnNames.contains('expense_date')) {
@@ -1608,29 +1556,20 @@ class DatabaseService {
             newCols.map((c) => c['name']?.toString() ?? '').toList();
         columnNames.clear();
         columnNames.addAll(newColumnNames);
-        debugPrint('تم إضافة عمود expense_date');
       }
 
       // التحقق مرة أخرى من updated_at بعد إعادة إنشاء الجدول
       if (!columnNames.contains('updated_at')) {
         try {
           await db.execute('ALTER TABLE expenses ADD COLUMN updated_at TEXT');
-          debugPrint('تم إضافة عمود updated_at');
-        } catch (e) {
-          debugPrint('عمود updated_at موجود بالفعل أو خطأ: $e');
-        }
+        } catch (e) {}
       }
-
-      debugPrint('انتهى Migration V9 بنجاح');
-    } catch (e) {
-      debugPrint('خطأ في Migration V9: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _migrateToV10(Database db) async {
     // إضافة جدول event_log لتسجيل جميع العمليات
     try {
-      debugPrint('بدء Migration V10 - إضافة جدول event_log...');
       await db.execute('''
         CREATE TABLE IF NOT EXISTS event_log (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1653,16 +1592,12 @@ class DatabaseService {
           'CREATE INDEX IF NOT EXISTS idx_event_log_entity_type ON event_log(entity_type)');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
-      debugPrint('انتهى Migration V10 بنجاح');
-    } catch (e) {
-      debugPrint('خطأ في Migration V10: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _migrateToV11(Database db) async {
     // إضافة جدول returns للمرتجعات
     try {
-      debugPrint('بدء Migration V11 - إضافة جدول returns...');
       await db.execute('''
         CREATE TABLE IF NOT EXISTS returns (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1678,16 +1613,12 @@ class DatabaseService {
           'CREATE INDEX IF NOT EXISTS idx_returns_sale_id ON returns(sale_id)');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_returns_return_date ON returns(return_date)');
-      debugPrint('انتهى Migration V11 بنجاح');
-    } catch (e) {
-      debugPrint('خطأ في Migration V11: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _migrateToV14(Database db) async {
     // إضافة جدول deleted_items لسلة المحذوفات
     try {
-      debugPrint('بدء Migration V14 - إضافة جدول deleted_items...');
       await db.execute('''
         CREATE TABLE IF NOT EXISTS deleted_items (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1705,26 +1636,18 @@ class DatabaseService {
           'CREATE INDEX IF NOT EXISTS idx_deleted_items_entity_type ON deleted_items(entity_type)');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_deleted_items_deleted_at ON deleted_items(deleted_at)');
-      debugPrint('انتهى Migration V14 بنجاح');
-    } catch (e) {
-      debugPrint('خطأ في Migration V14: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _migrateToV15(Database db) async {
     // إضافة نظام الخصومات والكوبونات
     try {
-      debugPrint('بدء Migration V15 - إضافة نظام الخصومات والكوبونات...');
-
       // إضافة حقول الكوبون إلى جدول sales
       try {
         await db.execute('ALTER TABLE sales ADD COLUMN coupon_id INTEGER');
         await db.execute(
             'ALTER TABLE sales ADD COLUMN coupon_discount REAL DEFAULT 0');
-        debugPrint('تم إضافة حقول الكوبون إلى جدول sales');
-      } catch (e) {
-        debugPrint('حقول الكوبون موجودة بالفعل أو خطأ: $e');
-      }
+      } catch (e) {}
 
       // إنشاء جدول خصومات المنتجات
       await db.execute('''
@@ -1771,18 +1694,12 @@ class DatabaseService {
           'CREATE INDEX IF NOT EXISTS idx_discount_coupons_code ON discount_coupons(code)');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_discount_coupons_active ON discount_coupons(active)');
-
-      debugPrint('انتهى Migration V15 بنجاح');
-    } catch (e) {
-      debugPrint('خطأ في Migration V15: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _migrateToV12(Database db) async {
     // إضافة نظام المجموعات والصلاحيات
     try {
-      debugPrint('بدء Migration V12 - إضافة نظام المجموعات والصلاحيات...');
-
       // 1. إنشاء جدول groups
       await db.execute('''
         CREATE TABLE IF NOT EXISTS groups (
@@ -1812,10 +1729,7 @@ class DatabaseService {
       try {
         await db.execute(
             'ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id)');
-        debugPrint('تم إضافة عمود group_id إلى جدول users');
-      } catch (e) {
-        debugPrint('عمود group_id موجود بالفعل أو خطأ: $e');
-      }
+      } catch (e) {}
 
       // 4. إنشاء المجموعات الافتراضية
       final now = DateTime.now().toIso8601String();

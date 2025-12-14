@@ -3560,9 +3560,7 @@ class _SalesScreenState extends State<SalesScreen> {
           productDiscount = (discountAmount / price) * 100;
         }
       }
-    } catch (e) {
-      debugPrint('خطأ في جلب خصم المنتج: $e');
-    }
+    } catch (e) {}
 
     // Reserve one immediately
     context.read<DatabaseService>().adjustProductQuantity(p['id'] as int, -1);

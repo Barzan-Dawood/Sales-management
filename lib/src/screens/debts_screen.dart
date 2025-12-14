@@ -2691,10 +2691,6 @@ class _DebtsScreenState extends State<DebtsScreen>
                                         dt = DateTime.parse(raw);
                                       } catch (e) {
                                         // تجاهل خطأ تحليل التاريخ والاستمرار بالقيمة الافتراضية
-                                        if (kDebugMode) {
-                                          debugPrint(
-                                              'خطأ في تحليل التاريخ: $e');
-                                        }
                                       }
                                       final formatted = dt != null
                                           ? DateFormat('yyyy/MM/dd').format(dt)
@@ -3559,7 +3555,6 @@ class _DebtsScreenState extends State<DebtsScreen>
       }
     } catch (e) {
       // في حالة حدوث خطأ في التحقق، نتابع مع الحذف العادي
-      debugPrint('خطأ في التحقق من البيانات المرتبطة: $e');
     }
 
     // إذا لم يكن هناك بيانات مرتبطة، عرض حوار الحذف العادي
@@ -3760,7 +3755,6 @@ class _DebtsScreenState extends State<DebtsScreen>
       }
     } catch (e) {
       // في حالة حدوث خطأ في التحقق، نتابع مع الحذف العادي
-      debugPrint('خطأ في التحقق من المدفوعات: $e');
     }
 
     // إذا لم يكن هناك مدفوعات، عرض حوار الحذف العادي
@@ -4267,7 +4261,6 @@ class _DebtsScreenState extends State<DebtsScreen>
         ),
       );
     } catch (e) {
-      debugPrint('خطأ في طباعة كشف القسط: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في طباعة كشف القسط: $e'),
@@ -5179,7 +5172,6 @@ class _DebtsScreenState extends State<DebtsScreen>
           .load('assets/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf');
       return pw.Font.ttf(fontData);
     } catch (e) {
-      debugPrint('خطأ في تحميل الخط العربي: $e');
       return pw.Font.helvetica();
     }
   }

@@ -104,8 +104,6 @@ class _EventLogScreenState extends State<EventLogScreen> {
         });
       }
     } catch (e, stackTrace) {
-      debugPrint('خطأ في تحميل الأحداث: $e');
-      debugPrint('Stack trace: $stackTrace');
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -464,9 +462,7 @@ class _EventLogScreenState extends State<EventLogScreen> {
       date = DateTime.tryParse(createdAt);
     } catch (e) {
       // تجاهل خطأ تحليل التاريخ والاستمرار بالقيمة الافتراضية
-      if (kDebugMode) {
-        debugPrint('خطأ في تحليل تاريخ الحدث: $e');
-      }
+      if (kDebugMode) {}
     }
 
     final icon = _eventTypeIcons[eventType] ?? Icons.info;

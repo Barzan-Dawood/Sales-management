@@ -839,8 +839,6 @@ Future<void> _showResetPasswordsDialog(
 Future<void> _resetAllPasswords(
     BuildContext context, DatabaseService db, VoidCallback onAfterReset) async {
   try {
-    debugPrint('بدء إعادة ضبط كلمات المرور...');
-
     // إظهار مؤشر التحميل
     showDialog(
       context: context,
@@ -851,11 +849,9 @@ Future<void> _resetAllPasswords(
     );
 
     final nowIso = DateTime.now().toIso8601String();
-    debugPrint('وقت التحديث: $nowIso');
 
     // إعادة ضبط المدير (اسم المستخدم + كلمة المرور)
     final managerId = await _getUserIdByRole(db, 'manager');
-    debugPrint('معرف المدير: $managerId');
     if (managerId != null) {
       // فض أي تعارض على اسم manager
       final conflict = await db.database.query(
@@ -887,14 +883,10 @@ Future<void> _resetAllPasswords(
         where: 'id = ?',
         whereArgs: [managerId],
       );
-      debugPrint('نتيجة تحديث المدير: $result');
-    } else {
-      debugPrint('لم يتم العثور على المدير');
-    }
+    } else {}
 
     // إعادة ضبط المشرف (اسم المستخدم + كلمة المرور)
     final supervisorId = await _getUserIdByRole(db, 'supervisor');
-    debugPrint('معرف المشرف: $supervisorId');
     if (supervisorId != null) {
       try {
         // فض أي تعارض على اسم supervisor
@@ -927,12 +919,10 @@ Future<void> _resetAllPasswords(
           where: 'id = ?',
           whereArgs: [supervisorId],
         );
-        debugPrint('نتيجة تحديث المشرف: $result');
       } catch (e) {
-        debugPrint('خطأ في تحديث المشرف: $e');
         // محاولة تحديث كلمة المرور فقط
         try {
-          final result = await db.database.update(
+          await db.database.update(
             'users',
             {
               'password': _sha256('super123'),
@@ -941,18 +931,14 @@ Future<void> _resetAllPasswords(
             where: 'id = ?',
             whereArgs: [supervisorId],
           );
-          debugPrint('تم تحديث كلمة مرور المشرف فقط: $result');
         } catch (e2) {
-          debugPrint('خطأ في تحديث كلمة مرور المشرف: $e2');
+          // تجاهل خطأ تحديث كلمة المرور
         }
       }
-    } else {
-      debugPrint('لم يتم العثور على المشرف');
-    }
+    } else {}
 
     // إعادة ضبط الموظف (اسم المستخدم + كلمة المرور)
     final employeeId = await _getUserIdByRole(db, 'employee');
-    debugPrint('معرف الموظف: $employeeId');
     if (employeeId != null) {
       try {
         // فض أي تعارض على اسم employee
@@ -985,12 +971,10 @@ Future<void> _resetAllPasswords(
           where: 'id = ?',
           whereArgs: [employeeId],
         );
-        debugPrint('نتيجة تحديث الموظف: $result');
       } catch (e) {
-        debugPrint('خطأ في تحديث الموظف: $e');
         // محاولة تحديث كلمة المرور فقط
         try {
-          final result = await db.database.update(
+          await db.database.update(
             'users',
             {
               'password': _sha256('emp123'),
@@ -999,21 +983,17 @@ Future<void> _resetAllPasswords(
             where: 'id = ?',
             whereArgs: [employeeId],
           );
-          debugPrint('تم تحديث كلمة مرور الموظف فقط: $result');
         } catch (e2) {
-          debugPrint('خطأ في تحديث كلمة مرور الموظف: $e2');
+          // تجاهل خطأ تحديث كلمة المرور
         }
       }
-    } else {
-      debugPrint('لم يتم العثور على الموظف');
-    }
+    } else {}
 
     // إغلاق مؤشر التحميل
     if (context.mounted) Navigator.of(context).pop();
 
     // إظهار رسالة نجاح
     if (context.mounted) {
-      debugPrint('تم إعادة ضبط جميع البيانات بنجاح!');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
@@ -1072,7 +1052,6 @@ Future<int?> _getUserIdByRole(DatabaseService db, String role) async {
     }
     return null;
   } catch (e) {
-    debugPrint('خطأ في جلب معرف المستخدم للدور $role: $e');
     return null;
   }
 }
