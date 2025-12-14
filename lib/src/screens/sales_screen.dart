@@ -1801,215 +1801,126 @@ class _SalesScreenState extends State<SalesScreen> {
                                     ),
                                     child: Column(
                                       children: [
-                                        // Coupon Section
+                                        // Coupon Section - تصميم محسّن
                                         if (_cart.isNotEmpty)
                                           Container(
                                             margin: const EdgeInsets.only(
                                                 bottom: 8),
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: _appliedCoupon != null
-                                                  ? Theme.of(context)
-                                                      .colorScheme
-                                                      .primaryContainer
-                                                      .withOpacity(0.3)
-                                                  : Theme.of(context)
-                                                      .colorScheme
-                                                      .surfaceContainerHighest
-                                                      .withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: _appliedCoupon != null
-                                                    ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primary
-                                                    : Theme.of(context)
-                                                        .dividerColor
-                                                        .withOpacity(0.3),
-                                              ),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: _appliedCoupon != null
-                                                      ? Row(
-                                                          children: [
-                                                            Icon(
-                                                              Icons.local_offer,
-                                                              color: Theme.of(
-                                                                      context)
+                                            child: _appliedCoupon != null
+                                                ? Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 6),
+                                                    decoration: BoxDecoration(
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .primaryContainer
+                                                          .withOpacity(0.3),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                      border: Border.all(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary
+                                                            .withOpacity(0.3),
+                                                        width: 1,
+                                                      ),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Icon(
+                                                          Icons.local_offer,
+                                                          color:
+                                                              Theme.of(context)
                                                                   .colorScheme
                                                                   .primary,
-                                                              size: 16,
-                                                            ),
-                                                            const SizedBox(
-                                                                width: 6),
-                                                            Expanded(
-                                                              child: Text(
-                                                                'كوبون: ${_appliedCoupon!['code']} - خصم: ${Formatters.currencyIQD(_couponDiscount)}',
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize: 11,
-                                                                  color: Theme.of(
-                                                                          context)
-                                                                      .colorScheme
-                                                                      .primary,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            IconButton(
-                                                              icon: const Icon(
-                                                                  Icons.close,
-                                                                  size: 16),
-                                                              onPressed: () {
-                                                                setState(() {
-                                                                  _couponCode =
-                                                                      null;
-                                                                  _couponId =
-                                                                      null;
-                                                                  _couponDiscount =
-                                                                      0.0;
-                                                                  _appliedCoupon =
-                                                                      null;
-                                                                });
-                                                              },
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .zero,
-                                                              constraints:
-                                                                  const BoxConstraints(),
-                                                            ),
-                                                          ],
-                                                        )
-                                                      : TextField(
-                                                          onSubmitted:
-                                                              (value) async {
-                                                            if (value
-                                                                .trim()
-                                                                .isEmpty)
-                                                              return;
-                                                            await _applyCoupon(
-                                                                value.trim());
-                                                          },
-                                                          decoration:
-                                                              InputDecoration(
-                                                            hintText:
-                                                                'أدخل كود الكوبون',
-                                                            hintStyle:
-                                                                const TextStyle(
-                                                                    fontSize:
-                                                                        11),
-                                                            isDense: true,
-                                                            prefixIcon: const Icon(
-                                                                Icons
-                                                                    .local_offer,
-                                                                size: 16),
-                                                            prefixIconConstraints:
-                                                                const BoxConstraints(
-                                                              minWidth: 32,
-                                                              minHeight: 32,
-                                                            ),
-                                                            suffixIcon:
-                                                                IconButton(
-                                                              icon: const Icon(
-                                                                  Icons.check,
-                                                                  size: 16),
-                                                              onPressed:
-                                                                  () async {
-                                                                final controller =
-                                                                    TextEditingController();
-                                                                await showDialog(
-                                                                  context:
-                                                                      context,
-                                                                  builder:
-                                                                      (context) =>
-                                                                          AlertDialog(
-                                                                    title: const Text(
-                                                                        'إدخال كود الكوبون'),
-                                                                    content:
-                                                                        TextField(
-                                                                      controller:
-                                                                          controller,
-                                                                      decoration:
-                                                                          const InputDecoration(
-                                                                        hintText:
-                                                                            'أدخل كود الكوبون',
-                                                                      ),
-                                                                      autofocus:
-                                                                          true,
-                                                                    ),
-                                                                    actions: [
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () =>
-                                                                                Navigator.pop(context),
-                                                                        child: const Text(
-                                                                            'إلغاء'),
-                                                                      ),
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () {
-                                                                          Navigator.pop(
-                                                                              context,
-                                                                              controller.text);
-                                                                        },
-                                                                        child: const Text(
-                                                                            'تطبيق'),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ).then((value) {
-                                                                  if (value !=
-                                                                          null &&
-                                                                      value
-                                                                          .toString()
-                                                                          .trim()
-                                                                          .isNotEmpty) {
-                                                                    _applyCoupon(value
-                                                                        .toString()
-                                                                        .trim());
-                                                                  }
-                                                                });
-                                                              },
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .zero,
-                                                              constraints:
-                                                                  const BoxConstraints(),
-                                                            ),
-                                                            filled: true,
-                                                            fillColor: Theme.of(
+                                                          size: 14,
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 6),
+                                                        Text(
+                                                          '${_appliedCoupon!['code']}',
+                                                          style: TextStyle(
+                                                            fontSize: 11,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: Theme.of(
                                                                     context)
                                                                 .colorScheme
-                                                                .surface,
-                                                            border:
-                                                                OutlineInputBorder(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          6),
-                                                              borderSide:
-                                                                  BorderSide
-                                                                      .none,
-                                                            ),
-                                                            contentPadding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                              horizontal: 8,
-                                                              vertical: 6,
-                                                            ),
+                                                                .primary,
                                                           ),
-                                                          style:
-                                                              const TextStyle(
-                                                                  fontSize: 11),
                                                         ),
-                                                ),
-                                              ],
-                                            ),
+                                                        const SizedBox(
+                                                            width: 4),
+                                                        Text(
+                                                          'خصم: ${Formatters.currencyIQD(_couponDiscount)}',
+                                                          style: TextStyle(
+                                                            fontSize: 10,
+                                                            color: Colors
+                                                                .green.shade700,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 4),
+                                                        InkWell(
+                                                          onTap: () {
+                                                            setState(() {
+                                                              _couponCode =
+                                                                  null;
+                                                              _couponId = null;
+                                                              _couponDiscount =
+                                                                  0.0;
+                                                              _appliedCoupon =
+                                                                  null;
+                                                            });
+                                                          },
+                                                          child: Icon(
+                                                            Icons.close,
+                                                            color: Theme.of(
+                                                                    context)
+                                                                .colorScheme
+                                                                .error,
+                                                            size: 16,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  )
+                                                : OutlinedButton.icon(
+                                                    onPressed: () =>
+                                                        _showCouponDialog(
+                                                            context),
+                                                    icon: const Icon(
+                                                        Icons.local_offer,
+                                                        size: 18),
+                                                    label: const Text(
+                                                        'إضافة كوبون خصم'),
+                                                    style: OutlinedButton
+                                                        .styleFrom(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 16,
+                                                          vertical: 12),
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(12),
+                                                      ),
+                                                      side: BorderSide(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary
+                                                            .withOpacity(0.5),
+                                                      ),
+                                                    ),
+                                                  ),
                                           ),
                                         // Total Section
                                         Row(
@@ -3701,6 +3612,62 @@ class _SalesScreenState extends State<SalesScreen> {
     // Return to stock
     final productId = _cart[index]['product_id'] as int;
     context.read<DatabaseService>().adjustProductQuantity(productId, 1);
+  }
+
+  Future<void> _showCouponDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.local_offer,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Text('إضافة كوبون خصم'),
+            ],
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            decoration: InputDecoration(
+              hintText: 'أدخل كود الكوبون',
+              prefixIcon: const Icon(Icons.tag),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surface,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                if (controller.text.trim().isNotEmpty) {
+                  Navigator.pop(context);
+                  _applyCoupon(controller.text.trim());
+                }
+              },
+              icon: const Icon(Icons.check, size: 18),
+              label: const Text('تطبيق'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _applyCoupon(String code) async {
