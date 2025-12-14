@@ -1448,17 +1448,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
 
           SizedBox(height: isSmallScreen ? 12 : 16),
 
-          // Delete Users Only
-          _buildDeleteActionCard(
-            icon: Icons.person,
-            title: 'حذف المستخدمين فقط',
-            subtitle: 'حذف جميع المستخدمين (سيتم الاحتفاظ بالبيانات الأخرى)',
-            color: Colors.brown,
-            onTap: () => _deleteUsersOnly(),
-          ),
-
-          SizedBox(height: isSmallScreen ? 12 : 16),
-
           // Delete Suppliers Only
           _buildDeleteActionCard(
             icon: Icons.local_shipping,
@@ -2161,32 +2150,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         Navigator.of(context).pop();
       }
       _showSnackBar('خطأ في حذف الأقساط: $e', Colors.red);
-    }
-  }
-
-  Future<void> _deleteUsersOnly() async {
-    final confirmed = await _showDeleteConfirmationDialog(
-      'حذف المستخدمين فقط',
-      'هل أنت متأكد من حذف جميع المستخدمين؟\n\nسيتم حذف:\n• جميع المستخدمين\n\nتحذير: قد تفقد القدرة على تسجيل الدخول!\n\nسيتم الاحتفاظ بـ:\n• المبيعات\n• العملاء\n• المنتجات\n• الأقسام\n• الموردين\n\nهذه العملية لا يمكن التراجع عنها!',
-      'حذف المستخدمين',
-      Colors.brown,
-    );
-
-    if (!confirmed) return;
-
-    try {
-      _showLoadingDialog('جاري حذف المستخدمين...');
-
-      final db = context.read<DatabaseService>();
-      await db.deleteUsersOnly();
-
-      Navigator.of(context).pop();
-      _showSnackBar('تم حذف المستخدمين بنجاح', Colors.brown);
-    } catch (e) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-      _showSnackBar('خطأ في حذف المستخدمين: $e', Colors.red);
     }
   }
 

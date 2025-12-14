@@ -5549,52 +5549,6 @@ class DatabaseService {
     }
   }
 
-  /// حذف المستخدمين فقط
-  Future<void> deleteUsersOnly() async {
-    try {
-      await _db.transaction((txn) async {
-        // تعطيل المفاتيح الخارجية مؤقتًا لتجنب تعارضات العلاقات
-        await txn.execute('PRAGMA foreign_keys = OFF');
-        // حذف المستخدمين
-        await txn.delete('users');
-
-        // إعادة تعيين AUTO_INCREMENT
-        await txn.execute('DELETE FROM sqlite_sequence WHERE name = "users"');
-
-        // تأكد من وجود عمود الصلاحيات قبل الإدراج (لتوافق قواعد بيانات قديمة)
-        final usersColumns = await txn.rawQuery('PRAGMA table_info(users)');
-        final hasPermissionsColumn = usersColumns.any((col) {
-          final dynamic name = col['name'];
-          return name is String && name.toLowerCase() == 'permissions';
-        });
-        if (!hasPermissionsColumn) {
-          await txn.execute('ALTER TABLE users ADD COLUMN permissions TEXT');
-        }
-
-        // تشفير كلمة المرور الافتراضية
-        final hashedPassword =
-            sha256.convert(utf8.encode('Manager@2025')).toString();
-
-        // إعادة إنشاء المستخدم الافتراضي مع كلمة مرور مشفرة
-        await txn.insert('users', {
-          'name': 'مدير النظام',
-          'username': 'manager',
-          'password': hashedPassword,
-          'role': 'manager',
-          'employee_code': 'ADMIN001',
-          'permissions': 'all',
-          'active': 1,
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
-        // إعادة تفعيل المفاتيح الخارجية بعد الانتهاء
-        await txn.execute('PRAGMA foreign_keys = ON');
-      });
-    } catch (e) {
-      throw Exception('خطأ في حذف المستخدمين: $e');
-    }
-  }
-
   /// حذف الموردين فقط
   Future<void> deleteSuppliersOnly() async {
     try {
