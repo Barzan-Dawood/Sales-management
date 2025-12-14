@@ -26,6 +26,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
   String _backupPath = '';
   String _autoBackupFrequency = 'weekly';
   bool _autoBackupEnabled = false;
+  int _backupsRefreshKey = 0;
 
   @override
   void initState() {
@@ -912,95 +913,180 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
     }
   }
 
-  Widget _buildBackupsListDialog(List<Map<String, dynamic>> backups) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.8,
-        height: MediaQuery.of(context).size.height * 0.7,
-        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.purple.shade600, Colors.purple.shade700],
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-              ),
-              child: Row(
+  Widget _buildBackupsListDialog(List<Map<String, dynamic>> initialBackups) {
+    return WillPopScope(
+      onWillPop: () async {
+        // السماح بالخروج بشكل طبيعي
+        return true;
+      },
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              width: MediaQuery.of(context).size.width * 0.8,
+              height: MediaQuery.of(context).size.height * 0.7,
+              constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
+              child: Column(
                 children: [
+                  // Header
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.folder_open,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Text(
-                      'النسخ الاحتياطية المتاحة',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.purple.shade600,
+                          Colors.purple.shade700
+                        ],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
                       ),
                     ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.folder_open,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Text(
+                            'النسخ الاحتياطية المتاحة',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          icon: const Icon(Icons.close, color: Colors.white),
+                        ),
+                      ],
+                    ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: Colors.white),
+
+                  // Content
+                  Expanded(
+                    child: Builder(
+                      builder: (context) {
+                        // استخدام StatefulBuilder داخلي لتحديث FutureBuilder
+                        return StatefulBuilder(
+                          builder: (context, refreshState) {
+                            return FutureBuilder<List<Map<String, dynamic>>>(
+                              key: ValueKey(_backupsRefreshKey),
+                              future: _loadBackups(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+
+                                final backups = snapshot.data ?? initialBackups;
+                                debugPrint(
+                                    'عدد النسخ الاحتياطية المعروضة: ${backups.length}');
+
+                                if (backups.isEmpty) {
+                                  return const Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.folder_open,
+                                            size: 64, color: Colors.grey),
+                                        SizedBox(height: 16),
+                                        Text(
+                                          'لا توجد نسخ احتياطية',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+
+                                return RefreshIndicator(
+                                  onRefresh: () async {
+                                    setState(() {
+                                      _backupsRefreshKey =
+                                          DateTime.now().millisecondsSinceEpoch;
+                                    });
+                                  },
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: backups.length,
+                                    itemBuilder: (context, index) {
+                                      final backup = backups[index];
+                                      return _buildBackupItem(
+                                        backup,
+                                        onDeleted: () async {
+                                          // تحديث القائمة بعد الحذف
+                                          setState(() {
+                                            _backupsRefreshKey = DateTime.now()
+                                                .millisecondsSinceEpoch;
+                                          });
+                                        },
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
-            ),
-
-            // Content
-            Expanded(
-              child: backups.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.folder_open, size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text(
-                            'لا توجد نسخ احتياطية',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: backups.length,
-                      itemBuilder: (context, index) {
-                        final backup = backups[index];
-                        return _buildBackupItem(backup);
-                      },
-                    ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildBackupItem(Map<String, dynamic> backup) {
+  Future<List<Map<String, dynamic>>> _loadBackups() async {
+    try {
+      if (_backupPath.isEmpty) {
+        // إذا لم يكن هناك مسار محدد، محاولة الحصول عليه من SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        _backupPath = prefs.getString('backup_path') ?? '';
+        if (_backupPath.isEmpty) {
+          return [];
+        }
+      }
+      final db = context.read<DatabaseService>();
+      final backups = await db.getAvailableBackups(_backupPath);
+      debugPrint('تم تحميل ${backups.length} نسخة احتياطية');
+      return backups;
+    } catch (e) {
+      debugPrint('خطأ في تحميل النسخ الاحتياطية: $e');
+      return [];
+    }
+  }
+
+  Widget _buildBackupItem(
+    Map<String, dynamic> backup, {
+    VoidCallback? onDeleted,
+  }) {
     final name = backup['name'] as String;
     final size = backup['size'] as int;
     final date = backup['date'] as DateTime;
@@ -1063,7 +1149,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
           ],
         ),
         trailing: PopupMenuButton<String>(
-          onSelected: (value) => _handleBackupAction(value, backup),
+          onSelected: (value) => _handleBackupAction(value, backup, onDeleted),
           itemBuilder: (context) => [
             const PopupMenuItem(
               value: 'restore',
@@ -1101,38 +1187,121 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
     );
   }
 
-  Future<void> _handleBackupAction(
-      String action, Map<String, dynamic> backup) async {
+  Future<void> _handleBackupAction(String action, Map<String, dynamic> backup,
+      VoidCallback? onDeleted) async {
     final path = backup['path'] as String;
+    final name = backup['name'] as String;
     final db = context.read<DatabaseService>();
 
     switch (action) {
       case 'restore':
+        // عرض نافذة تأكيد
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('تأكيد الاستعادة'),
+            content: Text(
+                'هل أنت متأكد من استعادة النسخة الاحتياطية "$name"؟\n\nسيتم استبدال جميع البيانات الحالية بالبيانات من النسخة الاحتياطية.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('إلغاء'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('استعادة'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) return;
+
         try {
+          _showLoadingDialog('جاري استعادة النسخة الاحتياطية...');
           await db.restoreFullBackup(path);
-          _showSnackBar('تم استعادة النسخة الاحتياطية بنجاح', Colors.green);
+          if (context.mounted) {
+            Navigator.of(context).pop(); // إغلاق نافذة التحميل
+            Navigator.of(context).pop(); // إغلاق نافذة النسخ الاحتياطية
+            _showSnackBar('تم استعادة النسخة الاحتياطية بنجاح', Colors.green);
+          }
         } catch (e) {
-          _showSnackBar('خطأ في الاستعادة: $e', Colors.red);
+          if (context.mounted) {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop(); // إغلاق نافذة التحميل
+            }
+            _showSnackBar('خطأ في الاستعادة: $e', Colors.red);
+          }
         }
         break;
       case 'verify':
         try {
+          _showLoadingDialog('جاري التحقق من النسخة الاحتياطية...');
           final isValid = await db.verifyBackup(path);
-          _showSnackBar(
-            isValid ? 'النسخة الاحتياطية صالحة' : 'النسخة الاحتياطية تالفة',
-            isValid ? Colors.green : Colors.red,
-          );
+          if (context.mounted) {
+            Navigator.of(context).pop(); // إغلاق نافذة التحميل
+            _showSnackBar(
+              isValid ? 'النسخة الاحتياطية صالحة' : 'النسخة الاحتياطية تالفة',
+              isValid ? Colors.green : Colors.red,
+            );
+          }
         } catch (e) {
-          _showSnackBar('خطأ في التحقق: $e', Colors.red);
+          if (context.mounted) {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop(); // إغلاق نافذة التحميل
+            }
+            _showSnackBar('خطأ في التحقق: $e', Colors.red);
+          }
         }
         break;
       case 'delete':
+        // عرض نافذة تأكيد
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('تأكيد الحذف'),
+            content: Text(
+                'هل أنت متأكد من حذف النسخة الاحتياطية "$name"؟\n\nلا يمكن التراجع عن هذا الإجراء.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('إلغاء'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('حذف'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) return;
+
         try {
           final file = File(path);
-          await file.delete();
+          if (await file.exists()) {
+            await file.delete();
+          }
+
+          // حذف ملفات WAL و SHM المرتبطة إذا كانت موجودة
+          final walFile = File('$path-wal');
+          if (await walFile.exists()) {
+            await walFile.delete();
+          }
+
+          final shmFile = File('$path-shm');
+          if (await shmFile.exists()) {
+            await shmFile.delete();
+          }
+
           _showSnackBar('تم حذف النسخة الاحتياطية', Colors.orange);
-          // إعادة تحميل القائمة
-          _showAvailableBackups();
+
+          // تحديث القائمة
+          if (onDeleted != null) {
+            onDeleted();
+          }
         } catch (e) {
           _showSnackBar('خطأ في الحذف: $e', Colors.red);
         }

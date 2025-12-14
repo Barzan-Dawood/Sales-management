@@ -33,7 +33,7 @@ class ThermalPrinterService {
   /// Scan for Bluetooth printers (not supported on desktop)
   static Future<List<dynamic>> scanBluetoothPrinters() async {
     if (kDebugMode) {
-      print(
+      debugPrint(
           'ThermalPrinterService: Bluetooth scanning not supported on desktop');
     }
     return [];
@@ -42,7 +42,8 @@ class ThermalPrinterService {
   /// Scan for USB printers (not supported on desktop)
   static Future<List<dynamic>> scanUsbPrinters() async {
     if (kDebugMode) {
-      print('ThermalPrinterService: USB scanning not supported on desktop');
+      debugPrint(
+          'ThermalPrinterService: USB scanning not supported on desktop');
     }
     return [];
   }
@@ -50,7 +51,7 @@ class ThermalPrinterService {
   /// Connect to a Bluetooth printer (not supported on desktop)
   static Future<bool> connectBluetooth(dynamic printer) async {
     if (kDebugMode) {
-      print(
+      debugPrint(
           'ThermalPrinterService: Bluetooth connection not supported on desktop');
     }
     return false;
@@ -59,7 +60,8 @@ class ThermalPrinterService {
   /// Connect to a USB printer (not supported on desktop)
   static Future<bool> connectUsb(dynamic device) async {
     if (kDebugMode) {
-      print('ThermalPrinterService: USB connection not supported on desktop');
+      debugPrint(
+          'ThermalPrinterService: USB connection not supported on desktop');
     }
     return false;
   }
@@ -88,7 +90,7 @@ class ThermalPrinterService {
     double? downPayment,
   }) async {
     if (kDebugMode) {
-      print(
+      debugPrint(
           'ThermalPrinterService: Thermal printing not available on desktop. Use PrintService for PDF printing.');
     }
     return false;
@@ -105,7 +107,7 @@ class ThermalPrinterService {
     String? invoiceNumber,
   }) async {
     if (kDebugMode) {
-      print(
+      debugPrint(
           'ThermalPrinterService: Thermal printing not available on desktop. Use PrintService for PDF printing.');
     }
     return false;
@@ -148,7 +150,7 @@ class ThermalPrinterProvider extends ChangeNotifier {
       _bluetoothPrinters = await ThermalPrinterService.scanBluetoothPrinters();
     } catch (e) {
       if (kDebugMode) {
-        print('Error scanning Bluetooth printers: $e');
+        debugPrint('Error scanning Bluetooth printers: $e');
       }
     } finally {
       _isScanning = false;
@@ -171,7 +173,7 @@ class ThermalPrinterProvider extends ChangeNotifier {
       _usbPrinters = await ThermalPrinterService.scanUsbPrinters();
     } catch (e) {
       if (kDebugMode) {
-        print('Error scanning USB printers: $e');
+        debugPrint('Error scanning USB printers: $e');
       }
     } finally {
       _isScanning = false;
@@ -192,7 +194,7 @@ class ThermalPrinterProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('Error connecting to Bluetooth printer: $e');
+        debugPrint('Error connecting to Bluetooth printer: $e');
       }
       _isConnected = false;
       notifyListeners();
@@ -212,7 +214,7 @@ class ThermalPrinterProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('Error connecting to USB printer: $e');
+        debugPrint('Error connecting to USB printer: $e');
       }
       _isConnected = false;
       notifyListeners();

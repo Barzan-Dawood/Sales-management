@@ -1,5 +1,6 @@
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 /// أداة إنشاء مفاتيح الترخيص للمطور
 class LicenseGenerator {
@@ -196,14 +197,16 @@ class LicenseGenerator {
   static void printLicenseInfo(String licenseKey) {
     final info = parseLicenseKey(licenseKey);
 
-    print('=== معلومات مفتاح الترخيص ===');
-    print('المفتاح: $licenseKey');
-    print('صحيح: ${info['valid']}');
-    print('البادئة: ${info['prefix']}');
-    print('السنة: ${info['year']}');
-    print('اسم العميل: ${info['customerName'] ?? 'غير محدد'}');
-    print('تاريخ الانتهاء: ${info['expirationDate'] ?? 'غير محدد'}');
-    print('==============================');
+    if (kDebugMode) {
+      debugPrint('=== معلومات مفتاح الترخيص ===');
+      debugPrint('المفتاح: $licenseKey');
+      debugPrint('صحيح: ${info['valid']}');
+      debugPrint('البادئة: ${info['prefix']}');
+      debugPrint('السنة: ${info['year']}');
+      debugPrint('اسم العميل: ${info['customerName'] ?? 'غير محدد'}');
+      debugPrint('تاريخ الانتهاء: ${info['expirationDate'] ?? 'غير محدد'}');
+      debugPrint('==============================');
+    }
   }
 }
 
@@ -212,7 +215,9 @@ class LicenseGeneratorCLI {
   /// إنشاء مفتاح ترخيص واحد
   static void generateSingle() {
     final license = LicenseGenerator.generateLicenseKey();
-    print('مفتاح الترخيص الجديد: $license');
+    if (kDebugMode) {
+      debugPrint('مفتاح الترخيص الجديد: $license');
+    }
     LicenseGenerator.printLicenseInfo(license);
   }
 
@@ -223,11 +228,13 @@ class LicenseGeneratorCLI {
       customerPrefix: customerPrefix,
     );
 
-    print('=== دفعة مفاتيح الترخيص ($count) ===');
-    for (int i = 0; i < licenses.length; i++) {
-      print('${i + 1}. ${licenses[i]}');
+    if (kDebugMode) {
+      debugPrint('=== دفعة مفاتيح الترخيص ($count) ===');
+      for (int i = 0; i < licenses.length; i++) {
+        debugPrint('${i + 1}. ${licenses[i]}');
+      }
+      debugPrint('================================');
     }
-    print('================================');
   }
 
   /// التحقق من مفتاح ترخيص

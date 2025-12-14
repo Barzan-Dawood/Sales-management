@@ -873,7 +873,7 @@ Future<void> _resetAllPasswords(
           whereArgs: [otherId],
         );
       }
-      final result = await db.database.update(
+      await db.database.update(
         'users',
         {
           'username': 'manager',
@@ -909,7 +909,7 @@ Future<void> _resetAllPasswords(
             whereArgs: [otherId],
           );
         }
-        final result = await db.database.update(
+        await db.database.update(
           'users',
           {
             'username': 'supervisor',
@@ -961,7 +961,7 @@ Future<void> _resetAllPasswords(
             whereArgs: [otherId],
           );
         }
-        final result = await db.database.update(
+        await db.database.update(
           'users',
           {
             'username': 'employee',

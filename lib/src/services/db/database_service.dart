@@ -7,7 +7,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
+import 'package:sqflite/sqflite.dart';
 import '../../models/user_model.dart';
+import 'database_schema.dart';
+import 'database_migrations.dart';
 
 class DatabaseService {
   static const String _dbName = 'pos_office.db';
@@ -36,58 +39,14 @@ class DatabaseService {
       dbPath,
       version: _dbVersion,
       onCreate: (db, version) async {
-        await _createSchema(db);
-        await _seedData(db);
-        await _createIndexes(db);
+        await DatabaseSchema.createSchema(db);
+        await DatabaseSchema.seedData(db, _sha256Hex);
+        await DatabaseSchema.createIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        // Add migrations here as schema evolves
-        if (oldVersion < 2) {
-          await _migrateToV2(db);
-        }
-        if (oldVersion < 3) {
-          await _migrateToV3(db);
-        }
-        if (oldVersion < 4) {
-          await _migrateToV4(db);
-        }
-        if (oldVersion < 5) {
-          await _migrateToV5(db);
-        }
-        if (oldVersion < 6) {
-          await _migrateToV6(db);
-        }
-        if (oldVersion < 7) {
-          await _migrateToV7(db);
-        }
-        if (oldVersion < 8) {
-          await _migrateToV8(db);
-        }
-        if (oldVersion < 9) {
-          await _migrateToV9(db);
-        }
-        if (oldVersion < 10) {
-          await _migrateToV10(db);
-        }
-        if (oldVersion < 11) {
-          await _migrateToV11(db);
-        }
-        if (oldVersion < 12) {
-          await _migrateToV12(db);
-        }
-        if (oldVersion < 13) {
-          await _migrateToV13(db);
-        }
-        if (oldVersion < 14) {
-          await _migrateToV14(db);
-        }
-        if (oldVersion < 15) {
-          await _migrateToV15(db);
-        }
-        // Ensure no legacy triggers/views remain that reference old temp tables
-        await _cleanupOrphanObjects(db);
-        await _ensureCategorySchemaOn(db);
-        await _createIndexes(db);
+        // تشغيل جميع الترحيلات المطلوبة
+        await DatabaseMigrations.runMigrations(db, oldVersion, newVersion);
+        await DatabaseSchema.createIndexes(db);
       },
       onOpen: (db) async {
         // التحقق من وجود الجداول المهمة عند فتح قاعدة البيانات
@@ -122,7 +81,7 @@ class DatabaseService {
     // التأكد من وجود جداول الخصومات والكوبونات
     await _ensureDiscountTables(_db);
 
-    await _createIndexes(_db);
+    await DatabaseSchema.createIndexes(_db);
 
     // فحص وإصلاح المستخدمين الافتراضيين فقط
     await checkAndFixDefaultUsers();
@@ -142,7 +101,7 @@ class DatabaseService {
     // التأكد من وجود جداول الخصومات والكوبونات
     await _ensureDiscountTables(_db);
 
-    await _createIndexes(_db);
+    await DatabaseSchema.createIndexes(_db);
     await _cleanupOrphanObjects(_db);
     await _ensureCategorySchemaOn(_db);
     await _ensureSaleItemsDiscountColumn(_db);
@@ -292,9 +251,8 @@ class DatabaseService {
   /// This method can be called to resolve database corruption issues
   Future<void> forceCleanup() async {
     try {
-      await _cleanupOrphanObjects(_db);
-      await _createIndexes(_db);
-      await _ensureCategorySchemaOn(_db);
+      await DatabaseMigrations.runMigrations(_db, 1, _dbVersion);
+      await DatabaseSchema.createIndexes(_db);
     } catch (e) {
       rethrow;
     }
@@ -540,8 +498,7 @@ class DatabaseService {
       ''');
 
       // Recreate indexes
-      await _createIndexes(_db);
-      await _ensureCategorySchemaOn(_db);
+      await DatabaseSchema.createIndexes(_db);
 
       // Re-enable foreign keys
       await _db.execute('PRAGMA foreign_keys = ON');
@@ -730,28 +687,7 @@ class DatabaseService {
     }
   }
 
-  Future<void> _migrateToV2(Database db) async {
-    // SQLite cannot directly alter CHECK constraints. Recreate sales table.
-    await db.execute('PRAGMA foreign_keys=off');
-    await db.execute('ALTER TABLE sales RENAME TO sales_old');
-    await db.execute('''
-      CREATE TABLE sales (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER,
-        total REAL NOT NULL,
-        profit REAL NOT NULL DEFAULT 0,
-        type TEXT NOT NULL CHECK(type IN ('cash','installment','credit')),
-        created_at TEXT NOT NULL,
-        FOREIGN KEY(customer_id) REFERENCES customers(id)
-      );
-    ''');
-    await db.execute('''
-      INSERT INTO sales (id, customer_id, total, profit, type, created_at)
-      SELECT id, customer_id, total, profit, type, created_at FROM sales_old;
-    ''');
-    await db.execute('DROP TABLE sales_old');
-    await db.execute('PRAGMA foreign_keys=on');
-  }
+  // تم نقل _migrateToV2 إلى database_migrations.dart
 
   Future<void> _cleanupOrphanObjects(Database db) async {
     try {
@@ -920,324 +856,7 @@ class DatabaseService {
     }
   }
 
-  /// التحقق من وجود جدول
-  Future<bool> _tableExists(Database db, String tableName) async {
-    try {
-      final tables = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-        [tableName],
-      );
-      return tables.isNotEmpty;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<void> _createIndexes(Database db) async {
-    // Products
-    if (await _tableExists(db, 'products')) {
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)');
-      if (await _columnExists(db, 'products', 'category_id')) {
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)');
-      }
-    }
-
-    // Sales
-    if (await _tableExists(db, 'sales')) {
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at)');
-      if (await _columnExists(db, 'sales', 'customer_id')) {
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_id)');
-      }
-      await db
-          .execute('CREATE INDEX IF NOT EXISTS idx_sales_type ON sales(type)');
-    }
-
-    // Sale items
-    if (await _tableExists(db, 'sale_items')) {
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_sale_items_product ON sale_items(product_id)');
-    }
-
-    // Customers
-    if (await _tableExists(db, 'customers')) {
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)');
-    }
-
-    // Payments
-    if (await _tableExists(db, 'payments')) {
-      if (await _columnExists(db, 'payments', 'customer_id')) {
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id)');
-      }
-      if (await _columnExists(db, 'payments', 'payment_date')) {
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date)');
-      }
-    }
-
-    // Expenses
-    if (await _tableExists(db, 'expenses')) {
-      // التحقق من وجود عمود expense_date قبل إنشاء الفهرس
-      if (await _columnExists(db, 'expenses', 'expense_date')) {
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)');
-      }
-      // التحقق من وجود عمود category قبل إنشاء الفهرس
-      if (await _columnExists(db, 'expenses', 'category')) {
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)');
-      }
-    }
-
-    // Event Log
-    if (await _tableExists(db, 'event_log')) {
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_event_log_event_type ON event_log(event_type)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_event_log_entity_type ON event_log(entity_type)');
-      if (await _columnExists(db, 'event_log', 'user_id')) {
-        await db.execute(
-            'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
-      }
-    }
-  }
-
-  Future<void> _createSchema(Database db) async {
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        icon INTEGER,
-        color INTEGER
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE groups (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        description TEXT,
-        active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE group_permissions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        group_id INTEGER NOT NULL,
-        section TEXT NOT NULL,
-        permission TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE,
-        UNIQUE(group_id, section, permission)
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT CHECK(role IN ('manager','supervisor','employee')),
-        group_id INTEGER REFERENCES groups(id),
-        employee_code TEXT UNIQUE NOT NULL,
-        active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        barcode TEXT UNIQUE,
-        price REAL NOT NULL,
-        cost REAL NOT NULL DEFAULT 0,
-        quantity INTEGER NOT NULL DEFAULT 0,
-        min_quantity INTEGER NOT NULL DEFAULT 1,
-        category_id INTEGER,
-        created_at TEXT NOT NULL,
-        updated_at TEXT
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE customers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT,
-        address TEXT,
-        total_debt REAL NOT NULL DEFAULT 0
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE suppliers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT,
-        address TEXT,
-        total_payable REAL NOT NULL DEFAULT 0
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE sales (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER,
-        total REAL NOT NULL,
-        profit REAL NOT NULL DEFAULT 0,
-        type TEXT NOT NULL CHECK(type IN ('cash','installment','credit')),
-        created_at TEXT NOT NULL,
-        due_date TEXT,
-        down_payment REAL DEFAULT 0,
-        FOREIGN KEY(customer_id) REFERENCES customers(id)
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE sale_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sale_id INTEGER NOT NULL,
-        product_id INTEGER NOT NULL,
-        price REAL NOT NULL,
-        cost REAL NOT NULL,
-        quantity INTEGER NOT NULL,
-        discount_percent REAL NOT NULL DEFAULT 0,
-        FOREIGN KEY(sale_id) REFERENCES sales(id),
-        FOREIGN KEY(product_id) REFERENCES products(id)
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE installments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sale_id INTEGER NOT NULL,
-        due_date TEXT NOT NULL,
-        amount REAL NOT NULL,
-        paid INTEGER NOT NULL DEFAULT 0,
-        paid_at TEXT,
-        FOREIGN KEY(sale_id) REFERENCES sales(id)
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE expenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        amount REAL NOT NULL,
-        category TEXT NOT NULL DEFAULT 'عام',
-        description TEXT,
-        expense_date TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        shop_name TEXT,
-        phone TEXT,
-        address TEXT,
-        logo_path TEXT
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER NOT NULL,
-        amount REAL NOT NULL,
-        payment_date TEXT NOT NULL,
-        notes TEXT,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY(customer_id) REFERENCES customers(id)
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE event_log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_type TEXT NOT NULL,
-        entity_type TEXT NOT NULL,
-        entity_id INTEGER,
-        user_id INTEGER,
-        username TEXT,
-        description TEXT NOT NULL,
-        details TEXT,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY(user_id) REFERENCES users(id)
-      );
-    ''');
-
-    await db.execute('''
-      CREATE TABLE deleted_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        entity_type TEXT NOT NULL,
-        entity_id INTEGER NOT NULL,
-        original_data TEXT NOT NULL,
-        deleted_by_user_id INTEGER,
-        deleted_by_username TEXT,
-        deleted_at TEXT NOT NULL,
-        can_restore INTEGER NOT NULL DEFAULT 1,
-        FOREIGN KEY(deleted_by_user_id) REFERENCES users(id)
-      );
-    ''');
-
-    // جدول خصومات المنتجات
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS product_discounts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER NOT NULL,
-        discount_percent REAL NOT NULL DEFAULT 0,
-        discount_amount REAL,
-        start_date TEXT,
-        end_date TEXT,
-        active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL,
-        updated_at TEXT,
-        FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
-      );
-    ''');
-
-    // جدول كوبونات الخصم
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS discount_coupons (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT NOT NULL UNIQUE,
-        name TEXT NOT NULL,
-        discount_type TEXT NOT NULL CHECK(discount_type IN ('percent','amount')),
-        discount_value REAL NOT NULL,
-        min_purchase_amount REAL DEFAULT 0,
-        max_discount_amount REAL,
-        usage_limit INTEGER,
-        used_count INTEGER NOT NULL DEFAULT 0,
-        start_date TEXT,
-        end_date TEXT,
-        active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL,
-        updated_at TEXT
-      );
-    ''');
-  }
+  // تم نقل _createIndexes و _createSchema إلى database_schema.dart
 
   Future<void> _ensureCategorySchemaOn(Database db) async {
     await db.execute('''
@@ -1267,723 +886,7 @@ class DatabaseService {
     }
   }
 
-  Future<void> _migrateToV3(Database db) async {
-    // Add due_date to sales for credit tracking
-    try {
-      await db.execute('ALTER TABLE sales ADD COLUMN due_date TEXT');
-    } catch (_) {}
-  }
-
-  Future<void> _migrateToV4(Database db) async {
-    // Add payments table for debt collection
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER NOT NULL,
-        amount REAL NOT NULL,
-        payment_date TEXT NOT NULL,
-        notes TEXT,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY(customer_id) REFERENCES customers(id)
-      );
-    ''');
-  }
-
-  Future<void> _migrateToV5(Database db) async {
-    // Add address field to settings table
-    try {
-      await db.execute('ALTER TABLE settings ADD COLUMN address TEXT');
-    } catch (_) {
-      // column already exists
-    }
-  }
-
-  Future<void> _migrateToV6(Database db) async {
-    // Add down_payment field to sales table for installments
-    try {
-      await db
-          .execute('ALTER TABLE sales ADD COLUMN down_payment REAL DEFAULT 0');
-    } catch (_) {
-      // column already exists
-    }
-  }
-
-  Future<void> _migrateToV7(Database db) async {
-    // تحديث جدول المستخدمين لدعم النظام الجديد
-    try {
-      // إعادة إنشاء جدول المستخدمين لدعم supervisor
-      await db.execute('PRAGMA foreign_keys=off');
-
-      // إنشاء جدول مؤقت
-      await db.execute('''
-        CREATE TABLE users_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          username TEXT UNIQUE NOT NULL,
-          password TEXT NOT NULL,
-          role TEXT NOT NULL CHECK(role IN ('manager','supervisor','employee')),
-          employee_code TEXT UNIQUE NOT NULL,
-          active INTEGER NOT NULL DEFAULT 1,
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-      ''');
-
-      // نسخ البيانات الموجودة
-      await db.execute('''
-        INSERT INTO users_new (id, name, username, password, role, employee_code, active, created_at, updated_at)
-        SELECT 
-          id, 
-          name, 
-          username, 
-          password, 
-          role,
-          COALESCE(employee_code, 'LEGACY' || id) as employee_code,
-          active,
-          COALESCE(created_at, datetime('now')) as created_at,
-          datetime('now') as updated_at
-        FROM users;
-      ''');
-
-      // حذف الجدول القديم
-      await db.execute('DROP TABLE users');
-
-      // إعادة تسمية الجدول الجديد
-      await db.execute('ALTER TABLE users_new RENAME TO users');
-
-      await db.execute('PRAGMA foreign_keys=on');
-
-      // تحديث البيانات الموجودة
-      final now = DateTime.now().toIso8601String();
-      final existingUsers = await db.query('users');
-
-      for (final user in existingUsers) {
-        await db.update(
-            'users',
-            {
-              'employee_code': user['employee_code'] ?? 'LEGACY001',
-              'created_at': user['created_at'] ?? now,
-              'updated_at': now,
-            },
-            where: 'id = ?',
-            whereArgs: [user['id']]);
-      }
-
-      // إضافة المستخدمين الافتراضيين
-      final defaultUsers = [
-        {
-          'name': 'المدير',
-          'username': 'manager',
-          'password': 'admin123',
-          'role': 'manager',
-          'employee_code': 'A1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'المشرف',
-          'username': 'supervisor',
-          'password': 'super123',
-          'role': 'supervisor',
-          'employee_code': 'S1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'الموظف',
-          'username': 'employee',
-          'password': 'emp123',
-          'role': 'employee',
-          'employee_code': 'C1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-      ];
-
-      for (final user in defaultUsers) {
-        final existing = await db.query('users',
-            where: 'username = ?', whereArgs: [user['username']], limit: 1);
-
-        if (existing.isEmpty) {
-          await db.insert('users', user);
-        } else {}
-      }
-    } catch (e) {}
-  }
-
-  Future<void> _migrateToV8(Database db) async {
-    // إصلاح جدول المستخدمين لدعم supervisor
-    try {
-      // إعادة إنشاء جدول المستخدمين لدعم supervisor
-      await db.execute('PRAGMA foreign_keys=off');
-
-      // إنشاء جدول مؤقت
-      await db.execute('''
-        CREATE TABLE users_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          username TEXT UNIQUE NOT NULL,
-          password TEXT NOT NULL,
-          role TEXT NOT NULL CHECK(role IN ('manager','supervisor','employee')),
-          employee_code TEXT UNIQUE NOT NULL,
-          active INTEGER NOT NULL DEFAULT 1,
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-      ''');
-
-      // نسخ البيانات الموجودة
-      await db.execute('''
-        INSERT INTO users_new (id, name, username, password, role, employee_code, active, created_at, updated_at)
-        SELECT 
-          id, 
-          name, 
-          username, 
-          password, 
-          role,
-          COALESCE(employee_code, 'LEGACY' || id) as employee_code,
-          active,
-          COALESCE(created_at, datetime('now')) as created_at,
-          datetime('now') as updated_at
-        FROM users;
-      ''');
-
-      // حذف الجدول القديم
-      await db.execute('DROP TABLE users');
-
-      // إعادة تسمية الجدول الجديد
-      await db.execute('ALTER TABLE users_new RENAME TO users');
-
-      await db.execute('PRAGMA foreign_keys=on');
-
-      // إضافة المستخدمين الافتراضيين
-      final now = DateTime.now().toIso8601String();
-      final defaultUsers = [
-        {
-          'name': 'المدير',
-          'username': 'manager',
-          'password': 'admin123',
-          'role': 'manager',
-          'employee_code': 'A1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'المشرف',
-          'username': 'supervisor',
-          'password': 'super123',
-          'role': 'supervisor',
-          'employee_code': 'S1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'الموظف',
-          'username': 'employee',
-          'password': 'emp123',
-          'role': 'employee',
-          'employee_code': 'C1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-      ];
-
-      for (final user in defaultUsers) {
-        final existing = await db.query('users',
-            where: 'username = ?', whereArgs: [user['username']], limit: 1);
-
-        if (existing.isEmpty) {
-          await db.insert('users', user);
-        } else {}
-      }
-    } catch (e) {}
-  }
-
-  Future<void> _migrateToV9(Database db) async {
-    // تحديث جدول المصروفات لإضافة حقول جديدة
-    try {
-      // التحقق من وجود الأعمدة الجديدة
-      final cols = await db.rawQuery("PRAGMA table_info('expenses')");
-      final columnNames = cols.map((c) => c['name']?.toString() ?? '').toList();
-
-      // إضافة الأعمدة الجديدة إذا لم تكن موجودة
-      if (!columnNames.contains('category')) {
-        await db.execute(
-            'ALTER TABLE expenses ADD COLUMN category TEXT NOT NULL DEFAULT \'عام\'');
-      }
-
-      if (!columnNames.contains('description')) {
-        await db.execute('ALTER TABLE expenses ADD COLUMN description TEXT');
-      }
-
-      if (!columnNames.contains('expense_date')) {
-        // إضافة عمود expense_date واستخدام created_at كقيمة افتراضية
-        await db.execute('ALTER TABLE expenses ADD COLUMN expense_date TEXT');
-        // نسخ created_at إلى expense_date للبيانات الموجودة
-        await db.execute(
-            'UPDATE expenses SET expense_date = created_at WHERE expense_date IS NULL');
-        // جعل الحقل NOT NULL بعد نسخ البيانات
-        await db.execute('''
-          CREATE TABLE expenses_new (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            amount REAL NOT NULL,
-            category TEXT NOT NULL DEFAULT 'عام',
-            description TEXT,
-            expense_date TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT
-          );
-        ''');
-        await db.execute('''
-          INSERT INTO expenses_new (id, title, amount, category, description, expense_date, created_at, updated_at)
-          SELECT id, title, amount, COALESCE(category, 'عام'), description, COALESCE(expense_date, created_at), created_at, COALESCE(updated_at, created_at)
-          FROM expenses;
-        ''');
-        await db.execute('DROP TABLE expenses');
-        await db.execute('ALTER TABLE expenses_new RENAME TO expenses');
-        // تحديث columnNames بعد إعادة إنشاء الجدول
-        final newCols = await db.rawQuery("PRAGMA table_info('expenses')");
-        final newColumnNames =
-            newCols.map((c) => c['name']?.toString() ?? '').toList();
-        columnNames.clear();
-        columnNames.addAll(newColumnNames);
-      }
-
-      // التحقق مرة أخرى من updated_at بعد إعادة إنشاء الجدول
-      if (!columnNames.contains('updated_at')) {
-        try {
-          await db.execute('ALTER TABLE expenses ADD COLUMN updated_at TEXT');
-        } catch (e) {}
-      }
-    } catch (e) {}
-  }
-
-  Future<void> _migrateToV10(Database db) async {
-    // إضافة جدول event_log لتسجيل جميع العمليات
-    try {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS event_log (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          event_type TEXT NOT NULL,
-          entity_type TEXT NOT NULL,
-          entity_id INTEGER,
-          user_id INTEGER,
-          username TEXT,
-          description TEXT NOT NULL,
-          details TEXT,
-          created_at TEXT NOT NULL,
-          FOREIGN KEY(user_id) REFERENCES users(id)
-        );
-      ''');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_event_log_created_at ON event_log(created_at)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_event_log_event_type ON event_log(event_type)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_event_log_entity_type ON event_log(entity_type)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
-    } catch (e) {}
-  }
-
-  Future<void> _migrateToV11(Database db) async {
-    // إضافة جدول returns للمرتجعات
-    try {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS returns (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          sale_id INTEGER NOT NULL,
-          total_amount REAL NOT NULL,
-          return_date TEXT NOT NULL,
-          notes TEXT,
-          created_at TEXT NOT NULL,
-          FOREIGN KEY(sale_id) REFERENCES sales(id)
-        );
-      ''');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_returns_sale_id ON returns(sale_id)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_returns_return_date ON returns(return_date)');
-    } catch (e) {}
-  }
-
-  Future<void> _migrateToV14(Database db) async {
-    // إضافة جدول deleted_items لسلة المحذوفات
-    try {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS deleted_items (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          entity_type TEXT NOT NULL,
-          entity_id INTEGER NOT NULL,
-          original_data TEXT NOT NULL,
-          deleted_by_user_id INTEGER,
-          deleted_by_username TEXT,
-          deleted_at TEXT NOT NULL,
-          can_restore INTEGER NOT NULL DEFAULT 1,
-          FOREIGN KEY(deleted_by_user_id) REFERENCES users(id)
-        );
-      ''');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_deleted_items_entity_type ON deleted_items(entity_type)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_deleted_items_deleted_at ON deleted_items(deleted_at)');
-    } catch (e) {}
-  }
-
-  Future<void> _migrateToV15(Database db) async {
-    // إضافة نظام الخصومات والكوبونات
-    try {
-      // إضافة حقول الكوبون إلى جدول sales
-      try {
-        await db.execute('ALTER TABLE sales ADD COLUMN coupon_id INTEGER');
-        await db.execute(
-            'ALTER TABLE sales ADD COLUMN coupon_discount REAL DEFAULT 0');
-      } catch (e) {}
-
-      // إنشاء جدول خصومات المنتجات
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS product_discounts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          product_id INTEGER NOT NULL,
-          discount_percent REAL NOT NULL DEFAULT 0,
-          discount_amount REAL,
-          start_date TEXT,
-          end_date TEXT,
-          active INTEGER NOT NULL DEFAULT 1,
-          created_at TEXT NOT NULL,
-          updated_at TEXT,
-          FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
-        );
-      ''');
-
-      // إنشاء جدول كوبونات الخصم
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS discount_coupons (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          code TEXT NOT NULL UNIQUE,
-          name TEXT NOT NULL,
-          discount_type TEXT NOT NULL CHECK(discount_type IN ('percent','amount')),
-          discount_value REAL NOT NULL,
-          min_purchase_amount REAL DEFAULT 0,
-          max_discount_amount REAL,
-          usage_limit INTEGER,
-          used_count INTEGER NOT NULL DEFAULT 0,
-          start_date TEXT,
-          end_date TEXT,
-          active INTEGER NOT NULL DEFAULT 1,
-          created_at TEXT NOT NULL,
-          updated_at TEXT
-        );
-      ''');
-
-      // إنشاء الفهارس
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_product_discounts_product_id ON product_discounts(product_id)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_product_discounts_active ON product_discounts(active)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_discount_coupons_code ON discount_coupons(code)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_discount_coupons_active ON discount_coupons(active)');
-    } catch (e) {}
-  }
-
-  Future<void> _migrateToV12(Database db) async {
-    // إضافة نظام المجموعات والصلاحيات
-    try {
-      // 1. إنشاء جدول groups
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS groups (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL UNIQUE,
-          description TEXT,
-          active INTEGER NOT NULL DEFAULT 1,
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-      ''');
-
-      // 2. إنشاء جدول group_permissions
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS group_permissions (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          group_id INTEGER NOT NULL,
-          section TEXT NOT NULL,
-          permission TEXT NOT NULL,
-          created_at TEXT NOT NULL,
-          FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE,
-          UNIQUE(group_id, section, permission)
-        );
-      ''');
-
-      // 3. إضافة عمود group_id إلى جدول users
-      try {
-        await db.execute(
-            'ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id)');
-      } catch (e) {}
-
-      // 4. إنشاء المجموعات الافتراضية
-      final now = DateTime.now().toIso8601String();
-
-      // مجموعة المدير (Admin)
-      final adminGroupId = await db.insert('groups', {
-        'name': 'Admin',
-        'description': 'مجموعة المديرين - جميع الصلاحيات',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      });
-
-      // مجموعة الموظفين (Employee)
-      final employeeGroupId = await db.insert('groups', {
-        'name': 'Employee',
-        'description': 'مجموعة الموظفين - صلاحيات محدودة',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      });
-
-      // مجموعة HR
-      final hrGroupId = await db.insert('groups', {
-        'name': 'HR',
-        'description': 'مجموعة الموارد البشرية',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      });
-
-      // 5. إضافة الصلاحيات للمجموعات
-      // صلاحيات مجموعة Admin (جميع الصلاحيات)
-      final allPermissions = [
-        'manageUsers',
-        'systemSettings',
-        'manageBackup',
-        'manageLicensing',
-        'manageSales',
-        'applyDiscount',
-        'overridePrice',
-        'refundSales',
-        'voidSale',
-        'deleteSaleItem',
-        'openCashDrawer',
-        'manageProducts',
-        'manageInventory',
-        'adjustStock',
-        'viewCostPrice',
-        'editCostPrice',
-        'receivePurchase',
-        'manageSuppliers',
-        'manageCategories',
-        'manageCustomers',
-        'viewReports',
-        'exportReports',
-        'viewProfitCosts',
-      ];
-
-      // تعيين الصلاحيات لمجموعة Admin
-      for (final perm in allPermissions) {
-        // تحديد القسم لكل صلاحية
-        String section = 'system';
-        if (perm.startsWith('manageUsers')) {
-          section = 'hr';
-        } else if (perm.contains('Sales') ||
-            perm.contains('Discount') ||
-            perm.contains('Price') ||
-            perm.contains('refund') ||
-            perm.contains('void') ||
-            perm.contains('CashDrawer') ||
-            perm.contains('Customers')) {
-          section = 'sales';
-        } else if (perm.contains('Product') ||
-            perm.contains('Inventory') ||
-            perm.contains('Stock') ||
-            perm.contains('Cost') ||
-            perm.contains('Purchase') ||
-            perm.contains('Supplier') ||
-            perm.contains('Categor')) {
-          section = 'inventory';
-        } else if (perm.contains('Report') || perm.contains('Profit')) {
-          section = 'reports';
-        } else if (perm.contains('Backup') ||
-            perm.contains('Licensing') ||
-            perm.contains('Settings')) {
-          section = 'system';
-        } else if (perm.contains('Profit')) {
-          section = 'finance';
-        }
-
-        await db.insert('group_permissions', {
-          'group_id': adminGroupId,
-          'section': section,
-          'permission': perm,
-          'created_at': now,
-        });
-      }
-
-      // صلاحيات مجموعة Employee (مبيعات وتقارير محدودة)
-      final employeePermissions = [
-        {'section': 'sales', 'permission': 'manageSales'},
-        {'section': 'reports', 'permission': 'viewReports'},
-      ];
-
-      for (final perm in employeePermissions) {
-        await db.insert('group_permissions', {
-          'group_id': employeeGroupId,
-          'section': perm['section'],
-          'permission': perm['permission'],
-          'created_at': now,
-        });
-      }
-
-      // صلاحيات مجموعة HR
-      final hrPermissions = [
-        {'section': 'hr', 'permission': 'manageUsers'},
-        {'section': 'reports', 'permission': 'viewReports'},
-      ];
-
-      for (final perm in hrPermissions) {
-        await db.insert('group_permissions', {
-          'group_id': hrGroupId,
-          'section': perm['section'],
-          'permission': perm['permission'],
-          'created_at': now,
-        });
-      }
-
-      // 6. تحديث المستخدمين الموجودين لربطهم بالمجموعات المناسبة
-      final users = await db.query('users');
-      for (final user in users) {
-        final role = user['role']?.toString() ?? 'employee';
-        int? groupId;
-
-        if (role == 'manager') {
-          groupId = adminGroupId;
-        } else if (role == 'employee') {
-          groupId = employeeGroupId;
-        } else if (role == 'supervisor') {
-          // المشرفون ينتقلون لمجموعة Admin (يمكن تغيير ذلك لاحقاً)
-          groupId = adminGroupId;
-        }
-
-        if (groupId != null) {
-          await db.update(
-            'users',
-            {'group_id': groupId},
-            where: 'id = ?',
-            whereArgs: [user['id']],
-          );
-        }
-      }
-
-      // 7. إنشاء الفهارس
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_users_group_id ON users(group_id)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_group_permissions_group_id ON group_permissions(group_id)');
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_group_permissions_section ON group_permissions(section)');
-
-      debugPrint('انتهى Migration V12 بنجاح');
-    } catch (e) {}
-  }
-
-  Future<void> _migrateToV13(Database db) async {
-    // إضافة حقل status إلى جدول returns
-    try {
-      debugPrint('بدء Migration V13 - إضافة حقل status إلى جدول returns...');
-
-      // التحقق من وجود العمود أولاً
-      final columns = await db.rawQuery("PRAGMA table_info(returns)");
-      final columnNames =
-          columns.map((c) => c['name']?.toString().toLowerCase()).toSet();
-
-      if (!columnNames.contains('status')) {
-        await db.execute(
-            'ALTER TABLE returns ADD COLUMN status TEXT NOT NULL DEFAULT \'pending\'');
-        debugPrint('تم إضافة عمود status إلى جدول returns');
-      } else {
-        debugPrint('عمود status موجود بالفعل في جدول returns');
-      }
-
-      // إنشاء فهرس على status
-      await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_returns_status ON returns(status)');
-
-      debugPrint('انتهى Migration V13 بنجاح');
-    } catch (e) {
-      debugPrint('خطأ في Migration V13: $e');
-    }
-  }
-
-  Future<void> _seedData(Database db) async {
-    final now = DateTime.now().toIso8601String();
-    debugPrint('بدء إنشاء البيانات الافتراضية...');
-
-    // إنشاء المستخدمين الافتراضيين
-    final defaultUsers = [
-      {
-        'name': 'المدير',
-        'username': 'manager',
-        'password': _sha256Hex('admin123'),
-        'role': 'manager',
-        'employee_code': 'A1',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      },
-      {
-        'name': 'المشرف',
-        'username': 'supervisor',
-        'password': _sha256Hex('super123'),
-        'role': 'supervisor',
-        'employee_code': 'S1',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      },
-      {
-        'name': 'الموظف',
-        'username': 'employee',
-        'password': _sha256Hex('emp123'),
-        'role': 'employee',
-        'employee_code': 'C1',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      },
-    ];
-
-    for (final user in defaultUsers) {
-      final existing = await db.query('users',
-          where: 'username = ?', whereArgs: [user['username']], limit: 1);
-
-      if (existing.isEmpty) {
-        await db.insert('users', user);
-        debugPrint('تم إنشاء مستخدم جديد: ${user['username']}');
-      } else {
-        await db.update('users', user,
-            where: 'username = ?', whereArgs: [user['username']]);
-        debugPrint('تم تحديث مستخدم موجود: ${user['username']}');
-      }
-    }
-
-    // التأكد من وجود المستخدم الموحد للتوافق مع الإصدارات القديمة
-    final existingAdmin = await db.query('users',
-        where: 'username = ?', whereArgs: ['admin'], limit: 1);
-
-    if (existingAdmin.isNotEmpty) {
-      // حذف المستخدم القديم "admin" لأنه يسبب تضارب
-      await db.delete('users', where: 'username = ?', whereArgs: ['admin']);
-      debugPrint('تم حذف المستخدم القديم admin لتجنب التضارب');
-    }
-  }
+  // تم نقل جميع دوال _migrateToV* و _seedData إلى database_migrations.dart و database_schema.dart
 
   // Simple helpers for common queries used early in development
   Future<Map<String, Object?>?> findUserByCredentials(
@@ -2372,6 +1275,15 @@ class DatabaseService {
               // نتابع حذف المنتج حتى لو فشلت معالجة المبيعات
             }
 
+            // حذف الخصومات المرتبطة بالمنتج
+            try {
+              await txn.delete('product_discounts',
+                  where: 'product_id = ?', whereArgs: [id]);
+            } catch (e) {
+              debugPrint('خطأ في حذف الخصومات المرتبطة بالمنتج: $e');
+              // نتابع حتى لو فشل حذف الخصومات
+            }
+
             // حذف المنتج
             final deletedRows =
                 await txn.delete('products', where: 'id = ?', whereArgs: [id]);
@@ -2423,6 +1335,10 @@ class DatabaseService {
     return _db.transaction<int>((txn) async {
       // First delete all sale_items that reference this product
       await txn.delete('sale_items', where: 'product_id = ?', whereArgs: [id]);
+
+      // Delete product discounts associated with this product
+      await txn.delete('product_discounts',
+          where: 'product_id = ?', whereArgs: [id]);
 
       // Then delete the product
       return txn.delete('products', where: 'id = ?', whereArgs: [id]);
@@ -3775,10 +2691,7 @@ class DatabaseService {
       await _db.execute('PRAGMA foreign_keys = ON');
 
       // إعادة إنشاء الفهارس
-      await _createIndexes(_db);
-
-      // التأكد من وجود الجداول الأساسية
-      await _ensureCategorySchemaOn(_db);
+      await DatabaseSchema.createIndexes(_db);
     } catch (e) {
       await _db.execute('PRAGMA foreign_keys = ON');
       rethrow;
@@ -4256,11 +3169,19 @@ class DatabaseService {
       }
 
       // إنشاء نسخة احتياطية من البيانات الحالية قبل الإغلاق
-      await _db.execute('PRAGMA wal_checkpoint(FULL)');
-      await _db.execute('PRAGMA optimize');
+      try {
+        await _db.execute('PRAGMA wal_checkpoint(FULL)');
+        await _db.execute('PRAGMA optimize');
+      } catch (e) {
+        debugPrint('تحذير: فشل في تحسين قاعدة البيانات قبل النسخ: $e');
+      }
 
       // إغلاق قاعدة البيانات مؤقتاً لضمان النسخ الكامل
-      await _db.close();
+      try {
+        await _db.close();
+      } catch (e) {
+        debugPrint('تحذير: قاعدة البيانات قد تكون مغلقة بالفعل: $e');
+      }
 
       try {
         // نسخ ملف قاعدة البيانات الرئيسي
@@ -4303,9 +3224,7 @@ class DatabaseService {
       // إعادة فتح قاعدة البيانات مع التحسينات
       _db = await openDatabase(_dbPath, version: _dbVersion);
       await _db.execute('PRAGMA foreign_keys = ON');
-      await _createIndexes(_db);
-      await _cleanupOrphanObjects(_db);
-      await _ensureCategorySchemaOn(_db);
+      await DatabaseSchema.createIndexes(_db);
 
       return backupFile.path;
     } catch (e) {
@@ -4313,7 +3232,7 @@ class DatabaseService {
       try {
         _db = await openDatabase(_dbPath, version: _dbVersion);
         await _db.execute('PRAGMA foreign_keys = ON');
-        await _createIndexes(_db);
+        await DatabaseSchema.createIndexes(_db);
       } catch (_) {}
       rethrow;
     }
@@ -4333,81 +3252,6 @@ class DatabaseService {
     }
   }
 
-  /// تشغيل جميع الـ migrations المطلوبة على قاعدة البيانات
-  Future<void> _runAllMigrations(Database db) async {
-    try {
-      // الحصول على إصدار قاعدة البيانات الحالي
-      final versionResult = await db.rawQuery('PRAGMA user_version');
-      final currentVersion = (versionResult.first['user_version'] as int?) ?? 0;
-
-      debugPrint(
-          'إصدار قاعدة البيانات الحالي: $currentVersion، الإصدار المطلوب: $_dbVersion');
-
-      // تشغيل جميع الـ migrations المطلوبة
-      if (currentVersion < 2) {
-        await _migrateToV2(db);
-      }
-      if (currentVersion < 3) {
-        await _migrateToV3(db);
-      }
-      if (currentVersion < 4) {
-        await _migrateToV4(db);
-      }
-      if (currentVersion < 5) {
-        await _migrateToV5(db);
-      }
-      if (currentVersion < 6) {
-        await _migrateToV6(db);
-      }
-      if (currentVersion < 7) {
-        await _migrateToV7(db);
-      }
-      if (currentVersion < 8) {
-        await _migrateToV8(db);
-      }
-      if (currentVersion < 9) {
-        await _migrateToV9(db);
-      }
-      if (currentVersion < 10) {
-        await _migrateToV10(db);
-      }
-      if (currentVersion < 11) {
-        await _migrateToV11(db);
-      }
-      if (currentVersion < 12) {
-        await _migrateToV12(db);
-      }
-      if (currentVersion < 13) {
-        await _migrateToV13(db);
-      }
-      if (currentVersion < 14) {
-        await _migrateToV14(db);
-      }
-      if (currentVersion < 15) {
-        await _migrateToV15(db);
-      }
-
-      // تحديث إصدار قاعدة البيانات
-      await db.execute('PRAGMA user_version = $_dbVersion');
-
-      // التأكد من وجود جميع الجداول والأعمدة المطلوبة
-      await _cleanupOrphanObjects(db);
-      await _ensureCategorySchemaOn(db);
-      await _ensureEventLogTable(db);
-      // ملاحظة: _ensureReturnsTable() تستخدم _db داخلياً
-      // await _ensureReturnsTable();
-      await _ensureReturnsTableColumns(db);
-      await _ensureReturnsStatusColumn(db);
-      await _ensureDeletedItemsTable(db);
-      await _ensureSaleItemsDiscountColumn(db);
-
-      debugPrint('تم تشغيل جميع الـ migrations بنجاح');
-    } catch (e) {
-      debugPrint('خطأ في تشغيل الـ migrations: $e');
-      rethrow;
-    }
-  }
-
   /// استعادة نسخة احتياطية كاملة محسنة
   Future<void> restoreFullBackup(String backupFilePath) async {
     try {
@@ -4416,7 +3260,8 @@ class DatabaseService {
         throw Exception('ملف النسخة الاحتياطية غير موجود');
       }
 
-      // التحقق من صحة ملف النسخة الاحتياطية
+      // التحقق من صحة ملف النسخة الاحتياطية والحصول على إصداره
+      int backupVersion = 1;
       final testDb = await openDatabase(backupFilePath, readOnly: true);
       try {
         await testDb.rawQuery('SELECT COUNT(*) FROM sqlite_master');
@@ -4426,6 +3271,10 @@ class DatabaseService {
         if (tables.isEmpty) {
           throw Exception('ملف النسخة الاحتياطية لا يحتوي على جداول صالحة');
         }
+        // الحصول على إصدار قاعدة البيانات من النسخة الاحتياطية
+        final versionResult = await testDb.rawQuery('PRAGMA user_version');
+        backupVersion = (versionResult.first['user_version'] as int?) ?? 1;
+        debugPrint('إصدار النسخة الاحتياطية: $backupVersion');
       } finally {
         await testDb.close();
       }
@@ -4435,8 +3284,17 @@ class DatabaseService {
       final currentBackupPath = '${_dbPath}_pre_restore_$timestamp.db';
 
       // إغلاق قاعدة البيانات الحالية وإجراء تنظيف
-      await _db.execute('PRAGMA wal_checkpoint(FULL)');
-      await _db.close();
+      try {
+        await _db.execute('PRAGMA wal_checkpoint(FULL)');
+      } catch (e) {
+        debugPrint('تحذير: فشل في تحسين قاعدة البيانات قبل الاستعادة: $e');
+      }
+
+      try {
+        await _db.close();
+      } catch (e) {
+        debugPrint('تحذير: قاعدة البيانات قد تكون مغلقة بالفعل: $e');
+      }
 
       // نسخ البيانات الحالية كنسخة احتياطية احتياطية
       await File(_dbPath).copy(currentBackupPath);
@@ -4471,21 +3329,69 @@ class DatabaseService {
         }
 
         // إعادة فتح قاعدة البيانات والتحقق من صحتها
-        _db = await openDatabase(_dbPath, version: _dbVersion);
+        // نفتح قاعدة البيانات بدون تحديد الإصدار لتجنب استدعاء onUpgrade تلقائياً
+        // ثم نتحكم في migrations يدوياً
+        _db = await openDatabase(_dbPath);
         await _db.execute('PRAGMA foreign_keys = ON');
 
         // التحقق من صحة البيانات المستعادة
-        await _db.rawQuery('PRAGMA integrity_check');
+        final integrityResult = await _db.rawQuery('PRAGMA integrity_check');
+        final integrityCheck =
+            integrityResult.first['integrity_check'] as String?;
+        if (integrityCheck != 'ok') {
+          throw Exception(
+              'فشل التحقق من سلامة قاعدة البيانات: $integrityCheck');
+        }
 
-        // تشغيل جميع الـ migrations المطلوبة قبل إنشاء الفهارس
-        debugPrint('بدء تشغيل الـ migrations بعد الاستعادة...');
-        await _runAllMigrations(_db);
+        // الحصول على الإصدار الحالي للنسخة المستعادة
+        final currentVersionResult = await _db.rawQuery('PRAGMA user_version');
+        final currentVersion =
+            (currentVersionResult.first['user_version'] as int?) ??
+                backupVersion;
+        debugPrint(
+            'إصدار النسخة المستعادة: $currentVersion، الإصدار المطلوب: $_dbVersion');
+
+        // تشغيل جميع الـ migrations المطلوبة فقط إذا كان الإصدار الحالي أقل من المطلوب
+        if (currentVersion < _dbVersion) {
+          debugPrint(
+              'بدء تشغيل الـ migrations بعد الاستعادة من الإصدار $currentVersion إلى $_dbVersion...');
+          await DatabaseMigrations.runMigrations(
+              _db, currentVersion, _dbVersion);
+
+          // تحديث إصدار قاعدة البيانات
+          await _db.execute('PRAGMA user_version = $_dbVersion');
+          debugPrint('تم تحديث إصدار قاعدة البيانات إلى $_dbVersion');
+        } else {
+          debugPrint(
+              'قاعدة البيانات في الإصدار المطلوب، لا حاجة لتشغيل migrations');
+        }
 
         // إعادة بناء الفهارس والتنظيف بعد الـ migrations
-        await _createIndexes(_db);
+        await DatabaseSchema.createIndexes(_db);
+
+        // التأكد من وجود جميع الجداول المهمة (returns, event_log, deleted_items, إلخ)
+        await _ensureReturnsTable(_db);
+        await _ensureReturnsTableColumns(_db);
+        await _ensureReturnsStatusColumn(_db);
+        await _ensureEventLogTable(_db);
+        await _ensureDeletedItemsTable(_db);
+        await _ensureExpensesTableColumns(_db);
+        await _ensureDiscountTables(_db);
 
         // تحسين قاعدة البيانات بعد الاستعادة
         await _db.execute('PRAGMA optimize');
+
+        // حذف جميع البيانات عدا المستخدمين بعد الاستعادة
+        // (حذف سلة المحذوفات، الكوبونات، الخصومات، سجل الأحداث، وجميع البيانات الأخرى)
+        // نستخدم _deleteAllDataExceptUsers بدلاً من deleteAllDataNew لتجنب استدعاء seedData
+        debugPrint('بدء حذف البيانات عدا المستخدمين بعد الاستعادة...');
+        try {
+          await _deleteAllDataExceptUsers();
+          debugPrint('تم حذف جميع البيانات عدا المستخدمين بنجاح');
+        } catch (e) {
+          debugPrint('تحذير: فشل حذف البيانات بعد الاستعادة: $e');
+          // لا نرمي الخطأ هنا لأن الاستعادة تمت بنجاح
+        }
       } catch (restoreError) {
         // في حالة فشل الاستعادة، استعادة البيانات الأصلية
         try {
@@ -4505,7 +3411,7 @@ class DatabaseService {
 
           _db = await openDatabase(_dbPath, version: _dbVersion);
           await _db.execute('PRAGMA foreign_keys = ON');
-          await _createIndexes(_db);
+          await DatabaseSchema.createIndexes(_db);
         } catch (_) {}
 
         // حذف النسخة الاحتياطية المؤقتة وجميع ملفاتها
@@ -4530,7 +3436,7 @@ class DatabaseService {
       try {
         _db = await openDatabase(_dbPath, version: _dbVersion);
         await _db.execute('PRAGMA foreign_keys = ON');
-        await _createIndexes(_db);
+        await DatabaseSchema.createIndexes(_db);
       } catch (_) {}
       rethrow;
     }
@@ -4602,26 +3508,44 @@ class DatabaseService {
             .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
         final tableNames = tables.map((t) => t['name'] as String).toList();
 
+        // الجداول الأساسية المطلوبة (يجب أن تكون موجودة)
         final requiredTables = [
           'users',
           'products',
           'categories',
           'customers',
           'sales',
-          'sale_items'
+          'sale_items',
+          'installments',
+          'payments',
+          'expenses',
+          'suppliers',
+          'settings',
         ];
+
+        // التحقق من وجود جميع الجداول الأساسية
         for (final table in requiredTables) {
-          if (!tableNames.contains(table)) return false;
+          if (!tableNames.contains(table)) {
+            debugPrint('النسخة الاحتياطية لا تحتوي على الجدول المطلوب: $table');
+            return false;
+          }
         }
 
         // التحقق من سلامة البيانات
-        await testDb.rawQuery('PRAGMA integrity_check');
+        final integrityResult = await testDb.rawQuery('PRAGMA integrity_check');
+        final integrityCheck =
+            integrityResult.first['integrity_check'] as String?;
+        if (integrityCheck != 'ok') {
+          debugPrint('فشل التحقق من سلامة النسخة الاحتياطية: $integrityCheck');
+          return false;
+        }
 
         return true;
       } finally {
         await testDb.close();
       }
     } catch (e) {
+      debugPrint('خطأ في التحقق من النسخة الاحتياطية: $e');
       return false;
     }
   }
@@ -4631,35 +3555,53 @@ class DatabaseService {
       String backupPath) async {
     try {
       final backupDir = Directory(backupPath);
-      if (!await backupDir.exists()) return [];
+      if (!await backupDir.exists()) {
+        debugPrint('مجلد النسخ الاحتياطية غير موجود: $backupPath');
+        return [];
+      }
 
-      final backupFiles = await backupDir
-          .list()
-          .where((entity) => entity is File && entity.path.endsWith('.db'))
-          .cast<File>()
-          .toList();
+      // الحصول على جميع الملفات من المجلد
+      final entities = await backupDir.list().toList();
+      debugPrint('عدد الملفات في المجلد: ${entities.length}');
+
+      // فلترة الملفات التي تنتهي بـ .db
+      final backupFiles = <File>[];
+      for (final entity in entities) {
+        if (entity is File && entity.path.endsWith('.db')) {
+          backupFiles.add(entity);
+        }
+      }
+
+      debugPrint('عدد ملفات النسخ الاحتياطية: ${backupFiles.length}');
 
       final backups = <Map<String, dynamic>>[];
       for (final file in backupFiles) {
-        final stat = await file.stat();
-        final size = await file.length();
-        final isValid = await verifyBackup(file.path);
+        try {
+          final stat = await file.stat();
+          final size = await file.length();
+          final isValid = await verifyBackup(file.path);
 
-        backups.add({
-          'path': file.path,
-          'name': p.basename(file.path),
-          'size': size,
-          'date': stat.modified,
-          'isValid': isValid,
-        });
+          backups.add({
+            'path': file.path,
+            'name': p.basename(file.path),
+            'size': size,
+            'date': stat.modified,
+            'isValid': isValid,
+          });
+        } catch (e) {
+          debugPrint('خطأ في معالجة ملف النسخة الاحتياطية ${file.path}: $e');
+          // نتابع مع الملفات الأخرى حتى لو فشل أحدها
+        }
       }
 
       // ترتيب حسب التاريخ (الأحدث أولاً)
       backups.sort(
           (a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
 
+      debugPrint('عدد النسخ الاحتياطية المعروضة: ${backups.length}');
       return backups;
     } catch (e) {
+      debugPrint('خطأ في الحصول على قائمة النسخ الاحتياطية: $e');
       return [];
     }
   }
@@ -5126,8 +4068,9 @@ class DatabaseService {
     }
   }
 
-  /// حذف جميع البيانات من قاعدة البيانات (نسخة محدثة)
-  Future<void> deleteAllDataNew() async {
+  /// حذف جميع البيانات عدا المستخدمين (دون إعادة إنشاء البيانات الأساسية)
+  /// تستخدم عند الاستعادة للحفاظ على المستخدمين من النسخة المستعادة
+  Future<void> _deleteAllDataExceptUsers() async {
     try {
       // تعطيل المفاتيح الخارجية خارج transaction
       await _db.execute('PRAGMA foreign_keys = OFF');
@@ -5158,6 +4101,12 @@ class DatabaseService {
           await txn.execute('DELETE FROM expenses');
         } catch (e) {
           debugPrint('خطأ في حذف expenses: $e');
+        }
+
+        try {
+          await txn.execute('DELETE FROM returns');
+        } catch (e) {
+          debugPrint('خطأ في حذف returns: $e');
         }
 
         // ثانياً: حذف الجداول الرئيسية
@@ -5191,12 +4140,55 @@ class DatabaseService {
           debugPrint('خطأ في حذف suppliers: $e');
         }
 
-        // ثالثاً: حذف المستخدمين عدا المدير
+        // ثالثاً: حذف سلة المحذوفات
         try {
-          await txn.execute('DELETE FROM users WHERE username != ?', ['admin']);
+          await txn.execute('DELETE FROM deleted_items');
         } catch (e) {
-          debugPrint('خطأ في حذف users: $e');
+          debugPrint('خطأ في حذف deleted_items: $e');
         }
+
+        // رابعاً: حذف الكوبونات
+        try {
+          await txn.execute('DELETE FROM discount_coupons');
+        } catch (e) {
+          debugPrint('خطأ في حذف discount_coupons: $e');
+        }
+
+        // خامساً: حذف الخصومات
+        try {
+          await txn.execute('DELETE FROM product_discounts');
+        } catch (e) {
+          debugPrint('خطأ في حذف product_discounts: $e');
+        }
+
+        // سادساً: حذف سجل الأحداث
+        try {
+          await txn.execute('DELETE FROM event_log');
+        } catch (e) {
+          debugPrint('خطأ في حذف event_log: $e');
+        }
+
+        // سابعاً: حذف المجموعات والصلاحيات
+        try {
+          await txn.execute('DELETE FROM group_permissions');
+        } catch (e) {
+          debugPrint('خطأ في حذف group_permissions: $e');
+        }
+
+        try {
+          await txn.execute('DELETE FROM groups');
+        } catch (e) {
+          debugPrint('خطأ في حذف groups: $e');
+        }
+
+        // إزالة ارتباط المستخدمين بالمجموعات (وضع group_id إلى NULL)
+        try {
+          await txn.execute('UPDATE users SET group_id = NULL');
+        } catch (e) {
+          debugPrint('خطأ في إزالة ارتباط المستخدمين بالمجموعات: $e');
+        }
+
+        // ملاحظة: لا نحذف المستخدمين - يتم الاحتفاظ بجميع المستخدمين
 
         // إعادة تعيين AUTO_INCREMENT
         try {
@@ -5208,20 +4200,32 @@ class DatabaseService {
 
       // إعادة تفعيل المفاتيح الخارجية
       await _db.execute('PRAGMA foreign_keys = ON');
-
-      // إعادة إنشاء البيانات الأساسية
-      try {
-        await _seedData(_db);
-      } catch (e) {
-        debugPrint('خطأ في إعادة إنشاء البيانات الأساسية: $e');
-        // لا نرمي الخطأ هنا لأن الحذف تم بنجاح
-      }
     } catch (e) {
       // إعادة تفعيل المفاتيح الخارجية في حالة الخطأ
       try {
         await _db.execute('PRAGMA foreign_keys = ON');
       } catch (_) {}
 
+      debugPrint('خطأ في حذف جميع البيانات عدا المستخدمين: $e');
+      throw Exception('خطأ في حذف جميع البيانات عدا المستخدمين: $e');
+    }
+  }
+
+  /// حذف جميع البيانات من قاعدة البيانات (نسخة محدثة)
+  /// يحذف كل شيء عدا المستخدمين
+  Future<void> deleteAllDataNew() async {
+    try {
+      // استخدام الدالة المشتركة لحذف البيانات عدا المستخدمين
+      await _deleteAllDataExceptUsers();
+
+      // إعادة إنشاء البيانات الأساسية
+      try {
+        await DatabaseSchema.seedData(_db, _sha256Hex);
+      } catch (e) {
+        debugPrint('خطأ في إعادة إنشاء البيانات الأساسية: $e');
+        // لا نرمي الخطأ هنا لأن الحذف تم بنجاح
+      }
+    } catch (e) {
       debugPrint('خطأ في حذف جميع البيانات: $e');
       throw Exception('خطأ في حذف جميع البيانات: $e');
     }
@@ -5491,6 +4495,13 @@ class DatabaseService {
           debugPrint('خطأ في حذف sale_items: $e');
         }
 
+        // حذف الخصومات المرتبطة بالمنتجات
+        try {
+          await txn.execute('DELETE FROM product_discounts');
+        } catch (e) {
+          debugPrint('خطأ في حذف product_discounts: $e');
+        }
+
         // حذف المنتجات فقط
         try {
           await txn.execute('DELETE FROM products');
@@ -5502,7 +4513,7 @@ class DatabaseService {
         // إعادة تعيين AUTO_INCREMENT
         try {
           await txn.execute(
-              'DELETE FROM sqlite_sequence WHERE name IN ("products", "sale_items")');
+              'DELETE FROM sqlite_sequence WHERE name IN ("products", "sale_items", "product_discounts")');
         } catch (e) {
           debugPrint('خطأ في إعادة تعيين sqlite_sequence: $e');
         }
@@ -6507,12 +5518,76 @@ class DatabaseService {
     try {
       await _ensureReturnsTable();
 
-      await _db.delete(
-        'returns',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      // محاولة الحذف مع معاملة عادية أولاً
+      try {
+        return await _db.transaction<void>((txn) async {
+          // حذف سجلات event_log المرتبطة بالمرتجع أولاً
+          try {
+            await txn.delete(
+              'event_log',
+              where: 'entity_type = ? AND entity_id = ?',
+              whereArgs: ['return', id],
+            );
+          } catch (e) {
+            debugPrint('خطأ في حذف سجلات event_log للمرتجع: $e');
+            // نتابع حتى لو فشل حذف سجلات event_log
+          }
+
+          // حذف المرتجع
+          final deletedRows = await txn.delete(
+            'returns',
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+
+          if (deletedRows == 0) {
+            throw Exception('المرتجع غير موجود');
+          }
+        });
+      } catch (e) {
+        // إذا فشل الحذف بسبب قيد المفتاح الخارجي، نستخدم تعطيل المفاتيح الخارجية
+        if (e.toString().contains('FOREIGN KEY') ||
+            e.toString().contains('constraint')) {
+          debugPrint(
+              'فشل الحذف بسبب قيد المفتاح الخارجي، محاولة مع تعطيل المفاتيح الخارجية...');
+
+          // تعطيل المفاتيح الخارجية مؤقتاً
+          await _db.execute('PRAGMA foreign_keys = OFF');
+
+          try {
+            await _db.transaction<void>((txn) async {
+              // حذف سجلات event_log المرتبطة بالمرتجع
+              try {
+                await txn.delete(
+                  'event_log',
+                  where: 'entity_type = ? AND entity_id = ?',
+                  whereArgs: ['return', id],
+                );
+              } catch (e) {
+                debugPrint('خطأ في حذف سجلات event_log للمرتجع: $e');
+              }
+
+              // حذف المرتجع
+              final deletedRows = await txn.delete(
+                'returns',
+                where: 'id = ?',
+                whereArgs: [id],
+              );
+
+              if (deletedRows == 0) {
+                throw Exception('المرتجع غير موجود');
+              }
+            });
+          } finally {
+            // إعادة تفعيل المفاتيح الخارجية
+            await _db.execute('PRAGMA foreign_keys = ON');
+          }
+        } else {
+          rethrow;
+        }
+      }
     } catch (e) {
+      debugPrint('خطأ في حذف المرتجع: $e');
       throw Exception('خطأ في حذف المرتجع: $e');
     }
   }
@@ -6607,7 +5682,7 @@ class DatabaseService {
 
       if (tables.isEmpty) {
         debugPrint('جدول المستخدمين غير موجود، سيتم إنشاؤه...');
-        await _createSchema(_db);
+        await DatabaseSchema.createSchema(_db);
         return;
       }
 
