@@ -1,6 +1,7 @@
 // ignore_for_file: dead_code, deprecated_member_use, use_build_context_synchronously, unused_field
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../services/print_service.dart';
@@ -3560,7 +3561,12 @@ class _SalesScreenState extends State<SalesScreen> {
           productDiscount = (discountAmount / price) * 100;
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      // تجاهل خطأ جلب خصم المنتج والاستمرار بدون خصم
+      if (kDebugMode) {
+        debugPrint('خطأ في جلب خصم المنتج: $e');
+      }
+    }
 
     // Reserve one immediately
     context.read<DatabaseService>().adjustProductQuantity(p['id'] as int, -1);

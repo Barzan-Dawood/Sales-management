@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../services/auth/auth_provider.dart';
@@ -1095,7 +1096,12 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       if (saleDetails['due_date'] != null) {
         try {
           dueDate = DateTime.parse(saleDetails['due_date'] as String);
-        } catch (e) {}
+        } catch (e) {
+          // تجاهل خطأ تحليل التاريخ والاستمرار بدون تاريخ استحقاق
+          if (kDebugMode) {
+            debugPrint('خطأ في تحليل تاريخ الاستحقاق: $e');
+          }
+        }
       }
 
       // الحصول على معلومات الأقساط إذا كانت متوفرة
@@ -1108,7 +1114,12 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           installments = await db.getInstallments(saleId: saleId);
           totalDebt = saleDetails['total'] as double?;
           downPayment = saleDetails['down_payment'] as double?;
-        } catch (e) {}
+        } catch (e) {
+          // تجاهل خطأ جلب الأقساط والاستمرار بدون معلومات الأقساط
+          if (kDebugMode) {
+            debugPrint('خطأ في جلب معلومات الأقساط للفاتورة $saleId: $e');
+          }
+        }
       }
 
       // طباعة الفاتورة مع جميع التفاصيل والخيارات المختارة

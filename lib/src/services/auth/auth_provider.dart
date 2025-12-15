@@ -89,7 +89,12 @@ class AuthProvider extends ChangeNotifier {
             'تسجيل دخول المستخدم: ${_currentUser?.name} (${_currentUser?.username})',
         details: 'الدور: ${_currentUser?.roleDisplayName}',
       );
-    } catch (e) {}
+    } catch (e) {
+      // تجاهل خطأ تسجيل الحدث والاستمرار في تسجيل الدخول
+      if (kDebugMode) {
+        debugPrint('خطأ في تسجيل حدث تسجيل الدخول: $e');
+      }
+    }
 
     notifyListeners();
     return true;
@@ -143,10 +148,16 @@ class AuthProvider extends ChangeNotifier {
         try {
           await _db.database.insert('users', user);
           if (kDebugMode) {
-            //
-            'تم إضافة مستخدم جديد: ${user['username']} - ${user['name']}';
+            debugPrint(
+                'تم إضافة مستخدم جديد: ${user['username']} - ${user['name']}');
           }
-        } catch (e) {}
+        } catch (e) {
+          // تجاهل خطأ إضافة المستخدم إذا كان موجوداً بالفعل
+          if (kDebugMode) {
+            debugPrint(
+                'ملاحظة: المستخدم ${user['username']} قد يكون موجوداً بالفعل: $e');
+          }
+        }
       } else {
         // تأكيد تطبيق كلمات المرور الافتراضية لجميع المستخدمين حتى إن كانوا موجودين مسبقاً
         try {
@@ -174,7 +185,12 @@ class AuthProvider extends ChangeNotifier {
             where: 'username = ?',
             whereArgs: [user['username']],
           );
-        } catch (e) {}
+        } catch (e) {
+          // تجاهل خطأ تحديث المستخدم والاستمرار
+          if (kDebugMode) {
+            debugPrint('خطأ في تحديث بيانات المستخدم ${user['username']}: $e');
+          }
+        }
       }
     }
   }
@@ -193,7 +209,12 @@ class AuthProvider extends ChangeNotifier {
               'تسجيل خروج المستخدم: ${_currentUser?.name} (${_currentUser?.username})',
           details: 'الدور: ${_currentUser?.roleDisplayName}',
         );
-      } catch (e) {}
+      } catch (e) {
+        // تجاهل خطأ تسجيل الحدث والاستمرار في تسجيل الخروج
+        if (kDebugMode) {
+          debugPrint('خطأ في تسجيل حدث تسجيل الخروج: $e');
+        }
+      }
     }
 
     _currentUser = null;

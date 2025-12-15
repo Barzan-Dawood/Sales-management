@@ -2653,7 +2653,12 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         if (loadingContext != null && context.mounted) {
           try {
             Navigator.of(loadingContext!, rootNavigator: true).pop();
-          } catch (e) {}
+          } catch (e) {
+            // تجاهل خطأ إغلاق Navigator إذا كان مغلقاً بالفعل
+            if (kDebugMode) {
+              debugPrint('خطأ في إغلاق مؤشر التحميل: $e');
+            }
+          }
         }
       }
 
@@ -2737,7 +2742,12 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         if (loadingContext != null && context.mounted) {
           try {
             Navigator.of(loadingContext!, rootNavigator: true).pop();
-          } catch (e) {}
+          } catch (e) {
+            // تجاهل خطأ إغلاق Navigator إذا كان مغلقاً بالفعل
+            if (kDebugMode) {
+              debugPrint('خطأ في إغلاق مؤشر التحميل: $e');
+            }
+          }
         }
       }
 

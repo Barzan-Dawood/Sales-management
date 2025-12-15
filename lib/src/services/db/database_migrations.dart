@@ -80,7 +80,13 @@ class DatabaseMigrations {
     // Add due_date to sales for credit tracking
     try {
       await db.execute('ALTER TABLE sales ADD COLUMN due_date TEXT');
-    } catch (_) {}
+    } catch (e) {
+      // تجاهل الخطأ إذا كان العمود موجوداً بالفعل
+      if (kDebugMode) {
+        debugPrint(
+            'ملاحظة: عمود due_date قد يكون موجوداً بالفعل في جدول sales: $e');
+      }
+    }
   }
 
   static Future<void> migrateToV4(Database db) async {
@@ -373,7 +379,13 @@ class DatabaseMigrations {
       if (!columnNames.contains('updated_at')) {
         try {
           await db.execute('ALTER TABLE expenses ADD COLUMN updated_at TEXT');
-        } catch (e) {}
+        } catch (e) {
+          // تجاهل الخطأ إذا كان العمود موجوداً بالفعل
+          if (kDebugMode) {
+            debugPrint(
+                'ملاحظة: عمود updated_at قد يكون موجوداً بالفعل في جدول expenses: $e');
+          }
+        }
       }
     } catch (e) {
       debugPrint('خطأ في Migration V9: $e');
@@ -465,7 +477,13 @@ class DatabaseMigrations {
       try {
         await db.execute(
             'ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id)');
-      } catch (e) {}
+      } catch (e) {
+        // تجاهل الخطأ إذا كان العمود موجوداً بالفعل
+        if (kDebugMode) {
+          debugPrint(
+              'ملاحظة: عمود group_id قد يكون موجوداً بالفعل في جدول users: $e');
+        }
+      }
 
       // 4. إنشاء المجموعات الافتراضية
       final now = DateTime.now().toIso8601String();
@@ -695,7 +713,13 @@ class DatabaseMigrations {
         await db.execute('ALTER TABLE sales ADD COLUMN coupon_id INTEGER');
         await db.execute(
             'ALTER TABLE sales ADD COLUMN coupon_discount REAL DEFAULT 0');
-      } catch (e) {}
+      } catch (e) {
+        // تجاهل الخطأ إذا كانت الأعمدة موجودة بالفعل
+        if (kDebugMode) {
+          debugPrint(
+              'ملاحظة: أعمدة الكوبون قد تكون موجودة بالفعل في جدول sales: $e');
+        }
+      }
 
       // إنشاء جدول خصومات المنتجات
       await db.execute('''

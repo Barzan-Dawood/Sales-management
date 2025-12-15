@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'enhanced_privacy_policy_screen.dart';
@@ -84,7 +85,12 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      // تجاهل خطأ تحميل الإعدادات والاستمرار بالقيم الافتراضية
+      if (kDebugMode) {
+        debugPrint('خطأ في تحميل إعدادات تسجيل الدخول: $e');
+      }
+    }
   }
 
   Future<void> _loadLastUsername() async {
@@ -152,7 +158,12 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {});
         _reconcileUserTypeAndUsername();
       }
-    } catch (e) {}
+    } catch (e) {
+      // تجاهل خطأ حفظ اسم المستخدم والاستمرار
+      if (kDebugMode) {
+        debugPrint('خطأ في حفظ اسم المستخدم الأخير: $e');
+      }
+    }
   }
 
   void _autoSelectRoleFor(String username) {
@@ -238,7 +249,12 @@ class _LoginScreenState extends State<LoginScreen> {
         final value = result.first['username']?.toString();
         if (value != null && value.isNotEmpty) return value;
       }
-    } catch (e) {}
+    } catch (e) {
+      // تجاهل خطأ الاستعلام والاستمرار بالقيم الافتراضية
+      if (kDebugMode) {
+        debugPrint('خطأ في جلب اسم المستخدم من قاعدة البيانات: $e');
+      }
+    }
     // Fallbacks
     switch (role) {
       case 'manager':
