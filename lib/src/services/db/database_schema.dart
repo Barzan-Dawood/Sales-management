@@ -1,5 +1,4 @@
 import 'package:sqflite/sqflite.dart';
-import 'package:flutter/foundation.dart';
 
 /// ملف يحتوي على دوال إنشاء الجداول والفهارس والبيانات الافتراضية
 class DatabaseSchema {
@@ -308,7 +307,6 @@ class DatabaseSchema {
   static Future<void> seedData(
       Database db, String Function(String) sha256Hex) async {
     final now = DateTime.now().toIso8601String();
-    debugPrint('بدء إنشاء البيانات الافتراضية...');
 
     // إنشاء المستخدمين الافتراضيين
     final defaultUsers = [
@@ -350,11 +348,9 @@ class DatabaseSchema {
 
       if (existing.isEmpty) {
         await db.insert('users', user);
-        debugPrint('تم إنشاء مستخدم جديد: ${user['username']}');
       } else {
         await db.update('users', user,
             where: 'username = ?', whereArgs: [user['username']]);
-        debugPrint('تم تحديث مستخدم موجود: ${user['username']}');
       }
     }
 
@@ -365,7 +361,6 @@ class DatabaseSchema {
     if (existingAdmin.isNotEmpty) {
       // حذف المستخدم القديم "admin" لأنه يسبب تضارب
       await db.delete('users', where: 'username = ?', whereArgs: ['admin']);
-      debugPrint('تم حذف المستخدم القديم admin لتجنب التضارب');
     }
   }
 

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import '../../services/db/database_service.dart';
 
 /// دوال مساعدة لشاشة الديون
@@ -147,9 +146,6 @@ class DebtsHelpers {
       return productId;
     } catch (e) {
       // في حالة الخطأ، إرجاع معرف افتراضي
-      if (kDebugMode) {
-        debugPrint('خطأ في إنشاء منتج الدين: $e');
-      }
       return 1; // معرف افتراضي
     }
   }

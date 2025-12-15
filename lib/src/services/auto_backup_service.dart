@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'db/database_service.dart';
 
@@ -28,9 +27,6 @@ class AutoBackupService {
     final autoBackupEnabled = prefs.getBool('auto_backup_enabled') ?? false;
 
     if (!autoBackupEnabled) {
-      if (kDebugMode) {
-        debugPrint('النسخ الاحتياطي التلقائي معطل');
-      }
       return;
     }
 
@@ -44,10 +40,6 @@ class AutoBackupService {
       const Duration(hours: 1),
       (_) => _checkAndRunBackup(),
     );
-
-    if (kDebugMode) {
-      debugPrint('تم بدء خدمة النسخ الاحتياطي التلقائي');
-    }
   }
 
   /// التحقق من الحاجة للنسخ الاحتياطي وتشغيله
@@ -94,34 +86,20 @@ class AutoBackupService {
       }
 
       if (shouldBackup) {
-        if (kDebugMode) {
-          debugPrint('بدء النسخ الاحتياطي التلقائي...');
-        }
-
         try {
           await _databaseService!.createFullBackup(backupPath);
           await prefs.setInt('last_auto_backup_time', now);
           await prefs.setString('last_auto_backup_status', 'success');
           await prefs.setString(
               'last_auto_backup_message', 'تم إنشاء النسخة الاحتياطية بنجاح');
-
-          if (kDebugMode) {
-            debugPrint('تم إنشاء النسخة الاحتياطية التلقائية بنجاح');
-          }
         } catch (e) {
           await prefs.setString('last_auto_backup_status', 'error');
           await prefs.setString(
               'last_auto_backup_message', 'فشل في إنشاء النسخة الاحتياطية: $e');
-
-          if (kDebugMode) {
-            debugPrint('خطأ في النسخ الاحتياطي التلقائي: $e');
-          }
         }
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('خطأ في التحقق من النسخ الاحتياطي: $e');
-      }
+      // تجاهل خطأ التحقق من النسخ الاحتياطي
     }
   }
 
@@ -136,10 +114,6 @@ class AutoBackupService {
     _backupTimer?.cancel();
     _backupTimer = null;
     _isRunning = false;
-
-    if (kDebugMode) {
-      debugPrint('تم إيقاف خدمة النسخ الاحتياطي التلقائي');
-    }
   }
 
   /// الحصول على حالة الخدمة

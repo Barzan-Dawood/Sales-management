@@ -90,9 +90,6 @@ class ButtonUtils {
       await exportFunction();
     } catch (e) {
       // معالجة الخطأ
-      if (kDebugMode) {
-        debugPrint('خطأ في التصدير: $e');
-      }
     }
   }
 

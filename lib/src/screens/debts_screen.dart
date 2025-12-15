@@ -157,9 +157,6 @@ class DebtsScreenState extends State<DebtsScreen>
       return productId;
     } catch (e) {
       // في حالة الخطأ، إرجاع معرف افتراضي
-      if (kDebugMode) {
-        debugPrint('خطأ في إنشاء منتج الدين: $e');
-      }
       return 1; // معرف افتراضي
     }
   }
@@ -610,15 +607,6 @@ class DebtsScreenState extends State<DebtsScreen>
     DatabaseService db,
     Map<String, dynamic> customer,
   ) {
-    // تشخيص مؤقت
-    if (kDebugMode) {
-      debugPrint(
-          'Building installments section with ${installments.length} installments');
-      if (installments.isNotEmpty) {
-        debugPrint('First installment data: ${installments.first}');
-      }
-    }
-
     // حساب إجمالي مبلغ الأقساط الأصلية والبيع الآجل
     double totalInstallmentAmount = 0.0;
     double totalCreditAmount = 0.0;

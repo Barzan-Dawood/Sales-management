@@ -63,9 +63,6 @@ class StoreConfig extends ChangeNotifier {
       // إذا لم تكن هناك معلومات محفوظة، نستخدم القيم الافتراضية
     } catch (e) {
       // في حالة الخطأ، نستخدم القيم الافتراضية
-      if (kDebugMode) {
-        debugPrint('خطأ في تحميل معلومات المحل: $e');
-      }
     }
   }
 

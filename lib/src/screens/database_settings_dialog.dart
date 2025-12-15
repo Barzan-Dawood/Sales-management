@@ -998,8 +998,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                                 }
 
                                 final backups = snapshot.data ?? initialBackups;
-                                debugPrint(
-                                    'عدد النسخ الاحتياطية المعروضة: ${backups.length}');
 
                                 if (backups.isEmpty) {
                                   return const Center(
@@ -1075,10 +1073,8 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
       }
       final db = context.read<DatabaseService>();
       final backups = await db.getAvailableBackups(_backupPath);
-      debugPrint('تم تحميل ${backups.length} نسخة احتياطية');
       return backups;
     } catch (e) {
-      debugPrint('خطأ في تحميل النسخ الاحتياطية: $e');
       return [];
     }
   }
@@ -2655,9 +2651,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             Navigator.of(loadingContext!, rootNavigator: true).pop();
           } catch (e) {
             // تجاهل خطأ إغلاق Navigator إذا كان مغلقاً بالفعل
-            if (kDebugMode) {
-              debugPrint('خطأ في إغلاق مؤشر التحميل: $e');
-            }
           }
         }
       }
@@ -2744,9 +2737,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
             Navigator.of(loadingContext!, rootNavigator: true).pop();
           } catch (e) {
             // تجاهل خطأ إغلاق Navigator إذا كان مغلقاً بالفعل
-            if (kDebugMode) {
-              debugPrint('خطأ في إغلاق مؤشر التحميل: $e');
-            }
           }
         }
       }

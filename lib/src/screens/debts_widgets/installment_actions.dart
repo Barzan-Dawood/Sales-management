@@ -17,7 +17,6 @@ class InstallmentActions {
     // البحث عن DebtsScreen state
     final state = context.findAncestorStateOfType<DebtsScreenState>();
     if (state == null) {
-      debugPrint('تعذر العثور على DebtsScreen state');
       return;
     }
 
@@ -45,7 +44,6 @@ class InstallmentActions {
   ) {
     final state = context.findAncestorStateOfType<DebtsScreenState>();
     if (state == null) {
-      debugPrint('تعذر العثور على DebtsScreen state');
       return;
     }
 

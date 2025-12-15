@@ -26,8 +26,6 @@ class ErrorHandlerService {
       onSuccess?.call();
       return result;
     } catch (error) {
-      debugPrint('Error occurred: $error');
-
       if (onError != null) {
         onError();
       }
@@ -55,8 +53,6 @@ class ErrorHandlerService {
     operation().then((_) {
       onSuccess?.call();
     }).catchError((error) {
-      debugPrint('Async error occurred: $error');
-
       if (onError != null) {
         onError();
       }
@@ -90,7 +86,6 @@ class ErrorHandlerService {
         return result;
       } catch (error) {
         attempts++;
-        debugPrint('Error attempt $attempts: $error');
 
         if (attempts >= maxRetries) {
           // عرض خطأ مع إمكانية إعادة المحاولة اليدوية
@@ -172,19 +167,6 @@ class ErrorHandlerService {
     final errorInfo = ErrorMessages.analyzeError(error);
 
     // في الإنتاج، يمكن إرسال هذا إلى خدمة تحليل الأخطاء
-    if (kDebugMode) {
-      debugPrint('=== ERROR LOG ===');
-      debugPrint('Timestamp: $timestamp');
-      debugPrint('Context: ${context ?? 'Unknown'}');
-      debugPrint('Error Type: ${errorInfo.type.name}');
-      debugPrint('Title: ${errorInfo.title}');
-      debugPrint('Message: ${errorInfo.message}');
-      debugPrint('Raw Error: $error');
-      if (additionalInfo != null) {
-        debugPrint('Additional Info: $additionalInfo');
-      }
-      debugPrint('================');
-    }
 
     // يمكن استخدام logEntry في المستقبل لإرسال البيانات إلى خدمة تحليل الأخطاء
     // final logEntry = {

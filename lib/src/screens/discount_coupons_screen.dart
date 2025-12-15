@@ -1,7 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
 import '../utils/dark_mode_utils.dart';
@@ -29,9 +28,6 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
         await db.ensureDiscountTables();
       } catch (e) {
         // تجاهل خطأ التأكد من الجداول والاستمرار في التحميل
-        if (kDebugMode) {
-          debugPrint('خطأ في التأكد من وجود جداول الخصومات: $e');
-        }
       }
       _loadCoupons();
     });

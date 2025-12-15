@@ -87,9 +87,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       // تجاهل خطأ تحميل الإعدادات والاستمرار بالقيم الافتراضية
-      if (kDebugMode) {
-        debugPrint('خطأ في تحميل إعدادات تسجيل الدخول: $e');
-      }
     }
   }
 
@@ -160,9 +157,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       // تجاهل خطأ حفظ اسم المستخدم والاستمرار
-      if (kDebugMode) {
-        debugPrint('خطأ في حفظ اسم المستخدم الأخير: $e');
-      }
     }
   }
 
@@ -251,9 +245,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       // تجاهل خطأ الاستعلام والاستمرار بالقيم الافتراضية
-      if (kDebugMode) {
-        debugPrint('خطأ في جلب اسم المستخدم من قاعدة البيانات: $e');
-      }
     }
     // Fallbacks
     switch (role) {

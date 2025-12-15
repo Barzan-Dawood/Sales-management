@@ -3,7 +3,6 @@
 import 'dart:io';
 import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../services/db/database_service.dart';
 
@@ -696,10 +695,6 @@ class ExcelService {
                     if (existingProduct.isNotEmpty) {}
                   } catch (e) {
                     // تجاهل خطأ البحث عن المنتج بالباركود والاستمرار بالبحث بالاسم
-                    if (kDebugMode) {
-                      debugPrint(
-                          'خطأ في البحث عن المنتج بالباركود $barcode: $e');
-                    }
                   }
                 }
 
@@ -717,9 +712,6 @@ class ExcelService {
                     if (existingProduct.isNotEmpty) {}
                   } catch (e) {
                     // تجاهل خطأ البحث عن المنتج بالاسم والاستمرار
-                    if (kDebugMode) {
-                      debugPrint('خطأ في البحث عن المنتج بالاسم $name: $e');
-                    }
                   }
                 }
 

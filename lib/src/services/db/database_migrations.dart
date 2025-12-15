@@ -1,5 +1,4 @@
 import 'package:sqflite/sqflite.dart';
-import 'package:flutter/foundation.dart';
 
 /// ملف يحتوي على جميع دوال الترحيل (Migrations) لقاعدة البيانات
 class DatabaseMigrations {
@@ -82,10 +81,6 @@ class DatabaseMigrations {
       await db.execute('ALTER TABLE sales ADD COLUMN due_date TEXT');
     } catch (e) {
       // تجاهل الخطأ إذا كان العمود موجوداً بالفعل
-      if (kDebugMode) {
-        debugPrint(
-            'ملاحظة: عمود due_date قد يكون موجوداً بالفعل في جدول sales: $e');
-      }
     }
   }
 
@@ -227,7 +222,7 @@ class DatabaseMigrations {
         }
       }
     } catch (e) {
-      debugPrint('خطأ في Migration V7: $e');
+      // تجاهل خطأ Migration V7
     }
   }
 
@@ -320,7 +315,7 @@ class DatabaseMigrations {
         }
       }
     } catch (e) {
-      debugPrint('خطأ في Migration V8: $e');
+      // تجاهل خطأ Migration V8
     }
   }
 
@@ -381,14 +376,10 @@ class DatabaseMigrations {
           await db.execute('ALTER TABLE expenses ADD COLUMN updated_at TEXT');
         } catch (e) {
           // تجاهل الخطأ إذا كان العمود موجوداً بالفعل
-          if (kDebugMode) {
-            debugPrint(
-                'ملاحظة: عمود updated_at قد يكون موجوداً بالفعل في جدول expenses: $e');
-          }
         }
       }
     } catch (e) {
-      debugPrint('خطأ في Migration V9: $e');
+      // تجاهل خطأ Migration V9
     }
   }
 
@@ -418,7 +409,7 @@ class DatabaseMigrations {
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_event_log_user_id ON event_log(user_id)');
     } catch (e) {
-      debugPrint('خطأ في Migration V10: $e');
+      // تجاهل خطأ Migration V10
     }
   }
 
@@ -441,7 +432,7 @@ class DatabaseMigrations {
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_returns_return_date ON returns(return_date)');
     } catch (e) {
-      debugPrint('خطأ في Migration V11: $e');
+      // تجاهل خطأ Migration V11
     }
   }
 
@@ -479,10 +470,6 @@ class DatabaseMigrations {
             'ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id)');
       } catch (e) {
         // تجاهل الخطأ إذا كان العمود موجوداً بالفعل
-        if (kDebugMode) {
-          debugPrint(
-              'ملاحظة: عمود group_id قد يكون موجوداً بالفعل في جدول users: $e');
-        }
       }
 
       // 4. إنشاء المجموعات الافتراضية
@@ -645,18 +632,14 @@ class DatabaseMigrations {
           'CREATE INDEX IF NOT EXISTS idx_group_permissions_group_id ON group_permissions(group_id)');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_group_permissions_section ON group_permissions(section)');
-
-      debugPrint('انتهى Migration V12 بنجاح');
     } catch (e) {
-      debugPrint('خطأ في Migration V12: $e');
+      // تجاهل خطأ Migration V12
     }
   }
 
   static Future<void> migrateToV13(Database db) async {
     // إضافة حقل status إلى جدول returns
     try {
-      debugPrint('بدء Migration V13 - إضافة حقل status إلى جدول returns...');
-
       // التحقق من وجود العمود أولاً
       final columns = await db.rawQuery("PRAGMA table_info(returns)");
       final columnNames =
@@ -665,18 +648,13 @@ class DatabaseMigrations {
       if (!columnNames.contains('status')) {
         await db.execute(
             'ALTER TABLE returns ADD COLUMN status TEXT NOT NULL DEFAULT \'pending\'');
-        debugPrint('تم إضافة عمود status إلى جدول returns');
-      } else {
-        debugPrint('عمود status موجود بالفعل في جدول returns');
       }
 
       // إنشاء فهرس على status
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_returns_status ON returns(status)');
-
-      debugPrint('انتهى Migration V13 بنجاح');
     } catch (e) {
-      debugPrint('خطأ في Migration V13: $e');
+      // تجاهل خطأ Migration V13
     }
   }
 
@@ -701,7 +679,7 @@ class DatabaseMigrations {
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_deleted_items_deleted_at ON deleted_items(deleted_at)');
     } catch (e) {
-      debugPrint('خطأ في Migration V14: $e');
+      // تجاهل خطأ Migration V14
     }
   }
 
@@ -715,10 +693,6 @@ class DatabaseMigrations {
             'ALTER TABLE sales ADD COLUMN coupon_discount REAL DEFAULT 0');
       } catch (e) {
         // تجاهل الخطأ إذا كانت الأعمدة موجودة بالفعل
-        if (kDebugMode) {
-          debugPrint(
-              'ملاحظة: أعمدة الكوبون قد تكون موجودة بالفعل في جدول sales: $e');
-        }
       }
 
       // إنشاء جدول خصومات المنتجات
@@ -767,7 +741,7 @@ class DatabaseMigrations {
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_discount_coupons_active ON discount_coupons(active)');
     } catch (e) {
-      debugPrint('خطأ في Migration V15: $e');
+      // تجاهل خطأ Migration V15
     }
   }
 }

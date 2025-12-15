@@ -3563,9 +3563,6 @@ class _SalesScreenState extends State<SalesScreen> {
       }
     } catch (e) {
       // تجاهل خطأ جلب خصم المنتج والاستمرار بدون خصم
-      if (kDebugMode) {
-        debugPrint('خطأ في جلب خصم المنتج: $e');
-      }
     }
 
     // Reserve one immediately

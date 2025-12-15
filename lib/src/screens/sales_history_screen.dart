@@ -1098,9 +1098,6 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           dueDate = DateTime.parse(saleDetails['due_date'] as String);
         } catch (e) {
           // تجاهل خطأ تحليل التاريخ والاستمرار بدون تاريخ استحقاق
-          if (kDebugMode) {
-            debugPrint('خطأ في تحليل تاريخ الاستحقاق: $e');
-          }
         }
       }
 
@@ -1116,9 +1113,6 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           downPayment = saleDetails['down_payment'] as double?;
         } catch (e) {
           // تجاهل خطأ جلب الأقساط والاستمرار بدون معلومات الأقساط
-          if (kDebugMode) {
-            debugPrint('خطأ في جلب معلومات الأقساط للفاتورة $saleId: $e');
-          }
         }
       }
 
