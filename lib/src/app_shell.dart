@@ -142,12 +142,14 @@ class _AppShellState extends State<AppShell> {
           return auth
               .hasPermission(UserPermission.viewReports); // التقارير الموحدة
         case 14:
-          return auth.hasPermission(UserPermission.viewReports); // التحليلات
+          // التحليلات - للمدير فقط
+          return auth.isManager;
         case 15:
-          return auth.hasPermission(UserPermission.viewReports); // سجل الأحداث
+          // سجل الأحداث - للمدير فقط
+          return auth.isManager;
         case 16:
-          return auth
-              .hasPermission(UserPermission.viewReports); // سلة المحذوفات
+          // سلة المحذوفات - للمدير فقط
+          return auth.isManager;
         case 17:
           return auth.hasPermission(UserPermission.systemSettings);
         case 18:
@@ -798,10 +800,20 @@ class _AppShellState extends State<AppShell> {
               icon: Icon(Icons.inventory_2),
               label: 'المنتجات',
             );
+          case 6:
+            return const BottomNavigationBarItem(
+              icon: Icon(Icons.card_giftcard),
+              label: 'كوبونات الخصم',
+            );
           case 8:
             return const BottomNavigationBarItem(
               icon: Icon(Icons.people_alt),
               label: 'العملاء',
+            );
+          case 13:
+            return const BottomNavigationBarItem(
+              icon: Icon(Icons.assessment),
+              label: 'التقارير',
             );
           case 17:
             return const BottomNavigationBarItem(

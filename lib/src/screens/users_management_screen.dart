@@ -54,6 +54,11 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('إدارة المستخدمين'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+      ),
       backgroundColor: DarkModeUtils.getBackgroundColor(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -260,12 +265,6 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
     });
   }
 
-  String _sha256(String input) {
-    final bytes = utf8.encode(input);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
-
   @override
   void dispose() {
     _supervisorUsername.dispose();
@@ -348,14 +347,17 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
                     if (_savingSupervisor) return;
                     setState(() => _savingSupervisor = true);
                     try {
-                      await _saveSupervisor();
+                      await _saveSupervisor(context);
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('فشل الحفظ: $e'),
+                            content: const Text('فشل حفظ بيانات المشرف'),
                             backgroundColor:
                                 Theme.of(context).colorScheme.error,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                            width: 300,
                           ),
                         );
                       }
@@ -382,14 +384,17 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
                     if (_savingEmployee) return;
                     setState(() => _savingEmployee = true);
                     try {
-                      await _saveEmployee();
+                      await _saveEmployee(context);
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('فشل الحفظ: $e'),
+                            content: const Text('فشل حفظ بيانات الموظف'),
                             backgroundColor:
                                 Theme.of(context).colorScheme.error,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                            width: 300,
                           ),
                         );
                       }
@@ -417,13 +422,15 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
               if (_savingSupervisor) return;
               setState(() => _savingSupervisor = true);
               try {
-                await _saveSupervisor();
+                await _saveSupervisor(context);
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('فشل الحفظ: $e'),
+                      content: const Text('فشل حفظ بيانات المشرف'),
                       backgroundColor: Theme.of(context).colorScheme.error,
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 2),
                     ),
                   );
                 }
@@ -448,13 +455,15 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
               if (_savingEmployee) return;
               setState(() => _savingEmployee = true);
               try {
-                await _saveEmployee();
+                await _saveEmployee(context);
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('فشل الحفظ: $e'),
+                      content: const Text('فشل حفظ بيانات الموظف'),
                       backgroundColor: Theme.of(context).colorScheme.error,
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 2),
                     ),
                   );
                 }
@@ -552,7 +561,10 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
             obscureText: !showPassword,
             decoration: InputDecoration(
               labelText: 'كلمة المرور الجديدة',
-              hintText: 'اتركها فارغة للحفاظ على الكلمة الحالية',
+              labelStyle: TextStyle(fontSize: 13),
+              hintText:
+                  'اتركها فارغة للحفاظ على الكلمة الحالية (الحد الأدنى: 6 أحرف)',
+              hintStyle: TextStyle(fontSize: 12),
               prefixIcon: Icon(Icons.lock, color: color),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -609,14 +621,36 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
     );
   }
 
-  Future<void> _saveSupervisor() async {
+  Future<void> _saveSupervisor(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final nowIso = DateTime.now().toIso8601String();
     final newName = _supervisorUsername.text.trim();
+    bool hasChanges = false; // تتبع التغييرات
+
+    // التحقق من اسم المستخدم
     if (newName.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('اسم المستخدم لا يمكن أن يكون فارغاً'),
           backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
+        ));
+      }
+      return;
+    }
+
+    // التحقق من كلمة المرور إذا تم إدخالها
+    if (_supervisorPassword.text.isNotEmpty &&
+        _supervisorPassword.text.length < 6) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
         ));
       }
       return;
@@ -632,6 +666,9 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('لم يتم العثور على حساب المشرف'),
           backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
         ));
       }
       return;
@@ -639,9 +676,48 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
 
     final currentUsername = currentSupervisor['username']?.toString() ?? '';
     final supervisorId = currentSupervisor['id'];
+    final currentUserId = authProvider.currentUser?.id;
 
     // التحقق من التضارب فقط إذا كان اسم المستخدم مختلف
     if (currentUsername != newName) {
+      // تحذير إذا كان المستخدم الحالي هو المشرف
+      if (currentUserId == supervisorId) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange),
+                SizedBox(width: 8),
+                Text('تحذير'),
+              ],
+            ),
+            content: const Text(
+              'أنت على وشك تغيير اسم المستخدم الخاص بك. سيتم تسجيل خروجك تلقائياً بعد التغيير.\n\n'
+              'هل تريد المتابعة؟',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('إلغاء'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('متابعة'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) {
+          return;
+        }
+      }
+
       final conflict = await widget.db.database.query('users',
           where: 'username = ? AND id != ?',
           whereArgs: [newName, supervisorId],
@@ -651,6 +727,8 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('الاسم "$newName" مستخدم من حساب آخر'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
           ));
         }
         return;
@@ -660,35 +738,97 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
       await widget.db.database.update(
           'users', {'username': newName, 'updated_at': nowIso},
           where: 'id = ?', whereArgs: [supervisorId]);
+      hasChanges = true;
+
+      // تسجيل خروج المستخدم الحالي إذا كان هو المشرف
+      if (currentUserId == supervisorId && mounted) {
+        authProvider.logout();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                const Text('تم تغيير اسم المستخدم. يرجى تسجيل الدخول مرة أخرى'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            width: 300,
+          ));
+        }
+        return;
+      }
     }
 
     // تحديث كلمة المرور إذا تم إدخالها
     if (_supervisorPassword.text.isNotEmpty) {
       await widget.db.database.update(
         'users',
-        {'password': _sha256(_supervisorPassword.text), 'updated_at': nowIso},
+        {
+          'password': _sha256Hash(_supervisorPassword.text),
+          'updated_at': nowIso
+        },
         where: 'id = ?',
         whereArgs: [supervisorId],
       );
       _supervisorPassword.clear();
+      hasChanges = true;
     }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('تم حفظ المشرف'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ));
+    // إعادة تحميل البيانات فقط إذا كان هناك تغيير
+    if (hasChanges) {
+      await _load();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('تم حفظ بيانات المشرف بنجاح'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
+        ));
+      }
+    } else {
+      // لا توجد تغييرات
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('لم يتم إجراء أي تغييرات'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
+        ));
+      }
     }
   }
 
-  Future<void> _saveEmployee() async {
+  Future<void> _saveEmployee(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final nowIso = DateTime.now().toIso8601String();
     final newName = _employeeUsername.text.trim();
+    bool hasChanges = false; // تتبع التغييرات
+
+    // التحقق من اسم المستخدم
     if (newName.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('اسم المستخدم لا يمكن أن يكون فارغاً'),
           backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
+        ));
+      }
+      return;
+    }
+
+    // التحقق من كلمة المرور إذا تم إدخالها
+    if (_employeePassword.text.isNotEmpty &&
+        _employeePassword.text.length < 6) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('كلمة المرور يجب أن تكون 6 أحرف على الأقل'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
         ));
       }
       return;
@@ -704,6 +844,9 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('لم يتم العثور على حساب الموظف'),
           backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
         ));
       }
       return;
@@ -711,9 +854,48 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
 
     final currentUsername = currentEmployee['username']?.toString() ?? '';
     final employeeId = currentEmployee['id'];
+    final currentUserId = authProvider.currentUser?.id;
 
     // التحقق من التضارب فقط إذا كان اسم المستخدم مختلف
     if (currentUsername != newName) {
+      // تحذير إذا كان المستخدم الحالي هو الموظف
+      if (currentUserId == employeeId) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange),
+                SizedBox(width: 8),
+                Text('تحذير'),
+              ],
+            ),
+            content: const Text(
+              'أنت على وشك تغيير اسم المستخدم الخاص بك. سيتم تسجيل خروجك تلقائياً بعد التغيير.\n\n'
+              'هل تريد المتابعة؟',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('إلغاء'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('متابعة'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) {
+          return;
+        }
+      }
+
       final conflict = await widget.db.database.query('users',
           where: 'username = ? AND id != ?',
           whereArgs: [newName, employeeId],
@@ -723,6 +905,8 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('الاسم "$newName" مستخدم من حساب آخر'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
           ));
         }
         return;
@@ -732,24 +916,61 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
       await widget.db.database.update(
           'users', {'username': newName, 'updated_at': nowIso},
           where: 'id = ?', whereArgs: [employeeId]);
+      hasChanges = true;
+
+      // تسجيل خروج المستخدم الحالي إذا كان هو الموظف
+      if (currentUserId == employeeId && mounted) {
+        authProvider.logout();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                const Text('تم تغيير اسم المستخدم. يرجى تسجيل الدخول مرة أخرى'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            width: 300,
+          ));
+        }
+        return;
+      }
     }
 
     // تحديث كلمة المرور إذا تم إدخالها
     if (_employeePassword.text.isNotEmpty) {
       await widget.db.database.update(
         'users',
-        {'password': _sha256(_employeePassword.text), 'updated_at': nowIso},
+        {'password': _sha256Hash(_employeePassword.text), 'updated_at': nowIso},
         where: 'id = ?',
         whereArgs: [employeeId],
       );
       _employeePassword.clear();
+      hasChanges = true;
     }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('تم حفظ الموظف'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ));
+    // إعادة تحميل البيانات فقط إذا كان هناك تغيير
+    if (hasChanges) {
+      await _load();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('تم حفظ بيانات الموظف بنجاح'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
+        ));
+      }
+    } else {
+      // لا توجد تغييرات
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('لم يتم إجراء أي تغييرات'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          width: 300,
+        ));
+      }
     }
   }
 }
@@ -874,13 +1095,13 @@ Future<void> _resetAllPasswords(
         'users',
         {
           'username': 'manager',
-          'password': _sha256('admin123'),
+          'password': _sha256Hash('admin123'),
           'updated_at': nowIso,
         },
         where: 'id = ?',
         whereArgs: [managerId],
       );
-    } else {}
+    }
 
     // إعادة ضبط المشرف (اسم المستخدم + كلمة المرور)
     final supervisorId = await _getUserIdByRole(db, 'supervisor');
@@ -910,7 +1131,7 @@ Future<void> _resetAllPasswords(
           'users',
           {
             'username': 'supervisor',
-            'password': _sha256('super123'),
+            'password': _sha256Hash('super123'),
             'updated_at': nowIso,
           },
           where: 'id = ?',
@@ -922,7 +1143,7 @@ Future<void> _resetAllPasswords(
           await db.database.update(
             'users',
             {
-              'password': _sha256('super123'),
+              'password': _sha256Hash('super123'),
               'updated_at': nowIso,
             },
             where: 'id = ?',
@@ -932,7 +1153,7 @@ Future<void> _resetAllPasswords(
           // تجاهل خطأ تحديث كلمة المرور
         }
       }
-    } else {}
+    }
 
     // إعادة ضبط الموظف (اسم المستخدم + كلمة المرور)
     final employeeId = await _getUserIdByRole(db, 'employee');
@@ -962,7 +1183,7 @@ Future<void> _resetAllPasswords(
           'users',
           {
             'username': 'employee',
-            'password': _sha256('emp123'),
+            'password': _sha256Hash('emp123'),
             'updated_at': nowIso,
           },
           where: 'id = ?',
@@ -974,7 +1195,7 @@ Future<void> _resetAllPasswords(
           await db.database.update(
             'users',
             {
-              'password': _sha256('emp123'),
+              'password': _sha256Hash('emp123'),
               'updated_at': nowIso,
             },
             where: 'id = ?',
@@ -984,7 +1205,7 @@ Future<void> _resetAllPasswords(
           // تجاهل خطأ تحديث كلمة المرور
         }
       }
-    } else {}
+    }
 
     // إغلاق مؤشر التحميل
     if (context.mounted) Navigator.of(context).pop();
@@ -993,15 +1214,12 @@ Future<void> _resetAllPasswords(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'تم إعادة ضبط أسماء المستخدمين وكلمات المرور بنجاح!\n'
-            'المدير: manager / admin123\n'
-            'المشرف: supervisor / super123\n'
-            'الموظف: employee / emp123',
-            style: TextStyle(color: Colors.white),
-          ),
+          content:
+              const Text('تم إعادة ضبط أسماء المستخدمين وكلمات المرور بنجاح'),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          width: 300,
         ),
       );
     }
@@ -1014,22 +1232,21 @@ Future<void> _resetAllPasswords(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'خطأ في إعادة ضبط أسماء المستخدمين وكلمات المرور: $e',
-            style: const TextStyle(color: Colors.white),
-          ),
+          content: const Text('فشل إعادة ضبط أسماء المستخدمين وكلمات المرور'),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          width: 300,
         ),
       );
     }
   }
 }
 
-// دالة تشفير كلمة المرور
-String _sha256(String input) {
-  var bytes = utf8.encode(input);
-  var digest = sha256.convert(bytes);
+// دالة تشفير كلمة المرور (مشتركة)
+String _sha256Hash(String input) {
+  final bytes = utf8.encode(input);
+  final digest = sha256.convert(bytes);
   return digest.toString();
 }
 
