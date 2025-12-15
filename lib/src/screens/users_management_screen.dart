@@ -53,115 +53,172 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
       );
     }
 
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إدارة المستخدمين'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: scheme.onPrimary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.people,
+                color: scheme.onPrimary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('إدارة المستخدمين'),
+          ],
+        ),
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        elevation: 0,
       ),
       backgroundColor: DarkModeUtils.getBackgroundColor(context),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // معلومات المستخدم الحالي
-            Card(
-              color: DarkModeUtils.getCardColor(context),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'المستخدم الحالي',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInfoRow('الاسم', authProvider.currentUserName),
-                    _buildInfoRow('الرمز', authProvider.currentEmployeeCode),
-                    _buildInfoRow('الدور', authProvider.currentUserRole),
-                    _buildInfoRow('الصلاحيات',
-                        authProvider.currentUser?.permissionsDescription ?? ''),
-                  ],
+            // معلومات المستخدم الحالي - تصميم مضغوط
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.primary.withOpacity(0.2),
                 ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.person, color: scheme.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'المستخدم الحالي:',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    authProvider.currentUserName,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: scheme.primary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      authProvider.currentUserRole,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
-            // إدارة أسماء المستخدمين وكلمات المرور (للمدير)
-            Card(
-              color: DarkModeUtils.getCardColor(context),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _UserCredsEditor(key: ValueKey(_credsVersion), db: db),
-                    const SizedBox(height: 16),
-                    // زر إعادة ضبط كلمات المرور (للمدير فقط)
-                    if (authProvider.currentUserRole == 'مدير')
-                      _buildResetPasswordsButton(
-                        context,
-                        db,
-                        () {
-                          setState(() {
-                            _credsVersion++;
-                          });
-                        },
+            // إدارة أسماء المستخدمين وكلمات المرور
+            _UserCredsEditor(key: ValueKey(_credsVersion), db: db),
+
+            const SizedBox(height: 12),
+
+            // زر إعادة ضبط كلمات المرور (للمدير فقط)
+            if (authProvider.currentUserRole == 'مدير')
+              _buildResetPasswordsButton(
+                context,
+                db,
+                () {
+                  setState(() {
+                    _credsVersion++;
+                  });
+                },
+              ),
+
+            const SizedBox(height: 12),
+
+            // شرح الصلاحيات - تصميم مضغوط
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: DarkModeUtils.getCardColor(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: scheme.outline.withOpacity(0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.security, color: scheme.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'شرح الصلاحيات',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // شرح الصلاحيات
-            Card(
-              color: DarkModeUtils.getCardColor(context),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.security,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'شرح الصلاحيات',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPermissionInfo(
-                        'مدير', UserRole.manager.permissionsDescription),
-                    _buildPermissionInfo(
-                        'مشرف', UserRole.supervisor.permissionsDescription),
-                    _buildPermissionInfo(
-                        'موظف', UserRole.employee.permissionsDescription),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // الأدوار في صف واحد
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth > 700;
+                      if (isWide) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildCompactPermissionInfo('مدير',
+                                  UserRole.manager.permissionsDescription),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildCompactPermissionInfo('مشرف',
+                                  UserRole.supervisor.permissionsDescription),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildCompactPermissionInfo('موظف',
+                                  UserRole.employee.permissionsDescription),
+                            ),
+                          ],
+                        );
+                      } else {
+                        return Column(
+                          children: [
+                            _buildCompactPermissionInfo('مدير',
+                                UserRole.manager.permissionsDescription),
+                            const SizedBox(height: 12),
+                            _buildCompactPermissionInfo('مشرف',
+                                UserRole.supervisor.permissionsDescription),
+                            const SizedBox(height: 12),
+                            _buildCompactPermissionInfo('موظف',
+                                UserRole.employee.permissionsDescription),
+                          ],
+                        );
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
           ],
@@ -170,57 +227,60 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildCompactPermissionInfo(String role, String permissions) {
+    final scheme = Theme.of(context).colorScheme;
+    final roleColors = {
+      'مدير': Colors.blue,
+      'مشرف': Colors.orange,
+      'موظف': Colors.green,
+    };
+    final roleColor = roleColors[role] ?? scheme.primary;
 
-  Widget _buildPermissionInfo(String role, String permissions) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: DarkModeUtils.getBackgroundColor(context).withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
+        color: roleColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          color: roleColor.withOpacity(0.2),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            role,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+          Row(
+            children: [
+              Icon(
+                role == 'مدير'
+                    ? Icons.admin_panel_settings
+                    : role == 'مشرف'
+                        ? Icons.supervisor_account
+                        : Icons.person,
+                color: roleColor,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                role,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: roleColor,
+                      fontSize: 13,
+                    ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             permissions,
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: scheme.onSurface.withOpacity(0.7),
+                ),
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -280,52 +340,6 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header with description
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color:
-                Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.manage_accounts,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'إدارة بيانات المستخدمين',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'يمكنك تعديل اسم المستخدم وكلمة المرور لكل دور. سيتم حفظ التغييرات فوراً عند الضغط على زر الحفظ.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.8),
-                    ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-
         // User editor cards - responsive layout
         if (isWide)
           Row(
@@ -439,7 +453,7 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
               }
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           _buildEditorCard(
             title: 'الموظف',
             icon: Icons.person,
@@ -489,127 +503,134 @@ class _UserCredsEditorState extends State<_UserCredsEditor> {
     required Future<void> Function() onSave,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: DarkModeUtils.getCardColor(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: color.withOpacity(0.3),
-          width: 2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with icon and title
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  color: color,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                ),
-              ],
-            ),
+          // Header with icon and title - تصميم مضغوط
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // Username field
+          // Username field - تصميم مضغوط
           TextField(
             controller: usernameController,
             decoration: InputDecoration(
               labelText: 'اسم المستخدم',
-              hintText: 'أدخل اسم المستخدم الجديد',
-              prefixIcon: Icon(Icons.person, color: color),
+              labelStyle: TextStyle(fontSize: 13, color: color),
+              hintText: 'اسم المستخدم',
+              prefixIcon: Icon(Icons.person, color: color, size: 18),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surface,
               border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: color.withOpacity(0.3)),
+              ),
+              enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(color: color.withOpacity(0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: color, width: 2),
+                borderSide: BorderSide(color: color, width: 1.5),
               ),
               isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Password field
+          // Password field - تصميم مضغوط
           TextField(
             controller: passwordController,
             obscureText: !showPassword,
             decoration: InputDecoration(
               labelText: 'كلمة المرور الجديدة',
-              labelStyle: TextStyle(fontSize: 13),
+              labelStyle: TextStyle(fontSize: 13, color: color),
               hintText:
-                  'اتركها فارغة للحفاظ على الكلمة الحالية (الحد الأدنى: 6 أحرف)',
-              hintStyle: TextStyle(fontSize: 12),
-              prefixIcon: Icon(Icons.lock, color: color),
+                  '6 أحرف على الأقل (اتركها فارغة للحفاظ على الكلمة الحالية)',
+              hintStyle: TextStyle(fontSize: 11),
+              prefixIcon: Icon(Icons.lock, color: color, size: 18),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surface,
               border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: color.withOpacity(0.3)),
+              ),
+              enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(color: color.withOpacity(0.3)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: color, width: 2),
+                borderSide: BorderSide(color: color, width: 1.5),
               ),
               isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
               suffixIcon: IconButton(
-                tooltip:
-                    showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور',
                 icon: Icon(
                   showPassword ? Icons.visibility_off : Icons.visibility,
                   color: color,
+                  size: 18,
                 ),
                 onPressed: onToggleObscure,
+                tooltip:
+                    showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور',
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // Save button
+          // Save button - تصميم مضغوط
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: isSaving ? null : () => onSave(),
               icon: isSaving
                   ? SizedBox(
-                      width: 18,
-                      height: 18,
+                      width: 16,
+                      height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).colorScheme.onPrimary,
-                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : const Icon(Icons.save, size: 18),
-              label: Text(isSaving ? 'جارٍ الحفظ...' : 'حفظ $title'),
+                  : Icon(Icons.save, size: 16),
+              label: Text(
+                isSaving ? 'جارٍ الحفظ...' : 'حفظ $title',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: color,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
