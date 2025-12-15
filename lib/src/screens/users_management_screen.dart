@@ -16,6 +16,7 @@ class UsersManagementScreen extends StatefulWidget {
 
 class _UsersManagementScreenState extends State<UsersManagementScreen> {
   int _credsVersion = 0;
+
   @override
   void dispose() {
     super.dispose();
@@ -53,10 +54,6 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إدارة المستخدمين'),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-      ),
       backgroundColor: DarkModeUtils.getBackgroundColor(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

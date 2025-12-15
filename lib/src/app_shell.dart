@@ -7,6 +7,7 @@ import 'services/auth/auth_provider.dart';
 import 'services/store_config.dart';
 import 'services/theme_provider.dart';
 import 'services/license/license_provider.dart';
+import 'services/db/database_service.dart';
 import 'utils/strings.dart';
 import 'utils/app_themes.dart';
 import 'utils/dark_mode_utils.dart';
@@ -184,6 +185,8 @@ class _AppShellState extends State<AppShell> {
                     )
                   : null,
               actions: [
+                // زر التنبيهات (ثابت في AppBar)
+                _InventoryAlertsButton(),
                 // Dark mode toggle button
                 IconButton(
                   tooltip: themeProvider.isDarkMode
@@ -1240,6 +1243,309 @@ class _AppShellState extends State<AppShell> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Widget لزر تنبيهات المخزون
+class _InventoryAlertsButton extends StatefulWidget {
+  const _InventoryAlertsButton();
+
+  @override
+  State<_InventoryAlertsButton> createState() => _InventoryAlertsButtonState();
+}
+
+class _InventoryAlertsButtonState extends State<_InventoryAlertsButton> {
+  int _alertsCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAlertsCount();
+    });
+  }
+
+  Future<void> _loadAlertsCount() async {
+    if (!mounted) return;
+    final db = context.read<DatabaseService>();
+    final count = await _getAlertsCount(db);
+    if (mounted) {
+      setState(() {
+        _alertsCount = count;
+      });
+    }
+  }
+
+  Future<int> _getAlertsCount(DatabaseService db) async {
+    try {
+      final lowStock = await db.getLowStock();
+      final outOfStock = await db.getOutOfStock();
+      return lowStock.length + outOfStock.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  Future<void> _showInventoryAlerts(
+      BuildContext context, DatabaseService db) async {
+    try {
+      // عرض مؤشر التحميل
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // جلب البيانات
+      final lowStock = await db.getLowStock();
+      final outOfStock = await db.getOutOfStock();
+
+      if (!context.mounted) return;
+
+      // إغلاق مؤشر التحميل
+      Navigator.of(context).pop();
+
+      // عرض Dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                Icons.inventory_2,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              const Text('تنبيهات المخزون'),
+            ],
+          ),
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.6,
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // المنتجات النافدة
+                  if (outOfStock.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.error,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'منتجات نافدة (${outOfStock.length})',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...outOfStock.map((product) => Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border:
+                                Border.all(color: Colors.red.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.cancel,
+                                  color: Colors.red, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      product['name']?.toString() ?? 'منتج',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'الكمية: ${product['quantity'] ?? 0}',
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // المنتجات منخفضة المخزون
+                  if (lowStock.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.warning,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'منتجات منخفضة المخزون (${lowStock.length})',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange.shade700,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...lowStock.map((product) => Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: Colors.orange.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning_amber,
+                                  color: Colors.orange, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      product['name']?.toString() ?? 'منتج',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'الكمية: ${product['quantity'] ?? 0} | الحد الأدنى: ${product['min_quantity'] ?? 0}',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+
+                  // لا توجد تنبيهات
+                  if (outOfStock.isEmpty && lowStock.isEmpty)
+                    Center(
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'لا توجد تنبيهات',
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'جميع المنتجات في حالة جيدة',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('إغلاق'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في جلب التنبيهات: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final db = context.read<DatabaseService>();
+    return IconButton(
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(
+            Icons.notifications,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).colorScheme.onSurface
+                : Colors.black,
+          ),
+          if (_alertsCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 16,
+                  minHeight: 16,
+                ),
+                child: Text(
+                  _alertsCount > 99 ? '99+' : '$_alertsCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+      tooltip: 'تنبيهات المخزون',
+      onPressed: () async {
+        await _showInventoryAlerts(context, db);
+        // تحديث عدد التنبيهات بعد إغلاق الحوار
+        _loadAlertsCount();
+      },
     );
   }
 }

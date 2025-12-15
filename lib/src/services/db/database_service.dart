@@ -3381,17 +3381,48 @@ class DatabaseService {
         // تحسين قاعدة البيانات بعد الاستعادة
         await _db.execute('PRAGMA optimize');
 
-        // حذف جميع البيانات عدا المستخدمين بعد الاستعادة
-        // (حذف سلة المحذوفات، الكوبونات، الخصومات، سجل الأحداث، وجميع البيانات الأخرى)
-        // نستخدم _deleteAllDataExceptUsers بدلاً من deleteAllDataNew لتجنب استدعاء seedData
-        debugPrint('بدء حذف البيانات عدا المستخدمين بعد الاستعادة...');
+        // التحقق من وجود البيانات المستعادة
+        final customersCount =
+            await _db.rawQuery('SELECT COUNT(*) as count FROM customers');
+        final salesCount =
+            await _db.rawQuery('SELECT COUNT(*) as count FROM sales');
+        final productsCount =
+            await _db.rawQuery('SELECT COUNT(*) as count FROM products');
+        debugPrint(
+            'البيانات المستعادة - العملاء: ${customersCount.first['count']}, المبيعات: ${salesCount.first['count']}, المنتجات: ${productsCount.first['count']}');
+
+        // إعادة فتح قاعدة البيانات بشكل صحيح مع الإصدار و callbacks لضمان التهيئة الصحيحة
         try {
-          await _deleteAllDataExceptUsers();
-          debugPrint('تم حذف جميع البيانات عدا المستخدمين بنجاح');
+          await _db.close();
         } catch (e) {
-          debugPrint('تحذير: فشل حذف البيانات بعد الاستعادة: $e');
-          // لا نرمي الخطأ هنا لأن الاستعادة تمت بنجاح
+          debugPrint('تحذير: قاعدة البيانات قد تكون مغلقة بالفعل: $e');
         }
+        _db = await openDatabase(
+          _dbPath,
+          version: _dbVersion,
+          onOpen: (db) async {
+            // التحقق من وجود الجداول المهمة عند فتح قاعدة البيانات
+            await _ensureEventLogTable(db);
+            await _ensureReturnsTable(db);
+            await _ensureReturnsTableColumns(db);
+            await _ensureReturnsStatusColumn(db);
+            await _ensureDeletedItemsTable(db);
+            await _ensureExpensesTableColumns(db);
+            await _ensureDiscountTables(db);
+          },
+        );
+        await _db.execute('PRAGMA foreign_keys = ON');
+        await DatabaseSchema.createIndexes(_db);
+
+        // التحقق مرة أخرى من البيانات بعد إعادة الفتح
+        final finalCustomersCount =
+            await _db.rawQuery('SELECT COUNT(*) as count FROM customers');
+        final finalSalesCount =
+            await _db.rawQuery('SELECT COUNT(*) as count FROM sales');
+        final finalProductsCount =
+            await _db.rawQuery('SELECT COUNT(*) as count FROM products');
+        debugPrint(
+            'البيانات بعد إعادة الفتح - العملاء: ${finalCustomersCount.first['count']}, المبيعات: ${finalSalesCount.first['count']}, المنتجات: ${finalProductsCount.first['count']}');
       } catch (restoreError) {
         // في حالة فشل الاستعادة، استعادة البيانات الأصلية
         try {
@@ -4401,15 +4432,46 @@ class DatabaseService {
   Future<void> deleteCustomersOnly() async {
     try {
       await _db.transaction((txn) async {
+        // حذف الأقساط أولاً (لأنها مرتبطة بالمبيعات)
+        try {
+          await txn.execute('DELETE FROM installments');
+        } catch (e) {
+          debugPrint('خطأ في حذف installments: $e');
+        }
+
+        // حذف عناصر المبيعات (لأنها مرتبطة بالمبيعات)
+        try {
+          await txn.execute('DELETE FROM sale_items');
+        } catch (e) {
+          debugPrint('خطأ في حذف sale_items: $e');
+        }
+
+        // حذف المبيعات (لأنها مرتبطة بالعملاء)
+        try {
+          await txn.execute('DELETE FROM sales');
+        } catch (e) {
+          debugPrint('خطأ في حذف sales: $e');
+          rethrow;
+        }
+
         // حذف المدفوعات المرتبطة بالعملاء
-        await txn.delete('payments');
+        try {
+          await txn.delete('payments');
+        } catch (e) {
+          debugPrint('خطأ في حذف payments: $e');
+        }
 
         // حذف العملاء
-        await txn.delete('customers');
+        try {
+          await txn.delete('customers');
+        } catch (e) {
+          debugPrint('خطأ في حذف customers: $e');
+          rethrow;
+        }
 
         // إعادة تعيين AUTO_INCREMENT
         await txn.execute(
-            'DELETE FROM sqlite_sequence WHERE name IN ("customers", "payments")');
+            'DELETE FROM sqlite_sequence WHERE name IN ("customers", "payments", "sales", "sale_items", "installments")');
       });
     } catch (e) {
       throw Exception('خطأ في حذف العملاء: $e');
