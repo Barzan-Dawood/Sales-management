@@ -36,6 +36,11 @@ class _SalesScreenState extends State<SalesScreen> {
   final TextEditingController _customerAddressController =
       TextEditingController();
 
+  // Customers list for autocomplete
+  List<Map<String, Object?>> _customersList = [];
+  bool _customersLoaded = false;
+  final FocusNode _customerNameFocusNode = FocusNode();
+
 // Credit system variables
   DateTime? _dueDate;
   String _customerName = '';
@@ -69,12 +74,25 @@ class _SalesScreenState extends State<SalesScreen> {
 // Print settings
   String _selectedPrintType = '80'; // نوع الطباعة المختار
 
+  /// تحميل قائمة العملاء
+  Future<void> _loadCustomers(DatabaseService db) async {
+    if (_customersLoaded) return;
+    final customers = await db.getCustomers();
+    if (mounted) {
+      setState(() {
+        _customersList = customers;
+        _customersLoaded = true;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     _customerNameController.dispose();
     _customerPhoneController.dispose();
     _customerAddressController.dispose();
+    _customerNameFocusNode.dispose();
     super.dispose();
   }
 
@@ -82,6 +100,11 @@ class _SalesScreenState extends State<SalesScreen> {
   Widget build(BuildContext context) {
     final db = context.read<DatabaseService>();
     final auth = context.watch<AuthProvider>();
+
+    // تحميل قائمة العملاء عند أول تحميل
+    if (!_customersLoaded) {
+      _loadCustomers(db);
+    }
 
     // فحص صلاحية إدارة المبيعات
     if (!auth.hasPermission(UserPermission.manageSales)) {
@@ -124,6 +147,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
     // حساب الإجمالي مع الخصومات
     double subtotal = 0.0;
+    int totalQuantity = 0;
     for (final item in _cart) {
       final price = (item['price'] as num).toDouble();
       final quantity = (item['quantity'] as num).toInt();
@@ -132,6 +156,7 @@ class _SalesScreenState extends State<SalesScreen> {
       final itemTotal =
           price * (1 - (discountPercent.clamp(0, 100) / 100)) * quantity;
       subtotal += itemTotal;
+      totalQuantity += quantity;
     }
 
     // تطبيق خصم الكوبون
@@ -411,13 +436,138 @@ class _SalesScreenState extends State<SalesScreen> {
                 ),
                 child: Row(
                   children: [
-                    // Customer Name (default)
+                    // Customer Name with Autocomplete
                     Expanded(
                       flex: 1,
-                      child: TextField(
-                        controller: _customerNameController,
-                        decoration: pill('👤 اسم العميل', Icons.person),
-                        onChanged: (v) => _customerName = v,
+                      child: RawAutocomplete<Map<String, Object?>>(
+                        textEditingController: _customerNameController,
+                        focusNode: _customerNameFocusNode,
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          if (textEditingValue.text.isEmpty) {
+                            return _customersList;
+                          }
+                          final query = textEditingValue.text.toLowerCase();
+                          return _customersList.where((customer) {
+                            final name =
+                                customer['name']?.toString().toLowerCase() ??
+                                    '';
+                            final phone =
+                                customer['phone']?.toString().toLowerCase() ??
+                                    '';
+                            return name.contains(query) ||
+                                phone.contains(query);
+                          }).toList();
+                        },
+                        displayStringForOption: (Map<String, Object?> option) {
+                          return option['name']?.toString() ?? '';
+                        },
+                        onSelected: (Map<String, Object?> selection) {
+                          setState(() {
+                            _customerName = selection['name']?.toString() ?? '';
+                            _customerPhone =
+                                selection['phone']?.toString() ?? '';
+                            _customerAddress =
+                                selection['address']?.toString() ?? '';
+                            _customerNameController.text = _customerName;
+                            _customerPhoneController.text = _customerPhone;
+                            _customerAddressController.text = _customerAddress;
+                          });
+                        },
+                        fieldViewBuilder: (BuildContext context,
+                            TextEditingController textEditingController,
+                            FocusNode focusNode,
+                            VoidCallback onFieldSubmitted) {
+                          return TextField(
+                            controller: textEditingController,
+                            focusNode: focusNode,
+                            decoration: pill(
+                                '👤 اسم العميل (اختر أو اكتب)', Icons.person),
+                            onChanged: (v) {
+                              _customerName = v;
+                              // إذا تم مسح الحقل، امسح الحقول الأخرى أيضاً
+                              if (v.isEmpty) {
+                                _customerPhone = '';
+                                _customerAddress = '';
+                                _customerPhoneController.clear();
+                                _customerAddressController.clear();
+                              }
+                            },
+                            onSubmitted: (String value) {
+                              onFieldSubmitted();
+                            },
+                          );
+                        },
+                        optionsViewBuilder: (BuildContext context,
+                            AutocompleteOnSelected<Map<String, Object?>>
+                                onSelected,
+                            Iterable<Map<String, Object?>> options) {
+                          return Align(
+                            alignment: Alignment.topRight,
+                            child: Material(
+                              elevation: 4.0,
+                              borderRadius: BorderRadius.circular(8),
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxHeight: 200),
+                                child: ListView.builder(
+                                  shrinkWrap: true,
+                                  padding: EdgeInsets.zero,
+                                  itemCount: options.length,
+                                  itemBuilder:
+                                      (BuildContext context, int index) {
+                                    final customer = options.elementAt(index);
+                                    final name =
+                                        customer['name']?.toString() ?? '';
+                                    final phone =
+                                        customer['phone']?.toString() ?? '';
+                                    return InkWell(
+                                      onTap: () {
+                                        onSelected(customer);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 12),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.person,
+                                                size: 18,
+                                                color:
+                                                    DarkModeUtils.getInfoColor(
+                                                        context)),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    name,
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                                  ),
+                                                  if (phone.isNotEmpty)
+                                                    Text(
+                                                      phone,
+                                                      style: TextStyle(
+                                                          fontSize: 12,
+                                                          color: DarkModeUtils
+                                                              .getSecondaryTextColor(
+                                                                  context)),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -1255,7 +1405,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                           ),
                                         ),
                                         Text(
-                                          '${_cart.length} منتج في السلة',
+                                          '${_cart.length} منتج في السلة • إجمالي الكمية: $totalQuantity',
                                           style: TextStyle(
                                             color: Theme.of(context)
                                                 .colorScheme

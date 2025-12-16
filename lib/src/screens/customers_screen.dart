@@ -647,10 +647,19 @@ class _CustomersScreenState extends State<CustomersScreen> {
   /// عرض تفاصيل العميل وتاريخ المعاملات
   Future<void> _showCustomerDetails(Map<String, Object?> customer) async {
     final db = context.read<DatabaseService>();
-    final customerId = customer['id'] as int;
     final customerName = customer['name']?.toString() ?? '';
 
-    // جلب بيانات العميل التفصيلية
+    // البحث عن جميع العملاء بنفس الاسم (تطبيع الاسم)
+    final normalizedName = customerName.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+    final allCustomerIdsResult = await db.database.rawQuery('''
+      SELECT id FROM customers 
+      WHERE LOWER(TRIM(REPLACE(REPLACE(name, '\t', ' '), '  ', ' '))) = ?
+    ''', [normalizedName]);
+    
+    final allCustomerIds = allCustomerIdsResult.map((row) => row['id'] as int).toList();
+    final placeholders = allCustomerIds.map((_) => '?').join(',');
+
+    // جلب بيانات العميل التفصيلية من جميع العملاء بنفس الاسم
     final customerSales = await db.database.rawQuery('''
       SELECT 
         s.*,
@@ -658,16 +667,16 @@ class _CustomersScreenState extends State<CustomersScreen> {
       FROM sales s
       LEFT JOIN sale_items si ON s.id = si.sale_id
       LEFT JOIN products p ON si.product_id = p.id
-      WHERE s.customer_id = ?
+      WHERE s.customer_id IN ($placeholders)
       GROUP BY s.id
       ORDER BY s.created_at DESC
-    ''', [customerId]);
+    ''', allCustomerIds);
 
     final customerPayments = await db.database.rawQuery('''
       SELECT * FROM payments 
-      WHERE customer_id = ?
+      WHERE customer_id IN ($placeholders)
       ORDER BY payment_date DESC
-    ''', [customerId]);
+    ''', allCustomerIds);
 
     if (!mounted) return;
 

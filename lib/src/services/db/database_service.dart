@@ -1389,13 +1389,118 @@ class DatabaseService {
 
   // Customers
   Future<List<Map<String, Object?>>> getCustomers({String? query}) async {
-    if (query == null || query.trim().isEmpty)
-      return _db.query('customers', orderBy: 'id DESC');
-    final like = '%${query.trim()}%';
-    return _db.query('customers',
-        where: 'name LIKE ? OR phone LIKE ?',
-        whereArgs: [like, like],
-        orderBy: 'id DESC');
+    List<Map<String, Object?>> allCustomers;
+    if (query == null || query.trim().isEmpty) {
+      allCustomers = await _db.query('customers', orderBy: 'id DESC');
+    } else {
+      final like = '%${query.trim()}%';
+      allCustomers = await _db.query('customers',
+          where: 'name LIKE ? OR phone LIKE ?',
+          whereArgs: [like, like],
+          orderBy: 'id DESC');
+    }
+
+    // تجميع العملاء المكررين بالاسم (تطبيع الاسم)
+    final Map<String, Map<String, Object?>> uniqueCustomers = {};
+    final Map<String, List<int>> customerIdsByNormalizedName = {};
+
+    for (final customer in allCustomers) {
+      final name = customer['name']?.toString() ?? '';
+      final normalizedName =
+          name.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+
+      if (normalizedName.isEmpty) continue;
+
+      if (!uniqueCustomers.containsKey(normalizedName)) {
+        // استخدام أول عميل كأساس
+        uniqueCustomers[normalizedName] = Map<String, Object?>.from(customer);
+        customerIdsByNormalizedName[normalizedName] = [customer['id'] as int];
+      } else {
+        // دمج البيانات: استخدام البيانات الأكثر اكتمالاً
+        final existing = uniqueCustomers[normalizedName]!;
+        customerIdsByNormalizedName[normalizedName]!.add(customer['id'] as int);
+
+        // تحديث الهاتف إذا كان فارغاً في العميل الأساسي
+        if ((existing['phone'] == null ||
+                existing['phone'].toString().trim().isEmpty) &&
+            customer['phone'] != null &&
+            customer['phone'].toString().trim().isNotEmpty) {
+          existing['phone'] = customer['phone'];
+        }
+
+        // تحديث العنوان إذا كان فارغاً في العميل الأساسي
+        if ((existing['address'] == null ||
+                existing['address'].toString().trim().isEmpty) &&
+            customer['address'] != null &&
+            customer['address'].toString().trim().isNotEmpty) {
+          existing['address'] = customer['address'];
+        }
+
+        // جمع إجمالي الدين من جميع العملاء المكررين
+        final existingDebt =
+            (existing['total_debt'] as num?)?.toDouble() ?? 0.0;
+        final customerDebt =
+            (customer['total_debt'] as num?)?.toDouble() ?? 0.0;
+        existing['total_debt'] = existingDebt + customerDebt;
+      }
+    }
+
+    // حساب إجمالي الدين الفعلي من المبيعات والمدفوعات للعملاء المكررين
+    final duplicateGroups = customerIdsByNormalizedName.entries
+        .where((e) => e.value.length > 1)
+        .toList();
+
+    if (duplicateGroups.isNotEmpty) {
+      // جمع جميع IDs للعملاء المكررين
+      final allDuplicateIds = <int>[];
+      for (final group in duplicateGroups) {
+        allDuplicateIds.addAll(group.value);
+      }
+
+      // حساب الدين لجميع العملاء المكررين في استعلامات مجمعة
+      final placeholders = allDuplicateIds.map((_) => '?').join(',');
+      final salesResult = await _db.rawQuery(
+          'SELECT customer_id, SUM(total) as total FROM sales WHERE customer_id IN ($placeholders) AND type IN ("credit", "installment") GROUP BY customer_id',
+          allDuplicateIds);
+      final paymentsResult = await _db.rawQuery(
+          'SELECT customer_id, SUM(amount) as total FROM payments WHERE customer_id IN ($placeholders) GROUP BY customer_id',
+          allDuplicateIds);
+      final installmentsResult = await _db.rawQuery(
+          'SELECT s.customer_id, SUM(i.amount) as total FROM installments i JOIN sales s ON i.sale_id = s.id WHERE s.customer_id IN ($placeholders) GROUP BY s.customer_id',
+          allDuplicateIds);
+
+      // إنشاء maps للبحث السريع
+      final salesByCustomer = <int, double>{};
+      for (final row in salesResult) {
+        salesByCustomer[row['customer_id'] as int] =
+            (row['total'] as num?)?.toDouble() ?? 0.0;
+      }
+      final paymentsByCustomer = <int, double>{};
+      for (final row in paymentsResult) {
+        paymentsByCustomer[row['customer_id'] as int] =
+            (row['total'] as num?)?.toDouble() ?? 0.0;
+      }
+      final installmentsByCustomer = <int, double>{};
+      for (final row in installmentsResult) {
+        installmentsByCustomer[row['customer_id'] as int] =
+            (row['total'] as num?)?.toDouble() ?? 0.0;
+      }
+
+      // تحديث الدين لكل مجموعة من العملاء المكررين
+      for (final group in duplicateGroups) {
+        double totalDebt = 0.0;
+        for (final id in group.value) {
+          final salesTotal = salesByCustomer[id] ?? 0.0;
+          final paymentsTotal = paymentsByCustomer[id] ?? 0.0;
+          final installmentsPaid = installmentsByCustomer[id] ?? 0.0;
+          totalDebt += salesTotal - paymentsTotal - installmentsPaid;
+        }
+        uniqueCustomers[group.key]!['total_debt'] = totalDebt;
+      }
+    }
+
+    // إرجاع القائمة مع الحفاظ على الاسم الأصلي (غير normalized)
+    return uniqueCustomers.values.toList();
   }
 
   Future<int> upsertCustomer(Map<String, Object?> values, {int? id}) async {
@@ -1414,14 +1519,52 @@ class DatabaseService {
     }
 
     if (id == null) {
-      // إضافة عميل جديد
-      return _db.insert('customers', values);
+      // إضافة عميل جديد - التحقق من وجود عميل بنفس الاسم
+      final customerName = values['name']?.toString().trim() ?? '';
+      final normalizedName = customerName.replaceAll(RegExp(r'\s+'), ' ');
+      final existing = await _db.query('customers',
+          where: "TRIM(REPLACE(REPLACE(name, '\t', ' '), '  ', ' ')) = ?",
+          whereArgs: [normalizedName],
+          limit: 1);
+
+      if (existing.isNotEmpty) {
+        // تحديث العميل الموجود بدلاً من إنشاء جديد
+        final existingId = existing.first['id'] as int;
+        // دمج البيانات: تحديث الحقول الفارغة فقط
+        final updateData = Map<String, Object?>.from(values);
+        if (existing.first['phone']?.toString().trim().isNotEmpty == true &&
+            (updateData['phone'] == null ||
+                updateData['phone'].toString().trim().isEmpty)) {
+          updateData['phone'] = existing.first['phone'];
+        }
+        if (existing.first['address']?.toString().trim().isNotEmpty == true &&
+            (updateData['address'] == null ||
+                updateData['address'].toString().trim().isEmpty)) {
+          updateData['address'] = existing.first['address'];
+        }
+        // الحفاظ على total_debt الموجود
+        if (updateData['total_debt'] == null) {
+          updateData['total_debt'] = existing.first['total_debt'];
+        }
+        await _db.update('customers', updateData,
+            where: 'id = ?', whereArgs: [existingId]);
+        return existingId;
+      } else {
+        // إضافة عميل جديد
+        values['name'] = normalizedName; // استخدام الاسم المطبيع
+        return _db.insert('customers', values);
+      }
     } else {
       // تحديث عميل موجود - التحقق من وجوده
       final customer = await _db.query('customers',
           where: 'id = ?', whereArgs: [id], limit: 1);
       if (customer.isEmpty) {
         throw Exception('العميل غير موجود');
+      }
+      // تطبيع الاسم عند التحديث أيضاً
+      if (values['name'] != null) {
+        values['name'] =
+            (values['name'] as String).trim().replaceAll(RegExp(r'\s+'), ' ');
       }
       return _db.update('customers', values, where: 'id = ?', whereArgs: [id]);
     }
@@ -1824,14 +1967,36 @@ class DatabaseService {
         int? ensuredCustomerId = customerId;
         if (ensuredCustomerId == null &&
             customerName?.trim().isNotEmpty == true) {
+          // البحث عن العميل بالاسم فقط (تطبيع الاسم بإزالة المسافات الزائدة)
+          final normalizedName =
+              customerName!.trim().replaceAll(RegExp(r'\s+'), ' ');
           final existing = await txn.query('customers',
-              where: 'name = ? AND IFNULL(phone, "") = IFNULL(?, "")',
-              whereArgs: [customerName!.trim(), customerPhone?.trim()]);
+              where: "TRIM(REPLACE(REPLACE(name, '\t', ' '), '  ', ' ')) = ?",
+              whereArgs: [normalizedName]);
           if (existing.isNotEmpty) {
             ensuredCustomerId = existing.first['id'] as int;
+            // تحديث معلومات العميل إذا كانت هناك معلومات جديدة (هاتف أو عنوان)
+            final updateData = <String, Object?>{};
+            if (customerPhone?.trim().isNotEmpty == true) {
+              final existingPhone = existing.first['phone']?.toString().trim();
+              if (existingPhone == null || existingPhone.isEmpty) {
+                updateData['phone'] = customerPhone!.trim();
+              }
+            }
+            if (customerAddress?.trim().isNotEmpty == true) {
+              final existingAddress =
+                  existing.first['address']?.toString().trim();
+              if (existingAddress == null || existingAddress.isEmpty) {
+                updateData['address'] = customerAddress!.trim();
+              }
+            }
+            if (updateData.isNotEmpty) {
+              await txn.update('customers', updateData,
+                  where: 'id = ?', whereArgs: [ensuredCustomerId]);
+            }
           } else {
             ensuredCustomerId = await txn.insert('customers', {
-              'name': customerName.trim(),
+              'name': normalizedName,
               'phone': customerPhone?.trim(),
               'address': customerAddress?.trim(),
               'total_debt': 0,
