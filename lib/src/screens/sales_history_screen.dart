@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -785,149 +786,170 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
       showDialog(
         context: context,
-        builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
-            decoration: BoxDecoration(
-              color: DarkModeUtils.getCardColor(context),
+        builder: (context) => Directionality(
+          textDirection: ui.TextDirection.rtl,
+          child: Dialog(
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Column(
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.receipt_long,
-                        color: DarkModeUtils.getCardColor(context),
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'تفاصيل الفاتورة #$saleId',
-                              style: TextStyle(
-                                color: DarkModeUtils.getCardColor(context),
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (saleDetails['customer_name'] != null) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                saleDetails['customer_name'] as String,
-                                style: TextStyle(
-                                  color: DarkModeUtils.getSecondaryTextColor(
-                                      context),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(
-                          Icons.close,
-                          color: DarkModeUtils.getCardColor(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Content
-                Expanded(
-                  child: SingleChildScrollView(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
+              decoration: BoxDecoration(
+                color: DarkModeUtils.getCardColor(context),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  // Header
+                  Container(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      textDirection: ui.TextDirection.rtl,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Sale Info
-                        _buildDetailRow(
-                            'التاريخ',
-                            DateFormat('yyyy/MM/dd - HH:mm').format(
-                              DateTime.parse(
-                                  saleDetails['created_at'] as String),
-                            )),
-                        _buildDetailRow('نوع الدفع',
-                            _getTypeText(saleDetails['type'] as String)),
-                        if (saleDetails['customer_name'] != null)
-                          _buildDetailRow(
-                              'العميل', saleDetails['customer_name'] as String),
-                        if (saleDetails['customer_phone'] != null)
-                          _buildDetailRow('الهاتف',
-                              saleDetails['customer_phone'] as String),
-                        _buildDetailRow(
-                            'الإجمالي',
-                            Formatters.currencyIQD(
-                                saleDetails['total'] as num)),
-                        // إضافة المبلغ المقدم والمتبقي للمبيعات بالأقساط
-                        if (saleDetails['type'] == 'installment' &&
-                            saleDetails['down_payment'] != null &&
-                            (saleDetails['down_payment'] as num) > 0) ...[
-                          _buildDetailRow(
-                              'المبلغ المقدم',
-                              Formatters.currencyIQD(
-                                  saleDetails['down_payment'] as num),
-                              valueColor:
-                                  DarkModeUtils.getSuccessColor(context)),
-                          _buildDetailRow(
-                              'الباقي',
-                              Formatters.currencyIQD(
-                                  (saleDetails['total'] as num) -
-                                      (saleDetails['down_payment'] as num)),
-                              valueColor:
-                                  DarkModeUtils.getWarningColor(context)),
-                        ],
-                        _buildDetailRow(
-                            'الربح',
-                            Formatters.currencyIQD(
-                                saleDetails['profit'] as num)),
-                        const SizedBox(height: 16),
-                        // Items
-                        const Text(
-                          'المنتجات:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(
+                            Icons.close,
+                            color: DarkModeUtils.getCardColor(context),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        ...saleItems.map((item) => Card(
-                              child: ListTile(
-                                title: Text(item['product_name'] as String),
-                                subtitle: Text('الكمية: ${item['quantity']}'),
-                                trailing: Text(
-                                  Formatters.currencyIQD(
-                                      (item['price'] as num) *
-                                          (item['quantity'] as num)),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'تفاصيل الفاتورة #$saleId',
+                                style: TextStyle(
+                                  color: DarkModeUtils.getCardColor(context),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
                                 ),
+                                textAlign: TextAlign.right,
                               ),
-                            )),
+                              if (saleDetails['customer_name'] != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  saleDetails['customer_name'] as String,
+                                  style: TextStyle(
+                                    color: DarkModeUtils.getSecondaryTextColor(
+                                        context),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.receipt_long,
+                          color: DarkModeUtils.getCardColor(context),
+                          size: 24,
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Sale Info
+                          _buildDetailRow(
+                              'التاريخ',
+                              DateFormat('yyyy/MM/dd - HH:mm').format(
+                                DateTime.parse(
+                                    saleDetails['created_at'] as String),
+                              )),
+                          const SizedBox(height: 18),
+                          _buildDetailRow('نوع الدفع',
+                              _getTypeText(saleDetails['type'] as String)),
+                          if (saleDetails['customer_name'] != null) ...[
+                            const SizedBox(height: 18),
+                            _buildDetailRow('العميل',
+                                saleDetails['customer_name'] as String),
+                          ],
+                          if (saleDetails['customer_phone'] != null) ...[
+                            const SizedBox(height: 18),
+                            _buildDetailRow('الهاتف',
+                                saleDetails['customer_phone'] as String),
+                          ],
+                          const SizedBox(height: 18),
+                          _buildDetailRow(
+                              'الإجمالي',
+                              Formatters.currencyIQD(
+                                  saleDetails['total'] as num)),
+                          // إضافة المبلغ المقدم والمتبقي للمبيعات بالأقساط
+                          if (saleDetails['type'] == 'installment' &&
+                              saleDetails['down_payment'] != null &&
+                              (saleDetails['down_payment'] as num) > 0) ...[
+                            const SizedBox(height: 18),
+                            _buildDetailRow(
+                                'المبلغ المقدم',
+                                Formatters.currencyIQD(
+                                    saleDetails['down_payment'] as num),
+                                valueColor:
+                                    DarkModeUtils.getSuccessColor(context)),
+                            const SizedBox(height: 18),
+                            _buildDetailRow(
+                                'الباقي',
+                                Formatters.currencyIQD(
+                                    (saleDetails['total'] as num) -
+                                        (saleDetails['down_payment'] as num)),
+                                valueColor:
+                                    DarkModeUtils.getWarningColor(context)),
+                          ],
+                          const SizedBox(height: 18),
+                          _buildDetailRow(
+                              'الربح',
+                              Formatters.currencyIQD(
+                                  saleDetails['profit'] as num)),
+                          const SizedBox(height: 24),
+                          // Items
+                          const Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              'المنتجات:',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...saleItems.map((item) => Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  title: Text(item['product_name'] as String),
+                                  subtitle:
+                                      Text('الكمية : ${item['quantity']}'),
+                                  trailing: Text(
+                                    Formatters.currencyIQD(
+                                        (item['price'] as num) *
+                                            (item['quantity'] as num)),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              )),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -947,21 +969,34 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        textDirection: ui.TextDirection.rtl,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
           Expanded(
-            child: Text(
-              value,
-              style: valueColor != null
-                  ? TextStyle(color: valueColor, fontWeight: FontWeight.w600)
-                  : null,
+            child: RichText(
+              textDirection: ui.TextDirection.rtl,
+              textAlign: TextAlign.right,
+              text: TextSpan(
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: TextStyle(
+                      fontWeight: FontWeight.normal,
+                      color: valueColor,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

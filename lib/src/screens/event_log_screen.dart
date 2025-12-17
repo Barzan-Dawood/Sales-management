@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -430,13 +431,16 @@ class _EventLogScreenState extends State<EventLogScreen> {
     final entityType = event['entity_type'] as String? ?? '';
     final description = event['description'] as String? ?? '';
     final userRole = event['user_role'] as String?;
+    final userId = event['user_id'] as int?;
+
+    // الحصول على اسم المستخدم من user_name (من JOIN) أو username (من event_log)
     String userName =
         event['user_name'] as String? ?? event['username'] as String? ?? '';
 
-    // إذا لم يكن هناك اسم مستخدم، اعرض نوع المستخدم
-    if (userName.isEmpty || userName == 'غير معروف') {
-      if (userRole != null) {
-        switch (userRole) {
+    // إذا لم يكن هناك اسم مستخدم، استخدم user_role لعرض الدور
+    if (userName.isEmpty || userName.trim().isEmpty || userName == 'null') {
+      if (userRole != null && userRole.isNotEmpty && userRole != 'null') {
+        switch (userRole.toLowerCase()) {
           case 'manager':
             userName = 'مدير';
             break;
@@ -447,8 +451,11 @@ class _EventLogScreenState extends State<EventLogScreen> {
             userName = 'موظف';
             break;
           default:
-            userName = 'غير معروف';
+            userName = userRole; // عرض الدور كما هو إذا لم يكن معروفاً
         }
+      } else if (userId != null) {
+        // إذا كان هناك user_id لكن لا يوجد اسم، حاول الحصول على الاسم من قاعدة البيانات
+        userName = 'مستخدم #$userId';
       } else {
         userName = 'غير معروف';
       }
@@ -643,77 +650,141 @@ class _EventLogScreenState extends State<EventLogScreen> {
 
   void _showEventDetails(Map<String, Object?> event, String description,
       String details, DateTime? date, String userName) {
+    final eventType = event['event_type'] as String? ?? '';
+    final color =
+        _eventTypeColors[eventType] ?? Theme.of(context).colorScheme.primary;
+
     showDialog(
       context: context,
       builder: (context) => Directionality(
-        textDirection: Directionality.of(context),
+        textDirection: ui.TextDirection.rtl,
         child: Dialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Container(
-            padding: const EdgeInsets.all(20),
-            width: 450,
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.5,
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'تفاصيل الحدث',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                // Header
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    textDirection: ui.TextDirection.rtl,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.close,
+                            color: Colors.white, size: 22),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'إغلاق',
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildDetailRow('الوصف', description),
-                _buildDetailRow('المستخدم', userName),
-                if (date != null)
-                  _buildDetailRow('التاريخ والوقت',
-                      DateFormat('yyyy/MM/dd HH:mm:ss').format(date)),
-                _buildDetailRow('نوع الحدث',
-                    _getEventTypeLabel(event['event_type'] as String? ?? '')),
-                _buildDetailRow('نوع الكيان',
-                    _getEntityTypeLabel(event['entity_type'] as String? ?? '')),
-                if (event['entity_id'] != null)
-                  _buildDetailRow('معرف الكيان', '${event['entity_id']}'),
-                const SizedBox(height: 12),
-                const Text(
-                  'التفاصيل الإضافية:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                      const Text(
+                        'تفاصيل الحدث',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 6),
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _buildSimpleDetailRow('الوصف', description),
+                        const SizedBox(height: 16),
+                        _buildSimpleDetailRow('المستخدم', userName),
+                        if (date != null) ...[
+                          const SizedBox(height: 16),
+                          _buildSimpleDetailRow('التاريخ والوقت',
+                              DateFormat('yyyy/MM/dd HH:mm:ss').format(date)),
+                        ],
+                        const SizedBox(height: 16),
+                        _buildSimpleDetailRow(
+                            'نوع الحدث', _getEventTypeLabel(eventType)),
+                        const SizedBox(height: 16),
+                        _buildSimpleDetailRow(
+                            'نوع الكيان',
+                            _getEntityTypeLabel(
+                                event['entity_type'] as String? ?? '')),
+                        if (event['entity_id'] != null) ...[
+                          const SizedBox(height: 16),
+                          _buildSimpleDetailRow(
+                              'معرف الكيان', '${event['entity_id']}'),
+                        ],
+                        if (details.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          const Divider(),
+                          const SizedBox(height: 16),
+                          const Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              'التفاصيل الإضافية:',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              details,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                height: 1.6,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                // Footer
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   decoration: BoxDecoration(
                     color: Theme.of(context)
                         .colorScheme
                         .surfaceContainerHighest
                         .withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
                   ),
-                  child: Text(
-                    details,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('إغلاق'),
+                  child: Row(
+                    textDirection: ui.TextDirection.rtl,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('إغلاق'),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -724,31 +795,38 @@ class _EventLogScreenState extends State<EventLogScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
+  Widget _buildSimpleDetailRow(String label, String value) {
+    return Row(
+      textDirection: ui.TextDirection.rtl,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: RichText(
+            textDirection: ui.TextDirection.rtl,
+            textAlign: TextAlign.right,
+            text: TextSpan(
               style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextSpan(
+                  text: value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

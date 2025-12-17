@@ -6427,7 +6427,15 @@ class DatabaseService {
       var query = '''
         SELECT 
           e.*,
-          COALESCE(u.name, e.username) as user_name,
+          CASE 
+            WHEN u.name IS NOT NULL AND u.name != '' THEN u.name
+            WHEN e.username IS NOT NULL AND e.username != '' THEN e.username
+            WHEN u.role = 'manager' THEN 'مدير'
+            WHEN u.role = 'supervisor' THEN 'مشرف'
+            WHEN u.role = 'employee' THEN 'موظف'
+            WHEN u.role IS NOT NULL AND u.role != '' THEN u.role
+            ELSE 'غير معروف'
+          END as user_name,
           u.role as user_role
         FROM event_log e
         LEFT JOIN users u ON e.user_id = u.id

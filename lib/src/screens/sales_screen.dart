@@ -2292,6 +2292,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     }
                                                   }
 
+                                                  // الحصول على معلومات المستخدم الحالي
+                                                  final currentUser =
+                                                      auth.currentUser;
+
                                                   final saleId =
                                                       await db.createSale(
                                                     type: _type == 'cash'
@@ -2352,6 +2356,10 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             'installment'
                                                         ? _firstInstallmentDate
                                                         : null,
+                                                    // إضافة معلومات المستخدم لتسجيل الحدث
+                                                    userId: currentUser?.id,
+                                                    username:
+                                                        currentUser?.username,
                                                   );
                                                   if (!mounted) return;
 
