@@ -41,11 +41,15 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
     });
   }
 
-  InputDecoration _pill(BuildContext context, String hint, IconData icon) {
+  InputDecoration _pill(BuildContext context, String hint, IconData icon,
+      {String? helperText}) {
     return DarkModeUtils.createPillInputDecoration(
       context,
       hintText: hint,
       prefixIcon: icon,
+    ).copyWith(
+      helperText: helperText,
+      helperMaxLines: 2,
     );
   }
 
@@ -374,7 +378,9 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
                           controller: codeCtrl,
                           textAlign: TextAlign.right,
                           textDirection: TextDirection.rtl,
-                          decoration: _pill(context, 'كود الكوبون', Icons.tag),
+                          decoration: _pill(context, 'كود الكوبون', Icons.tag,
+                              helperText:
+                                  'أدخل كود فريد للكوبون (مثال: SUMMER2024)'),
                           textCapitalization: TextCapitalization.characters,
                           validator: (v) =>
                               (v == null || v.trim().isEmpty) ? 'مطلوب' : null,
@@ -384,8 +390,9 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
                           controller: nameCtrl,
                           textAlign: TextAlign.right,
                           textDirection: TextDirection.rtl,
-                          decoration:
-                              _pill(context, 'اسم الكوبون', Icons.label),
+                          decoration: _pill(context, 'اسم الكوبون', Icons.label,
+                              helperText:
+                                  'أدخل اسم وصفي للكوبون (مثال: خصم الصيف)'),
                           validator: (v) =>
                               (v == null || v.trim().isEmpty) ? 'مطلوب' : null,
                         ),
@@ -414,7 +421,10 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
                               discountType == 'percent'
                                   ? 'قيمة الخصم (%)'
                                   : 'قيمة الخصم',
-                              Icons.discount),
+                              Icons.discount,
+                              helperText: discountType == 'percent'
+                                  ? 'أدخل نسبة الخصم من 0 إلى 100 (مثال: 10 يعني 10%)'
+                                  : 'أدخل مبلغ الخصم بالدينار (مثال: 5000)'),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return 'مطلوب';
@@ -439,10 +449,10 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
                                   const TextInputType.numberWithOptions(
                                       decimal: true),
                               textAlign: TextAlign.right,
-                              decoration: _pill(
-                                  context,
-                                  'الحد الأقصى للخصم (اختياري)',
-                                  Icons.maximize),
+                              decoration: _pill(context,
+                                  'الحد الأقصى للخصم (اختياري)', Icons.maximize,
+                                  helperText:
+                                      'أدخل الحد الأقصى لمبلغ الخصم بالدينار (مثال: 50000). اتركه فارغاً إذا لم يكن هناك حد أقصى'),
                             ),
                           ),
                         TextFormField(
@@ -450,10 +460,10 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
                           textAlign: TextAlign.right,
-                          decoration: _pill(
-                              context,
-                              'الحد الأدنى للشراء (0 = بدون حد)',
-                              Icons.shopping_cart),
+                          decoration: _pill(context, 'الحد الأدنى للشراء',
+                              Icons.shopping_cart,
+                              helperText:
+                                  'أدخل الحد الأدنى لمبلغ الشراء بالدينار (مثال: 100000). أدخل 0 أو اتركه فارغاً إذا لم يكن هناك حد أدنى'),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return null;
@@ -470,10 +480,10 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
                           controller: usageLimitCtrl,
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.right,
-                          decoration: _pill(
-                              context,
-                              'حد الاستخدام (فارغ = بدون حد)',
-                              Icons.confirmation_number),
+                          decoration: _pill(context, 'حد الاستخدام',
+                              Icons.confirmation_number,
+                              helperText:
+                                  'أدخل عدد مرات استخدام الكوبون (مثال: 100). اتركه فارغاً إذا لم يكن هناك حد'),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return null;

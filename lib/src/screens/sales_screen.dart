@@ -3710,13 +3710,16 @@ class _SalesScreenState extends State<SalesScreen> {
       final db = context.read<DatabaseService>();
       final discount = await db.getActiveProductDiscount(p['id'] as int);
       if (discount != null) {
-        if (discount['discount_percent'] != null) {
-          productDiscount = (discount['discount_percent'] as num).toDouble();
-        } else if (discount['discount_amount'] != null) {
+        // التحقق من الخصم بالمبلغ أولاً (لأن discount_percent قد يكون 0 عند استخدام مبلغ)
+        if (discount['discount_amount'] != null && 
+            (discount['discount_amount'] as num).toDouble() > 0) {
           final price = (p['price'] as num).toDouble();
           final discountAmount =
               (discount['discount_amount'] as num).toDouble();
           productDiscount = (discountAmount / price) * 100;
+        } else if (discount['discount_percent'] != null && 
+                   (discount['discount_percent'] as num).toDouble() > 0) {
+          productDiscount = (discount['discount_percent'] as num).toDouble();
         }
       }
     } catch (e) {
