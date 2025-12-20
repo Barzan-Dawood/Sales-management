@@ -4,7 +4,24 @@ cmake_minimum_required(VERSION 3.10)
 set(EPHEMERAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ephemeral")
 
 # Configuration provided via flutter tool.
-include(${EPHEMERAL_DIR}/generated_config.cmake)
+if(EXISTS ${EPHEMERAL_DIR}/generated_config.cmake)
+  include(${EPHEMERAL_DIR}/generated_config.cmake)
+else()
+  # Default values when generated_config.cmake is not yet available
+  # These will be overridden when Flutter generates the file
+  if(NOT DEFINED FLUTTER_ROOT)
+    set(FLUTTER_ROOT "$ENV{FLUTTER_ROOT}")
+  endif()
+  if(NOT DEFINED FLUTTER_TARGET_PLATFORM)
+    set(FLUTTER_TARGET_PLATFORM "linux-x64")
+  endif()
+  if(NOT DEFINED FLUTTER_TARGET_ARCH)
+    set(FLUTTER_TARGET_ARCH "x64")
+  endif()
+  if(NOT DEFINED PROJECT_DIR)
+    get_filename_component(PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
+  endif()
+endif()
 
 # TODO: Move the rest of this into files in ephemeral. See
 # https://github.com/flutter/flutter/issues/57146.
@@ -21,10 +38,25 @@ endfunction()
 
 # === Flutter Library ===
 # System-level dependencies.
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
-pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
-pkg_check_modules(GIO REQUIRED IMPORTED_TARGET gio-2.0)
+# PkgConfig is only available on Linux/Unix systems
+# On Windows, this will fail but allows CMake to configure for IDE purposes
+# Actual Linux builds must be done on Linux or WSL
+find_package(PkgConfig)
+if(PkgConfig_FOUND)
+  pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
+  pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
+  pkg_check_modules(GIO REQUIRED IMPORTED_TARGET gio-2.0)
+else()
+  # Create stub targets for Windows IDE configuration
+  # These won't work for actual builds - Linux builds must be done on Linux/WSL
+  message(WARNING "PkgConfig not found. Linux builds require PkgConfig and GTK libraries.")
+  message(WARNING "For actual Linux builds, use Linux or WSL. This configuration is for IDE purposes only.")
+  
+  # Create stub imported targets
+  add_library(PkgConfig::GTK INTERFACE IMPORTED)
+  add_library(PkgConfig::GLIB INTERFACE IMPORTED)
+  add_library(PkgConfig::GIO INTERFACE IMPORTED)
+endif()
 
 set(FLUTTER_LIBRARY "${EPHEMERAL_DIR}/libflutter_linux_gtk.so")
 

@@ -549,20 +549,40 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     final vm = context.watch<SalesHistoryViewModel>();
     final bool selected =
         vm.type == value || (vm.type.isEmpty && value.isEmpty);
-    final Color color = selected
-        ? Theme.of(context).colorScheme.primary
-        : DarkModeUtils.getSecondaryTextColor(context);
+
+    // تحديد اللون حسب نوع الدفع
+    Color typeColor;
+    switch (value) {
+      case 'cash':
+        typeColor = Colors.blue;
+        break;
+      case 'credit':
+        typeColor = Colors.red;
+        break;
+      case 'installment':
+        typeColor = Colors.green;
+        break;
+      default: // 'الكل' أو ''
+        typeColor = DarkModeUtils.getSecondaryTextColor(context);
+        break;
+    }
+
     return ChoiceChip(
       label: Text(label, style: const TextStyle(fontSize: 12)),
       selected: selected,
-      selectedColor: color.withOpacity(0.15),
+      selectedColor: typeColor.withOpacity(0.15),
       labelStyle: TextStyle(
         color: selected
-            ? Theme.of(context).colorScheme.primary
-            : DarkModeUtils.getSecondaryTextColor(context),
+            ? typeColor
+            : typeColor.withOpacity(0.7), // ملون حتى عند عدم التحديد
         fontWeight: FontWeight.w600,
       ),
-      side: BorderSide(color: color.withOpacity(0.4)),
+      side: BorderSide(
+        color: selected
+            ? typeColor
+            : typeColor.withOpacity(0.5), // ملون حتى عند عدم التحديد
+        width: selected ? 1.5 : 1.0,
+      ),
       onSelected: (_) =>
           context.read<SalesHistoryViewModel>().updateType(value),
     );

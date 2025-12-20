@@ -51,8 +51,18 @@ set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
 # System-level dependencies.
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
+# PkgConfig is only available on Linux/Unix systems
+# On Windows, this will fail but allows CMake to configure for IDE purposes
+# Actual Linux builds must be done on Linux or WSL
+find_package(PkgConfig)
+if(PkgConfig_FOUND)
+  pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
+else()
+  # Stub target already created in flutter/CMakeLists.txt
+  if(NOT TARGET PkgConfig::GTK)
+    add_library(PkgConfig::GTK INTERFACE IMPORTED)
+  endif()
+endif()
 
 # Application build; see runner/CMakeLists.txt.
 add_subdirectory("runner")
@@ -72,7 +82,17 @@ set_target_properties(${BINARY_NAME}
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
-include(flutter/generated_plugins.cmake)
+# Initialize plugin libraries list
+set(PLUGIN_BUNDLED_LIBRARIES "")
+
+# Only include plugins when PkgConfig is available (i.e., on actual Linux systems)
+# This prevents plugin build errors when configuring on Windows for IDE purposes
+if(PkgConfig_FOUND)
+  include(flutter/generated_plugins.cmake)
+else()
+  message(WARNING "Skipping Linux plugin builds - PkgConfig not found.")
+  message(WARNING "Plugins will not be built. For actual Linux builds, use Linux or WSL.")
+endif()
 
 
 # === Installation ===
