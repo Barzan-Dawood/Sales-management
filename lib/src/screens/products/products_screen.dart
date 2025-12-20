@@ -682,7 +682,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
         return Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -693,26 +693,29 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           child: DropdownButtonFormField<int>(
             value: selectedCategoryId,
+            menuMaxHeight: 200,
+            isDense: true,
             decoration: InputDecoration(
               labelText: 'الفئة',
               prefixIcon: Icon(
                 Icons.category_rounded,
                 color: Theme.of(context).colorScheme.primary,
+                size: 20,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
                   color: DarkModeUtils.getBorderColor(context),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
                   color: DarkModeUtils.getBorderColor(context),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
                   color: Theme.of(context).colorScheme.primary,
                   width: 2,
@@ -721,7 +724,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               filled: true,
               fillColor: Theme.of(context).colorScheme.surface,
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
             items: [
               DropdownMenuItem<int>(
@@ -731,12 +734,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     Icon(
                       Icons.category_outlined,
                       color: Colors.grey,
-                      size: 20,
+                      size: 18,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
                       'بدون فئة (اختياري)',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
                     ),
                   ],
                 ),
@@ -748,10 +751,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         Icon(
                           Icons.category_rounded,
                           color: Theme.of(context).colorScheme.primary,
-                          size: 20,
+                          size: 18,
                         ),
-                        const SizedBox(width: 8),
-                        Text(category['name']?.toString() ?? ''),
+                        const SizedBox(width: 6),
+                        Text(
+                          category['name']?.toString() ?? '',
+                          style: const TextStyle(fontSize: 14),
+                        ),
                       ],
                     ),
                   )),
