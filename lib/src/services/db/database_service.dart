@@ -62,6 +62,8 @@ class DatabaseService {
         await _ensureExpensesTableColumns(db);
         // التأكد من وجود جداول الخصومات والكوبونات
         await _ensureDiscountTables(db);
+        // التأكد من وجود جدول supplier_payments
+        await _ensureSupplierPaymentsTable(db);
       },
     );
     // إعدادات أساسية فقط
@@ -80,6 +82,8 @@ class DatabaseService {
     await _ensureExpensesTableColumns(_db);
     // التأكد من وجود جداول الخصومات والكوبونات
     await _ensureDiscountTables(_db);
+    // التأكد من وجود جدول supplier_payments
+    await _ensureSupplierPaymentsTable(_db);
 
     await DatabaseSchema.createIndexes(_db);
 
@@ -100,6 +104,8 @@ class DatabaseService {
     await _ensureDeletedItemsTable(_db);
     // التأكد من وجود جداول الخصومات والكوبونات
     await _ensureDiscountTables(_db);
+    // التأكد من وجود جدول supplier_payments
+    await _ensureSupplierPaymentsTable(_db);
 
     await DatabaseSchema.createIndexes(_db);
     await _cleanupOrphanObjects(_db);
@@ -1671,22 +1677,377 @@ class DatabaseService {
 
   // Suppliers
   Future<List<Map<String, Object?>>> getSuppliers({String? query}) async {
-    if (query == null || query.trim().isEmpty)
-      return _db.query('suppliers', orderBy: 'id DESC');
+    if (query == null || query.trim().isEmpty) {
+      return _db.rawQuery('''
+        SELECT s.*, IFNULL(s.total_payable, 0) as total_payable
+        FROM suppliers s
+        ORDER BY s.id DESC
+      ''');
+    }
     final like = '%${query.trim()}%';
-    return _db.query('suppliers',
-        where: 'name LIKE ? OR phone LIKE ?',
-        whereArgs: [like, like],
-        orderBy: 'id DESC');
+    return _db.rawQuery('''
+      SELECT s.*, IFNULL(s.total_payable, 0) as total_payable
+      FROM suppliers s
+      WHERE s.name LIKE ? OR s.phone LIKE ?
+      ORDER BY s.id DESC
+    ''', [like, like]);
   }
 
   Future<int> upsertSupplier(Map<String, Object?> values, {int? id}) async {
-    if (id == null) return _db.insert('suppliers', values);
-    return _db.update('suppliers', values, where: 'id = ?', whereArgs: [id]);
+    // التحقق من صحة البيانات
+    if (values['name'] == null ||
+        (values['name'] as String?)?.trim().isEmpty == true) {
+      throw Exception('اسم المورد مطلوب');
+    }
+
+    // التحقق من total_payable إذا كان موجوداً
+    if (values['total_payable'] != null) {
+      final totalPayable = (values['total_payable'] as num?)?.toDouble() ?? 0.0;
+      if (totalPayable < 0) {
+        throw Exception('إجمالي المستحقات يجب أن يكون أكبر من أو يساوي صفر');
+      }
+    }
+
+    if (id == null) {
+      // إضافة مورد جديد
+      values['name'] = (values['name'] as String).trim();
+      return _db.insert('suppliers', values);
+    } else {
+      // تحديث مورد موجود
+      if (values['name'] != null) {
+        values['name'] = (values['name'] as String).trim();
+      }
+      return _db.update('suppliers', values, where: 'id = ?', whereArgs: [id]);
+    }
   }
 
-  Future<int> deleteSupplier(int id) =>
-      _db.delete('suppliers', where: 'id = ?', whereArgs: [id]);
+  Future<int> deleteSupplier(int id,
+      {int? userId, String? username, String? name}) async {
+    // التأكد من وجود جدول supplier_payments قبل الاستخدام
+    await _ensureSupplierPaymentsTable(_db);
+
+    return _db.transaction<int>((txn) async {
+      try {
+        // التحقق من وجود المورد أولاً
+        final supplier = await txn.query('suppliers',
+            where: 'id = ?', whereArgs: [id], limit: 1);
+        if (supplier.isEmpty) {
+          return 0;
+        }
+
+        // التحقق من وجود بيانات مرتبطة بالمورد
+        // استخدام try-catch للتعامل مع حالة عدم وجود الجدول
+        int payments = 0;
+        try {
+          final paymentsCount = await txn.rawQuery(
+              'SELECT COUNT(*) as count FROM supplier_payments WHERE supplier_id = ?',
+              [id]);
+          payments = paymentsCount.first['count'] as int;
+        } catch (e) {
+          // إذا كان الجدول غير موجود، نعتبر أن لا توجد مدفوعات
+          debugPrint(
+              'تحذير: جدول supplier_payments غير موجود أو خطأ في الاستعلام: $e');
+          payments = 0;
+        }
+
+        // إذا كان هناك مدفوعات مرتبطة، منع الحذف
+        if (payments > 0) {
+          throw Exception(
+              'لا يمكن حذف المورد لأنه مرتبط ببيانات مهمة:\n• $payments دفعة\n\n'
+              'لحماية السجلات المالية والتاريخية، يجب حذف جميع المدفوعات المرتبطة بهذا المورد أولاً.');
+        }
+
+        // حفظ البيانات الأصلية في سلة المحذوفات
+        final supplierData = supplier.first;
+        await txn.insert('deleted_items', {
+          'entity_type': 'supplier',
+          'entity_id': id,
+          'original_data': jsonEncode(supplierData),
+          'deleted_by_user_id': userId,
+          'deleted_by_username': username,
+          'deleted_by_name': name,
+          'deleted_at': DateTime.now().toIso8601String(),
+          'can_restore': 1,
+        });
+
+        // حذف المورد
+        final deletedRows =
+            await txn.delete('suppliers', where: 'id = ?', whereArgs: [id]);
+
+        return deletedRows;
+      } catch (e) {
+        rethrow;
+      }
+    });
+  }
+
+  /// إضافة دفعة للمورد (تقليل total_payable)
+  Future<int> addSupplierPayment({
+    required int supplierId,
+    required double amount,
+    required DateTime paymentDate,
+    String? notes,
+  }) async {
+    return _db.transaction<int>((txn) async {
+      // التحقق من وجود المورد
+      final supplier = await txn.query('suppliers',
+          where: 'id = ?', whereArgs: [supplierId], limit: 1);
+      if (supplier.isEmpty) {
+        throw Exception('المورد غير موجود');
+      }
+
+      // التحقق من أن المبلغ أكبر من صفر
+      if (amount <= 0) {
+        throw Exception('المبلغ يجب أن يكون أكبر من صفر');
+      }
+
+      // إضافة سجل الدفعة
+      final paymentId = await txn.insert('supplier_payments', {
+        'supplier_id': supplierId,
+        'amount': amount,
+        'payment_date': paymentDate.toIso8601String(),
+        'notes': notes,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      // تقليل المستحقات (total_payable)
+      await txn.rawUpdate(
+        'UPDATE suppliers SET total_payable = MAX(IFNULL(total_payable, 0) - ?, 0) WHERE id = ?',
+        [amount, supplierId],
+      );
+
+      return paymentId;
+    });
+  }
+
+  /// الحصول على مدفوعات المورد
+  Future<List<Map<String, Object?>>> getSupplierPayments({
+    int? supplierId,
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    final where = <String>[];
+    final args = <Object?>[];
+
+    if (supplierId != null) {
+      where.add('sp.supplier_id = ?');
+      args.add(supplierId);
+    }
+
+    if (from != null && to != null) {
+      where.add('sp.payment_date BETWEEN ? AND ?');
+      args.addAll([from.toIso8601String(), to.toIso8601String()]);
+    }
+
+    final whereClause = where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : '';
+
+    return _db.rawQuery('''
+      SELECT 
+        sp.*,
+        s.name as supplier_name,
+        s.phone as supplier_phone
+      FROM supplier_payments sp
+      JOIN suppliers s ON s.id = sp.supplier_id
+      $whereClause
+      ORDER BY sp.payment_date DESC, sp.created_at DESC
+    ''', args);
+  }
+
+  /// تحديث دفعة مورد
+  Future<bool> updateSupplierPayment({
+    required int paymentId,
+    required double newAmount,
+    required DateTime newPaymentDate,
+    String? newNotes,
+  }) async {
+    return _db.transaction<bool>((txn) async {
+      try {
+        // الحصول على تفاصيل الدفعة القديمة
+        final oldPayment = await txn.query('supplier_payments',
+            where: 'id = ?', whereArgs: [paymentId], limit: 1);
+
+        if (oldPayment.isEmpty) {
+          throw Exception('السجل غير موجود');
+        }
+
+        final oldP = oldPayment.first;
+        final supplierId = oldP['supplier_id'] as int;
+        final oldAmount = (oldP['amount'] as num).toDouble();
+        final isPayable = oldAmount == 0;
+
+        // إذا كان سجل مستحقات (amount = 0)، لا يمكن تعديله كدفعة
+        if (isPayable && newAmount > 0) {
+          throw Exception('لا يمكن تحويل سجل المستحقات إلى دفعة');
+        }
+
+        // تحديث السجل
+        final updatedRows = await txn.update(
+          'supplier_payments',
+          {
+            'amount': newAmount,
+            'payment_date': newPaymentDate.toIso8601String(),
+            'notes': newNotes,
+          },
+          where: 'id = ?',
+          whereArgs: [paymentId],
+        );
+
+        if (updatedRows > 0) {
+          // تحديث total_payable للمورد
+          // نستعيد المبلغ القديم ثم نطبق المبلغ الجديد
+          if (oldAmount > 0) {
+            // استرجاع المبلغ القديم
+            await txn.rawUpdate(
+              'UPDATE suppliers SET total_payable = IFNULL(total_payable, 0) + ? WHERE id = ?',
+              [oldAmount, supplierId],
+            );
+          }
+
+          // تطبيق المبلغ الجديد
+          if (newAmount > 0) {
+            await txn.rawUpdate(
+              'UPDATE suppliers SET total_payable = MAX(IFNULL(total_payable, 0) - ?, 0) WHERE id = ?',
+              [newAmount, supplierId],
+            );
+          }
+        }
+
+        return updatedRows > 0;
+      } catch (e) {
+        rethrow;
+      }
+    });
+  }
+
+  /// إعادة حساب total_payable للمورد من جميع السجلات
+  Future<void> _recalculateSupplierPayable(
+      DatabaseExecutor txn, int supplierId) async {
+    // حساب total_payable من جميع السجلات المتبقية
+    // total_payable = مجموع المستحقات المضافة - مجموع الدفعات المدفوعة
+
+    // الحصول على جميع السجلات للمورد
+    final payments = await txn.query('supplier_payments',
+        where: 'supplier_id = ?', whereArgs: [supplierId]);
+
+    double totalPayable = 0.0;
+
+    for (final payment in payments) {
+      final amount = (payment['amount'] as num?)?.toDouble() ?? 0.0;
+      final notes = payment['notes']?.toString() ?? '';
+
+      if (amount > 0) {
+        // دفعة - ننقص من total_payable
+        totalPayable -= amount;
+      } else if (notes.contains('إضافة مستحقات:')) {
+        // مستحقات مضافة - نحاول استخراج المبلغ من notes
+        try {
+          // تنسيق: "إضافة مستحقات: X.XX د.ع - ملاحظات" أو "إضافة مستحقات: X.XX د.ع"
+          // نبحث عن رقم بعد "إضافة مستحقات:" وقبل "د.ع"
+          final match =
+              RegExp(r'إضافة مستحقات:\s*([\d,]+\.?\d*)').firstMatch(notes);
+          if (match != null) {
+            // إزالة الفواصل من الرقم (مثل 1,000,000)
+            final amountStr = match.group(1)!.replaceAll(',', '');
+            final payableAmount = double.parse(amountStr);
+            totalPayable += payableAmount;
+          }
+        } catch (e) {
+          // إذا فشل استخراج المبلغ، نتجاهل هذا السجل
+          debugPrint('خطأ في استخراج المبلغ من السجل: $e');
+        }
+      }
+    }
+
+    // تحديث total_payable (يجب أن يكون >= 0)
+    await txn.rawUpdate(
+      'UPDATE suppliers SET total_payable = MAX(?, 0) WHERE id = ?',
+      [totalPayable, supplierId],
+    );
+  }
+
+  /// حذف دفعة مورد
+  Future<bool> deleteSupplierPayment(int paymentId,
+      {int? userId, String? username, String? name}) async {
+    return _db.transaction<bool>((txn) async {
+      try {
+        // الحصول على تفاصيل الدفعة
+        final payment = await txn.query('supplier_payments',
+            where: 'id = ?', whereArgs: [paymentId], limit: 1);
+
+        if (payment.isEmpty) return false;
+
+        final p = payment.first;
+        final supplierId = p['supplier_id'] as int;
+
+        // حفظ بيانات الدفعة في سلة المحذوفات قبل الحذف
+        await txn.insert('deleted_items', {
+          'entity_type': 'supplier_payment',
+          'entity_id': paymentId,
+          'original_data': jsonEncode(p),
+          'deleted_by_user_id': userId,
+          'deleted_by_username': username,
+          'deleted_by_name': name,
+          'deleted_at': DateTime.now().toIso8601String(),
+          'can_restore': 1,
+        });
+
+        // حذف الدفعة
+        final deletedRows = await txn.delete('supplier_payments',
+            where: 'id = ?', whereArgs: [paymentId]);
+
+        if (deletedRows > 0) {
+          // إعادة حساب total_payable من جميع السجلات المتبقية
+          await _recalculateSupplierPayable(txn, supplierId);
+        }
+
+        return deletedRows > 0;
+      } catch (e) {
+        return false;
+      }
+    });
+  }
+
+  /// إضافة مستحقات جديدة للمورد (زيادة total_payable)
+  Future<void> addSupplierPayable({
+    required int supplierId,
+    required double amount,
+    String? notes,
+  }) async {
+    if (amount <= 0) {
+      throw Exception('المبلغ يجب أن يكون أكبر من صفر');
+    }
+
+    await _db.transaction((txn) async {
+      // التحقق من وجود المورد
+      final supplier = await txn.query('suppliers',
+          where: 'id = ?', whereArgs: [supplierId], limit: 1);
+      if (supplier.isEmpty) {
+        throw Exception('المورد غير موجود');
+      }
+
+      // زيادة المستحقات
+      await txn.rawUpdate(
+        'UPDATE suppliers SET total_payable = IFNULL(total_payable, 0) + ? WHERE id = ?',
+        [amount, supplierId],
+      );
+
+      // إضافة سجل في supplier_payments كسجل إضافة مستحقات
+      // نستخدم amount = 0 لأننا لا نضيف دفعة، فقط نزيد المستحقات
+      // ويمكننا استخدام notes لتوضيح أن هذا إضافة مستحقات
+      final formattedAmount = amount.toStringAsFixed(2);
+      final noteText = notes?.isNotEmpty == true
+          ? 'إضافة مستحقات: $formattedAmount د.ع - $notes'
+          : 'إضافة مستحقات: $formattedAmount د.ع';
+
+      await txn.insert('supplier_payments', {
+        'supplier_id': supplierId,
+        'amount': 0, // لا نضيف دفعة فعلية
+        'payment_date': DateTime.now().toIso8601String(),
+        'notes': noteText,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    });
+  }
 
   // Expenses - تم نقل الدوال إلى قسم "دوال إدارة المصروفات" أدناه
   // الدوال القديمة تم استبدالها بدوال محسنة مع دعم الفئات والوصف
@@ -4691,18 +5052,35 @@ class DatabaseService {
     }
   }
 
-  /// حذف الموردين فقط
+  /// حذف جميع الموردين فقط
   Future<void> deleteSuppliersOnly() async {
     try {
       await _db.transaction((txn) async {
+        // حذف مدفوعات الموردين أولاً
+        try {
+          await txn.execute('DELETE FROM supplier_payments');
+        } catch (e) {
+          debugPrint('خطأ في حذف supplier_payments: $e');
+        }
+
         // حذف الموردين
-        await txn.delete('suppliers');
+        try {
+          await txn.execute('DELETE FROM suppliers');
+        } catch (e) {
+          debugPrint('خطأ في حذف suppliers: $e');
+          rethrow;
+        }
 
         // إعادة تعيين AUTO_INCREMENT
-        await txn
-            .execute('DELETE FROM sqlite_sequence WHERE name = "suppliers"');
+        try {
+          await txn.execute(
+              'DELETE FROM sqlite_sequence WHERE name IN ("suppliers", "supplier_payments")');
+        } catch (e) {
+          debugPrint('خطأ في إعادة تعيين sqlite_sequence: $e');
+        }
       });
     } catch (e) {
+      debugPrint('خطأ في حذف الموردين: $e');
       throw Exception('خطأ في حذف الموردين: $e');
     }
   }
@@ -5443,6 +5821,39 @@ class DatabaseService {
       }
     } catch (e) {
       debugPrint('خطأ في التأكد من عمود status في جدول returns: $e');
+    }
+  }
+
+  /// التأكد من وجود جدول supplier_payments
+  Future<void> _ensureSupplierPaymentsTable([Database? db]) async {
+    try {
+      final database = db ?? _db;
+      // التحقق من وجود الجدول أولاً
+      final tables = await database.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='supplier_payments'");
+
+      if (tables.isEmpty) {
+        debugPrint('جدول supplier_payments غير موجود، جاري إنشاؤه...');
+        await database.execute('''
+          CREATE TABLE IF NOT EXISTS supplier_payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            supplier_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            payment_date TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(supplier_id) REFERENCES suppliers(id)
+          );
+        ''');
+        // إنشاء الفهرس
+        await database.execute(
+            'CREATE INDEX IF NOT EXISTS idx_supplier_payments_supplier_id ON supplier_payments(supplier_id)');
+        await database.execute(
+            'CREATE INDEX IF NOT EXISTS idx_supplier_payments_date ON supplier_payments(payment_date)');
+        debugPrint('تم إنشاء جدول supplier_payments بنجاح');
+      }
+    } catch (e) {
+      debugPrint('خطأ في التأكد من جدول supplier_payments: $e');
     }
   }
 

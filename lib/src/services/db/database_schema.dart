@@ -162,6 +162,18 @@ class DatabaseSchema {
     ''');
 
     await db.execute('''
+      CREATE TABLE supplier_payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        supplier_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        payment_date TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(supplier_id) REFERENCES suppliers(id)
+      );
+    ''');
+
+    await db.execute('''
       CREATE TABLE event_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         event_type TEXT NOT NULL,
