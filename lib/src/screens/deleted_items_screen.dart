@@ -63,6 +63,19 @@ class _DeletedItemsScreenState extends State<DeletedItemsScreen> {
     _loadDeletedItems();
   }
 
+  String? _getRoleDisplayName(String? role) {
+    switch (role) {
+      case 'manager':
+        return 'مدير';
+      case 'supervisor':
+        return 'مشرف';
+      case 'employee':
+        return 'موظف';
+      default:
+        return null;
+    }
+  }
+
   String _getEntityTypeName(String type) {
     switch (type) {
       case 'customer':
@@ -77,6 +90,10 @@ class _DeletedItemsScreenState extends State<DeletedItemsScreen> {
         return 'منتج';
       case 'expense':
         return 'مصروف';
+      case 'supplier':
+        return 'مورد';
+      case 'supplier_payment':
+        return 'دفعة مورد';
       default:
         return type;
     }
@@ -96,6 +113,10 @@ class _DeletedItemsScreenState extends State<DeletedItemsScreen> {
         return Icons.inventory;
       case 'expense':
         return Icons.receipt;
+      case 'supplier':
+        return Icons.business;
+      case 'supplier_payment':
+        return Icons.payment;
       default:
         return Icons.delete;
     }
@@ -115,6 +136,10 @@ class _DeletedItemsScreenState extends State<DeletedItemsScreen> {
         return Colors.purple;
       case 'expense':
         return Colors.red;
+      case 'supplier':
+        return Colors.indigo;
+      case 'supplier_payment':
+        return Colors.cyan;
       default:
         return Colors.grey;
     }
@@ -180,6 +205,12 @@ class _DeletedItemsScreenState extends State<DeletedItemsScreen> {
                     const SizedBox(width: 8),
                     _buildFilterChip(
                         'expense', 'مصروفات', _itemsCount['expense'] ?? 0),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                        'supplier', 'موردون', _itemsCount['supplier'] ?? 0),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('supplier_payment', 'دفعات موردين',
+                        _itemsCount['supplier_payment'] ?? 0),
                   ],
                 ),
               ),
@@ -247,10 +278,43 @@ class _DeletedItemsScreenState extends State<DeletedItemsScreen> {
     final entityType = item['entity_type'] as String;
     final originalData = item['original_data'] as Map<String, dynamic>;
     final deletedAt = DateTime.tryParse(item['deleted_at'] as String);
-    // استخدام الاسم أولاً، ثم username، ثم "غير معروف"
-    final deletedByName = item['deleted_by_name'] as String?;
-    final deletedByUsername = item['deleted_by_username'] as String?;
-    final deletedBy = deletedByName ?? deletedByUsername ?? 'غير معروف';
+
+    // الحصول على معلومات المستخدم
+    // التحقق من القيم الفارغة أو null
+    final userName = (item['user_name'] as String?)?.trim();
+    final userUsername = (item['user_username'] as String?)?.trim();
+    final userRole = (item['user_role'] as String?)?.trim();
+    final deletedByName = (item['deleted_by_name'] as String?)?.trim();
+    final deletedByUsername = (item['deleted_by_username'] as String?)?.trim();
+
+    // استخدام معلومات المستخدم من جدول users أولاً، ثم المعلومات المحفوظة
+    String displayName = 'غير معروف';
+    if (userName != null && userName.isNotEmpty) {
+      displayName = userName;
+    } else if (deletedByName != null && deletedByName.isNotEmpty) {
+      displayName = deletedByName;
+    } else if (userUsername != null && userUsername.isNotEmpty) {
+      displayName = userUsername;
+    } else if (deletedByUsername != null && deletedByUsername.isNotEmpty) {
+      displayName = deletedByUsername;
+    }      
+
+    final roleDisplayName = _getRoleDisplayName(userRole);
+
+    // التحقق من أن الاسم لا يحتوي بالفعل على نوع المستخدم
+    bool nameContainsRole = false;
+    if (roleDisplayName != null && roleDisplayName.isNotEmpty) {
+      // التحقق من أن الاسم يحتوي على نوع المستخدم بين قوسين
+      nameContainsRole = displayName.contains('($roleDisplayName)') ||
+          displayName.contains('($roleDisplayName)') ||
+          displayName == roleDisplayName;
+    }
+
+    final deletedBy = (roleDisplayName != null &&
+            roleDisplayName.isNotEmpty &&
+            !nameContainsRole)
+        ? '$displayName ($roleDisplayName)'
+        : displayName;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -315,6 +379,10 @@ class _DeletedItemsScreenState extends State<DeletedItemsScreen> {
       case 'product':
         return 'الاسم: ${data['name'] ?? 'غير محدد'}';
       case 'expense':
+        return 'المبلغ: ${Formatters.currencyIQD((data['amount'] as num?)?.toDouble() ?? 0.0)}';
+      case 'supplier':
+        return 'الاسم: ${data['name'] ?? 'غير محدد'}';
+      case 'supplier_payment':
         return 'المبلغ: ${Formatters.currencyIQD((data['amount'] as num?)?.toDouble() ?? 0.0)}';
       default:
         return 'معرف: ${data['id'] ?? 'غير محدد'}';

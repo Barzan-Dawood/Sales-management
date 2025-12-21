@@ -429,7 +429,7 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
       case LicenseStatus.error:
         return 'حدث خطأ أثناء فحص الترخيص';
       case LicenseStatus.trialActive:
-        return 'يمكنك استخدام التطبيق خلال الفترة التجريبية (7 أيام)';
+        return 'يمكنك استخدام التطبيق خلال الفترة التجريبية (30 يوم)';
       case LicenseStatus.trialExpired:
         return 'انتهت الفترة التجريبية. يرجى إدخال مفتاح الترخيص للمتابعة';
     }
@@ -558,6 +558,8 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
 }
 
 class _LicenseCheckDialogState extends State<LicenseCheckDialog> {
+  bool _isChecking = false;
+
   @override
   void initState() {
     super.initState();
@@ -776,11 +778,82 @@ class _LicenseCheckDialogState extends State<LicenseCheckDialog> {
           width: double.infinity,
           height: 48,
           child: OutlinedButton.icon(
-            onPressed: () => licenseProvider.checkLicenseStatus(),
-            icon: const Icon(Icons.refresh),
-            label: const Text(
-              'إعادة فحص الترخيص',
-              style: TextStyle(fontSize: 16),
+            onPressed: _isChecking
+                ? null
+                : () async {
+                    setState(() {
+                      _isChecking = true;
+                    });
+                    try {
+                      await licenseProvider.checkLicenseStatus();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'تم فحص الترخيص بنجاح',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: Color(0xFF059669),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(
+                                  Icons.error,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'حدث خطأ أثناء فحص الترخيص',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: Color(0xFFDC2626),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } finally {
+                      if (mounted) {
+                        setState(() {
+                          _isChecking = false;
+                        });
+                      }
+                    }
+                  },
+            icon: _isChecking
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  )
+                : const Icon(Icons.refresh),
+            label: Text(
+              _isChecking ? 'جاري الفحص...' : 'إعادة فحص الترخيص',
+              style: const TextStyle(fontSize: 16),
             ),
             style: OutlinedButton.styleFrom(
               shape: RoundedRectangleBorder(
@@ -891,7 +964,7 @@ class _LicenseCheckDialogState extends State<LicenseCheckDialog> {
       case LicenseStatus.error:
         return 'حدث خطأ أثناء فحص الترخيص';
       case LicenseStatus.trialActive:
-        return 'يمكنك استخدام التطبيق خلال الفترة التجريبية (7 أيام)';
+        return 'يمكنك استخدام التطبيق خلال الفترة التجريبية (30 يوم)';
       case LicenseStatus.trialExpired:
         return 'انتهت الفترة التجريبية. يرجى إدخال مفتاح الترخيص للمتابعة';
     }

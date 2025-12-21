@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
+import '../services/auth/auth_provider.dart';
 import '../utils/format.dart';
 import '../utils/dark_mode_utils.dart';
 
@@ -371,6 +372,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
 
   Future<void> _delete(int id) async {
     final db = context.read<DatabaseService>();
+    final auth = context.read<AuthProvider>();
+    final currentUser = auth.currentUser;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -391,7 +394,12 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     }
 
     try {
-      final deletedRows = await db.deleteSupplier(id);
+      final deletedRows = await db.deleteSupplier(
+        id,
+        userId: currentUser?.id,
+        username: currentUser?.username,
+        name: currentUser?.name,
+      );
       if (!mounted) {
         return;
       }
@@ -781,6 +789,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   /// عرض سجل المستحقات والمدفوعات مع إمكانية التعديل والحذف
   Future<void> _showPaymentsHistory(Map<String, Object?> supplier) async {
     final db = context.read<DatabaseService>();
+    final auth = context.read<AuthProvider>();
+    final currentUser = auth.currentUser;
     final supplierId = supplier['id'] as int;
     final supplierName = supplier['name']?.toString() ?? '';
 
@@ -991,7 +1001,12 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                                 final paymentId =
                                                     payment['id'] as int;
                                                 await db.deleteSupplierPayment(
-                                                    paymentId);
+                                                  paymentId,
+                                                  userId: currentUser?.id,
+                                                  username:
+                                                      currentUser?.username,
+                                                  name: currentUser?.name,
+                                                );
 
                                                 if (!context.mounted) return;
 

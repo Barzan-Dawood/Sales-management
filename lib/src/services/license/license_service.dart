@@ -13,7 +13,7 @@ class LicenseService {
   static const String _trialStartDateKey = 'TRIAL_START_DATE';
 
   // مدة التجربة بالأيام
-  static const int _trialDays = 7;
+  static const int _trialDays = 30;
   static const String _trialFileName = 'trial_store.json';
   static const String _trialFolderName = 'OfficeMgmtSystem';
 

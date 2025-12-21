@@ -7281,14 +7281,20 @@ class DatabaseService {
     final args = <Object?>[];
 
     if (entityType != null) {
-      where.add('entity_type = ?');
+      where.add('di.entity_type = ?');
       args.add(entityType);
     }
 
     final sql = '''
-      SELECT * FROM deleted_items
+      SELECT 
+        di.*,
+        u.name as user_name,
+        u.username as user_username,
+        u.role as user_role
+      FROM deleted_items di
+      LEFT JOIN users u ON di.deleted_by_user_id = u.id
       ${where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : ''}
-      ORDER BY deleted_at DESC
+      ORDER BY di.deleted_at DESC
       ${limit != null ? 'LIMIT $limit' : ''}
     ''';
 
