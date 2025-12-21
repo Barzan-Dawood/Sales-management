@@ -17,7 +17,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
   int _slowDays = 30;
 
   Future<void> _refresh() async {
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override

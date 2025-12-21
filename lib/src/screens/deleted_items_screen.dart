@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -297,7 +297,7 @@ class _DeletedItemsScreenState extends State<DeletedItemsScreen> {
       displayName = userUsername;
     } else if (deletedByUsername != null && deletedByUsername.isNotEmpty) {
       displayName = deletedByUsername;
-    }      
+    }
 
     final roleDisplayName = _getRoleDisplayName(userRole);
 

@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -797,7 +797,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         name: currentUser?.name,
       );
       if (!mounted) return;
-      setState(() {});
+      setState(() {}); // تحديث الواجهة بعد الحذف
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم حذف المنتج بنجاح'),
@@ -1142,7 +1142,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     );
 
     if (ok == true && mounted) {
-      setState(() {});
+      setState(() {}); // تحديث الواجهة بعد التعديل
       // استدعاء callback لتحديث عدد المنتجات في كارت القسم
       if (!isEdit && widget.onProductAdded != null) {
         widget.onProductAdded!();

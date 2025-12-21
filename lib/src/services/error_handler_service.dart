@@ -167,6 +167,17 @@ class ErrorHandlerService {
     final errorInfo = ErrorMessages.analyzeError(error);
 
     // في الإنتاج، يمكن إرسال هذا إلى خدمة تحليل الأخطاء
+    // في وضع التطوير، نطبع المعلومات للمساعدة في التصحيح
+    if (kDebugMode) {
+      debugPrint('Error logged at $timestamp');
+      debugPrint('Context: ${context ?? 'Unknown'}');
+      debugPrint('Error type: ${errorInfo.type.name}');
+      debugPrint('Error title: ${errorInfo.title}');
+      debugPrint('Error message: ${errorInfo.message}');
+      if (additionalInfo != null && additionalInfo.isNotEmpty) {
+        debugPrint('Additional info: $additionalInfo');
+      }
+    }
 
     // يمكن استخدام logEntry في المستقبل لإرسال البيانات إلى خدمة تحليل الأخطاء
     // final logEntry = {

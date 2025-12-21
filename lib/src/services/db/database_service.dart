@@ -966,8 +966,12 @@ class DatabaseService {
 
   // updateUserPassword removed: password changes are disabled
 
-  Future<List<Map<String, Object?>>> getAllProducts(
-      {String? query, int? categoryId}) async {
+  Future<List<Map<String, Object?>>> getAllProducts({
+    String? query,
+    int? categoryId,
+    int? limit,
+    int? offset,
+  }) async {
     final where = <String>[];
     final args = <Object?>[];
     if (query != null && query.trim().isNotEmpty) {
@@ -979,10 +983,34 @@ class DatabaseService {
       where.add('category_id = ?');
       args.add(categoryId);
     }
-    return _db.query('products',
-        where: where.isEmpty ? null : where.join(' AND '),
-        whereArgs: where.isEmpty ? null : args,
-        orderBy: 'id DESC');
+    return _db.query(
+      'products',
+      where: where.isEmpty ? null : where.join(' AND '),
+      whereArgs: where.isEmpty ? null : args,
+      orderBy: 'id DESC',
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  /// الحصول على عدد المنتجات (للمساعدة في pagination)
+  Future<int> getProductsCount({String? query, int? categoryId}) async {
+    final where = <String>[];
+    final args = <Object?>[];
+    if (query != null && query.trim().isNotEmpty) {
+      final like = '%${query.trim()}%';
+      where.add('(name LIKE ? OR barcode LIKE ?)');
+      args.addAll([like, like]);
+    }
+    if (categoryId != null) {
+      where.add('category_id = ?');
+      args.add(categoryId);
+    }
+    final result = await _db.rawQuery(
+      'SELECT COUNT(*) as count FROM products ${where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}'}',
+      where.isEmpty ? [] : args,
+    );
+    return (result.first['count'] as int?) ?? 0;
   }
 
   Future<int> insertProduct(Map<String, Object?> values,
@@ -1394,16 +1422,29 @@ class DatabaseService {
   }
 
   // Customers
-  Future<List<Map<String, Object?>>> getCustomers({String? query}) async {
+  Future<List<Map<String, Object?>>> getCustomers({
+    String? query,
+    int? limit,
+    int? offset,
+  }) async {
     List<Map<String, Object?>> allCustomers;
     if (query == null || query.trim().isEmpty) {
-      allCustomers = await _db.query('customers', orderBy: 'id DESC');
+      allCustomers = await _db.query(
+        'customers',
+        orderBy: 'id DESC',
+        limit: limit,
+        offset: offset,
+      );
     } else {
       final like = '%${query.trim()}%';
-      allCustomers = await _db.query('customers',
-          where: 'name LIKE ? OR phone LIKE ?',
-          whereArgs: [like, like],
-          orderBy: 'id DESC');
+      allCustomers = await _db.query(
+        'customers',
+        where: 'name LIKE ? OR phone LIKE ?',
+        whereArgs: [like, like],
+        orderBy: 'id DESC',
+        limit: limit,
+        offset: offset,
+      );
     }
 
     // تجميع العملاء المكررين بالاسم (تطبيع الاسم)
@@ -1676,12 +1717,20 @@ class DatabaseService {
   }
 
   // Suppliers
-  Future<List<Map<String, Object?>>> getSuppliers({String? query}) async {
+  Future<List<Map<String, Object?>>> getSuppliers({
+    String? query,
+    int? limit,
+    int? offset,
+  }) async {
+    final limitClause = limit != null ? 'LIMIT $limit' : '';
+    final offsetClause = offset != null ? 'OFFSET $offset' : '';
+
     if (query == null || query.trim().isEmpty) {
       return _db.rawQuery('''
         SELECT s.*, IFNULL(s.total_payable, 0) as total_payable
         FROM suppliers s
         ORDER BY s.id DESC
+        $limitClause $offsetClause
       ''');
     }
     final like = '%${query.trim()}%';
@@ -1690,7 +1739,38 @@ class DatabaseService {
       FROM suppliers s
       WHERE s.name LIKE ? OR s.phone LIKE ?
       ORDER BY s.id DESC
+      $limitClause $offsetClause
     ''', [like, like]);
+  }
+
+  /// الحصول على عدد الموردين (للمساعدة في pagination)
+  Future<int> getSuppliersCount({String? query}) async {
+    if (query == null || query.trim().isEmpty) {
+      final result =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM suppliers');
+      return (result.first['count'] as int?) ?? 0;
+    }
+    final like = '%${query.trim()}%';
+    final result = await _db.rawQuery(
+      'SELECT COUNT(*) as count FROM suppliers WHERE name LIKE ? OR phone LIKE ?',
+      [like, like],
+    );
+    return (result.first['count'] as int?) ?? 0;
+  }
+
+  /// الحصول على عدد العملاء (للمساعدة في pagination)
+  Future<int> getCustomersCount({String? query}) async {
+    if (query == null || query.trim().isEmpty) {
+      final result =
+          await _db.rawQuery('SELECT COUNT(*) as count FROM customers');
+      return (result.first['count'] as int?) ?? 0;
+    }
+    final like = '%${query.trim()}%';
+    final result = await _db.rawQuery(
+      'SELECT COUNT(*) as count FROM customers WHERE name LIKE ? OR phone LIKE ?',
+      [like, like],
+    );
+    return (result.first['count'] as int?) ?? 0;
   }
 
   Future<int> upsertSupplier(Map<String, Object?> values, {int? id}) async {
@@ -2569,6 +2649,8 @@ class DatabaseService {
     String? type,
     String? query,
     bool sortDescending = true,
+    int? limit,
+    int? offset,
   }) async {
     String whereClause = '';
     List<dynamic> whereArgs = [];
@@ -2591,6 +2673,9 @@ class DatabaseService {
       whereArgs.addAll([likeQuery, likeQuery, likeQuery]);
     }
 
+    final limitClause = limit != null ? 'LIMIT $limit' : '';
+    final offsetClause = offset != null ? 'OFFSET $offset' : '';
+
     final sales = await _db.rawQuery('''
       SELECT 
         s.*,
@@ -2604,6 +2689,7 @@ class DatabaseService {
       ${whereClause.isNotEmpty ? 'WHERE $whereClause' : ''}
       GROUP BY s.id
       ORDER BY s.id ${sortDescending ? 'DESC' : 'ASC'}
+      $limitClause $offsetClause
     ''', whereArgs);
 
     return sales;

@@ -1,4 +1,4 @@
-// ignore_for_file: dead_code, deprecated_member_use, use_build_context_synchronously, unused_field
+// ignore_for_file: dead_code, use_build_context_synchronously, unused_field
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -991,7 +991,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                   colors: [
                                                     Theme.of(context)
                                                         .colorScheme
-                                                        .surfaceVariant
+                                                        .surfaceContainerHighest
                                                         .withOpacity(0.35),
                                                     Theme.of(context)
                                                         .colorScheme
@@ -3711,14 +3711,14 @@ class _SalesScreenState extends State<SalesScreen> {
       final discount = await db.getActiveProductDiscount(p['id'] as int);
       if (discount != null) {
         // التحقق من الخصم بالمبلغ أولاً (لأن discount_percent قد يكون 0 عند استخدام مبلغ)
-        if (discount['discount_amount'] != null && 
+        if (discount['discount_amount'] != null &&
             (discount['discount_amount'] as num).toDouble() > 0) {
           final price = (p['price'] as num).toDouble();
           final discountAmount =
               (discount['discount_amount'] as num).toDouble();
           productDiscount = (discountAmount / price) * 100;
-        } else if (discount['discount_percent'] != null && 
-                   (discount['discount_percent'] as num).toDouble() > 0) {
+        } else if (discount['discount_percent'] != null &&
+            (discount['discount_percent'] as num).toDouble() > 0) {
           productDiscount = (discount['discount_percent'] as num).toDouble();
         }
       }

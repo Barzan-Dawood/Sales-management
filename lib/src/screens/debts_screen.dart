@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously, unused_local_variable
+// ignore_for_file: use_build_context_synchronously, unused_local_variable
 
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -1183,7 +1183,7 @@ class DebtsScreenState extends State<DebtsScreen>
     return Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: const Text(
             'دفتر الديون',
@@ -1226,7 +1226,7 @@ class DebtsScreenState extends State<DebtsScreen>
             // شريط البحث
             Container(
               padding: const EdgeInsets.all(8),
-              color: Theme.of(context).colorScheme.surfaceVariant,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(

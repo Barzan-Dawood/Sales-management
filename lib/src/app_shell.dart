@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -50,7 +48,9 @@ class _AppShellState extends State<AppShell> {
     super.initState();
     // تهيئة مزود الترخيص عند بدء الشاشة
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LicenseProvider>().initialize();
+      if (mounted) {
+        context.read<LicenseProvider>().initialize();
+      }
     });
   }
 

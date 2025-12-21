@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +14,12 @@ class CategoriesScreen extends StatefulWidget {
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
   String _query = '';
+
+  Future<void> _refresh() async {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   InputDecoration _pill(BuildContext context, String hint, IconData icon) {
     return DarkModeUtils.createPillInputDecoration(
@@ -89,7 +93,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                 c['id'] as int,
                                 c['name']?.toString() ?? 'القسم',
                                 color,
-                                () => setState(() {}), // callback لتحديث الصفحة
+                                _refresh, // callback لتحديث الصفحة
                               );
                             },
                             onEdit: () => _openEditor(category: c),
@@ -136,7 +140,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         }
 
         if (deletedRows > 0) {
-          setState(() {});
+          _refresh();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('تم حذف القسم بنجاح'),
@@ -411,7 +415,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       if (!mounted) {
         return;
       }
-      setState(() {});
+      _refresh();
     }
   }
 }

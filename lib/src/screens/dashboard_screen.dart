@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously, deprecated_member_use
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -45,9 +43,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DashboardViewModel>().load();
-      _fadeController.forward();
-      _slideController.forward();
+      if (mounted) {
+        context.read<DashboardViewModel>().load();
+        _fadeController.forward();
+        _slideController.forward();
+      }
     });
   }
 

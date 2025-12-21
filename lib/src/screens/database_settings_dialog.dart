@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -528,7 +528,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                     });
                     _saveSettings();
                   },
-                  activeColor: Theme.of(context).colorScheme.primary,
+                  activeThumbColor: Theme.of(context).colorScheme.primary,
                 ),
 
                 if (_autoBackupEnabled) ...[
@@ -542,7 +542,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: _autoBackupFrequency,
+                    initialValue: _autoBackupFrequency,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       contentPadding:
@@ -914,11 +914,8 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
   }
 
   Widget _buildBackupsListDialog(List<Map<String, dynamic>> initialBackups) {
-    return WillPopScope(
-      onWillPop: () async {
-        // السماح بالخروج بشكل طبيعي
-        return true;
-      },
+    return PopScope(
+      canPop: true,
       child: Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: StatefulBuilder(
@@ -2838,7 +2835,7 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
 
         // تحديث الشاشة
         if (mounted) {
-          setState(() {});
+          setState(() {}); // تحديث الواجهة بعد العملية
         }
       } else {
         // عرض رسالة الفشل

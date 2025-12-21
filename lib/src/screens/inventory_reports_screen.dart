@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -68,7 +68,11 @@ class _InventoryReportsScreenState extends State<InventoryReportsScreen>
               Icons.refresh,
               color: Colors.green,
             ),
-            onPressed: () => setState(() {}),
+            onPressed: () {
+              if (mounted) {
+                setState(() {}); // تحديث الواجهة
+              }
+            },
             tooltip: 'تحديث البيانات',
           ),
         ],

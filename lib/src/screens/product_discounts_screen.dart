@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
@@ -21,6 +19,7 @@ class _ProductDiscountsScreenState extends State<ProductDiscountsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       final db = context.read<DatabaseService>();
       // التأكد من وجود الجداول قبل التحميل
       try {
@@ -28,7 +27,9 @@ class _ProductDiscountsScreenState extends State<ProductDiscountsScreen> {
       } catch (e) {
         // تجاهل خطأ التأكد من الجداول والاستمرار في التحميل
       }
-      _loadDiscounts();
+      if (mounted) {
+        _loadDiscounts();
+      }
     });
   }
 
@@ -302,7 +303,7 @@ class _ProductDiscountsScreenState extends State<ProductDiscountsScreen> {
                                   p['name']?.toString() ?? '';
                             }
                             return DropdownButtonFormField<int>(
-                              value: selectedProductId,
+                              initialValue: selectedProductId,
                               decoration: _pill(
                                   context, 'اختر المنتج', Icons.shopping_bag),
                               items: products.map((p) {

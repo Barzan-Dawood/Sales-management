@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 
 class AppUsageGuideScreen extends StatefulWidget {
@@ -201,7 +199,7 @@ class _AppUsageGuideScreenState extends State<AppUsageGuideScreen> {
       return Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          backgroundColor: scheme.background,
+          backgroundColor: scheme.surface,
           appBar: AppBar(
             title: const Text(
               'دليل الاستخدام',

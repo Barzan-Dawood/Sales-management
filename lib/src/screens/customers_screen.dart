@@ -413,7 +413,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       }
 
       if (deletedRows > 0) {
-        setState(() {});
+        setState(() {}); // تحديث الواجهة بعد الحذف
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم حذف العميل بنجاح'),
@@ -511,7 +511,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       if (!mounted) {
         return;
       }
-      setState(() {});
+      setState(() {}); // تحديث الواجهة بعد التعديل
     }
   }
 
@@ -650,13 +650,15 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final customerName = customer['name']?.toString() ?? '';
 
     // البحث عن جميع العملاء بنفس الاسم (تطبيع الاسم)
-    final normalizedName = customerName.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+    final normalizedName =
+        customerName.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
     final allCustomerIdsResult = await db.database.rawQuery('''
       SELECT id FROM customers 
       WHERE LOWER(TRIM(REPLACE(REPLACE(name, '\t', ' '), '  ', ' '))) = ?
     ''', [normalizedName]);
-    
-    final allCustomerIds = allCustomerIdsResult.map((row) => row['id'] as int).toList();
+
+    final allCustomerIds =
+        allCustomerIdsResult.map((row) => row['id'] as int).toList();
     final placeholders = allCustomerIds.map((_) => '?').join(',');
 
     // جلب بيانات العميل التفصيلية من جميع العملاء بنفس الاسم

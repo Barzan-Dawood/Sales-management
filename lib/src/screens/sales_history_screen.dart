@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously, deprecated_member_use
-
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -36,7 +34,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SalesHistoryViewModel>().load();
+      if (mounted) {
+        context.read<SalesHistoryViewModel>().load();
+      }
     });
   }
 

@@ -263,6 +263,12 @@ class DatabaseSchema {
           'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)');
+      // فهرس للبحث في الأسماء (لتحسين LIKE queries)
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)');
+      // فهرس للترتيب حسب التاريخ
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_products_created_at ON products(created_at)');
     }
 
     // Sales
@@ -297,6 +303,22 @@ class DatabaseSchema {
           'CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id)');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date)');
+    }
+
+    // Customers - فهارس للبحث
+    if (await _tableExists(db, 'customers')) {
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)');
+    }
+
+    // Suppliers - فهارس للبحث
+    if (await _tableExists(db, 'suppliers')) {
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers(name)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_suppliers_phone ON suppliers(phone)');
     }
 
     // Event Log

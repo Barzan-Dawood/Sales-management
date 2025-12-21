@@ -20,6 +20,12 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
   String _searchQuery = '';
   String _selectedStatus = 'all'; // all, pending, completed, cancelled
 
+  Future<void> _refresh() async {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -58,13 +64,13 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
             IconButton(
               icon: const Icon(Icons.refresh),
               color: Colors.blue,
-              onPressed: () => setState(() {}),
+              onPressed: _refresh,
               tooltip: 'تحديث',
             ),
           ],
         ),
         body: RefreshIndicator(
-          onRefresh: () async => setState(() {}),
+          onRefresh: _refresh,
           child: Column(
             children: [
               _buildFilterSection(),
@@ -284,7 +290,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
             child: _AddReturnDialog(
               onReturnCreated: () {
                 Navigator.pop(context);
-                setState(() {});
+                _refresh();
               },
             ),
           ),
@@ -451,7 +457,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        setState(() {});
+        _refresh();
       }
     } catch (e) {
       if (mounted) {
@@ -504,7 +510,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        setState(() {});
+        _refresh();
       }
     } catch (e) {
       if (mounted) {

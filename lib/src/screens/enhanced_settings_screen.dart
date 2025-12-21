@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -45,6 +43,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
   Future<void> _checkDataExists() async {
     try {
       // Check data exists - this can be used for future features
+      if (!mounted) return;
       final db = context.read<DatabaseService>();
       await db.getAllProducts();
     } catch (e) {
@@ -57,7 +56,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: const Text('الإعدادات'),
           backgroundColor: Theme.of(context).colorScheme.surface,
@@ -67,7 +66,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
           automaticallyImplyLeading: false,
         ),
         body: Container(
-          color: Theme.of(context).colorScheme.background,
+          color: Theme.of(context).colorScheme.surface,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -241,7 +240,7 @@ class _EnhancedSettingsScreenState extends State<EnhancedSettingsScreen> {
                 trailing: Switch(
                   value: themeProvider.isDarkMode,
                   onChanged: (value) => themeProvider.toggleTheme(),
-                  activeColor: Theme.of(context).colorScheme.primary,
+                  activeThumbColor: Theme.of(context).colorScheme.primary,
                 ),
                 onTap: () => themeProvider.toggleTheme(),
                 contentPadding:

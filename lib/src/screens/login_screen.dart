@@ -1,7 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'enhanced_privacy_policy_screen.dart';
@@ -152,8 +149,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (mounted) {
-        setState(() {});
         _reconcileUserTypeAndUsername();
+        setState(() {});
       }
     } catch (e) {
       // تجاهل خطأ حفظ اسم المستخدم والاستمرار
@@ -180,7 +177,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _selectedUserType = 'employee';
       }
     }
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _attemptLogin(BuildContext context) async {
@@ -210,6 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       // تجاهل خطأ حفظ اسم المستخدم الأخير
     }
+    if (!mounted) return;
     final authProvider = context.read<AuthProvider>();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

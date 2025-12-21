@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/db/database_service.dart';
@@ -22,6 +20,7 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       final db = context.read<DatabaseService>();
       // التأكد من وجود الجداول قبل التحميل
       try {
@@ -29,7 +28,9 @@ class _DiscountCouponsScreenState extends State<DiscountCouponsScreen> {
       } catch (e) {
         // تجاهل خطأ التأكد من الجداول والاستمرار في التحميل
       }
-      _loadCoupons();
+      if (mounted) {
+        _loadCoupons();
+      }
     });
   }
 

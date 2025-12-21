@@ -26,7 +26,9 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
     super.initState();
     // تهيئة مزود الترخيص عند بدء الشاشة
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LicenseProvider>().initialize();
+      if (mounted) {
+        context.read<LicenseProvider>().initialize();
+      }
     });
   }
 

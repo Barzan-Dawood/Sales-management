@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,19 +22,122 @@ class _ProductsScreenState extends State<ProductsScreen> {
   String _searchQuery = '';
   int? _selectedCategoryId;
   final ScrollController _horizontalScrollController = ScrollController();
+  final ScrollController _verticalScrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+
+  // Pagination variables
+  static const int _pageSize = 50;
+  int _currentPage = 0;
+  List<Map<String, Object?>> _products = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  int _totalCount = 0;
 
   @override
   void initState() {
     super.initState();
     _selectedCategoryId = widget.initialCategoryId;
+    _verticalScrollController.addListener(_onScroll);
+    _loadProducts();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _horizontalScrollController.dispose();
+    _verticalScrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_verticalScrollController.position.pixels >=
+            _verticalScrollController.position.maxScrollExtent * 0.8 &&
+        !_isLoading &&
+        _hasMore) {
+      _loadMoreProducts();
+    }
+  }
+
+  Future<void> _loadProducts({bool reset = false}) async {
+    if (reset) {
+      _currentPage = 0;
+      _products.clear();
+      _hasMore = true;
+    }
+
+    if (_isLoading || !_hasMore) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final db = context.read<DatabaseService>();
+      final offset = _currentPage * _pageSize;
+
+      final products = await db.getAllProducts(
+        query: _searchQuery.isEmpty ? null : _searchQuery,
+        categoryId: _selectedCategoryId,
+        limit: _pageSize,
+        offset: offset,
+      );
+
+      if (mounted) {
+        setState(() {
+          if (reset) {
+            _products = products;
+          } else {
+            _products.addAll(products);
+          }
+          _hasMore = products.length == _pageSize;
+          _isLoading = false;
+
+          // تحديث العدد الإجمالي عند إعادة التحميل
+          if (reset) {
+            _totalCount = products.length;
+            // تحميل العدد الإجمالي في الخلفية
+            db
+                .getProductsCount(
+              query: _searchQuery.isEmpty ? null : _searchQuery,
+              categoryId: _selectedCategoryId,
+            )
+                .then((count) {
+              if (mounted) {
+                setState(() => _totalCount = count);
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحميل المنتجات: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadMoreProducts() async {
+    if (_isLoading || !_hasMore) return;
+    _currentPage++;
+    await _loadProducts();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value;
+    });
+    _loadProducts(reset: true);
+  }
+
+  void _onCategoryChanged(int? categoryId) {
+    setState(() {
+      _selectedCategoryId = categoryId;
+    });
+    _loadProducts(reset: true);
   }
 
   @override
@@ -44,7 +147,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final isVerySmallScreen = ResponsiveUtils.isVerySmallScreen(context);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Column(
         children: [
           // Header with search and filters
@@ -165,7 +268,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       },
       child: TextField(
         controller: _searchController,
-        onChanged: (value) => setState(() => _searchQuery = value),
+        onChanged: _onSearchChanged,
         decoration: InputDecoration(
           hintText: 'البحث في المنتجات...',
           prefixIcon: const Icon(Icons.search),
@@ -174,7 +277,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   icon: const Icon(Icons.clear),
                   onPressed: () {
                     _searchController.clear();
-                    setState(() => _searchQuery = '');
+                    _onSearchChanged('');
                   },
                 )
               : null,
@@ -206,7 +309,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         final categories = snapshot.data!;
 
         return DropdownButtonFormField<int>(
-          value: _selectedCategoryId,
+          initialValue: _selectedCategoryId,
           decoration: InputDecoration(
             labelText: 'الفئة',
             border: OutlineInputBorder(
@@ -226,7 +329,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   child: Text(category['name']?.toString() ?? ''),
                 )),
           ],
-          onChanged: (value) => setState(() => _selectedCategoryId = value),
+          onChanged: _onCategoryChanged,
         );
       },
     );
@@ -322,82 +425,71 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Widget _buildTableContent(BuildContext context, DatabaseService db,
       bool isSmallScreen, bool isVerySmallScreen) {
-    return FutureBuilder<List<Map<String, Object?>>>(
-      future: db.getAllProducts(
-        query: _searchQuery,
-        categoryId: _selectedCategoryId,
-      ),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (_isLoading && _products.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        final products = snapshot.data!;
+    final products = _products;
 
-        if (products.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.inventory_2_outlined,
-                  size: 80,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
-                      : Colors.grey.shade400,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _searchQuery.isEmpty
-                      ? 'لا توجد منتجات'
-                      : 'لا توجد نتائج للبحث',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.7)
-                        : Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _searchQuery.isEmpty
-                      ? 'قم بإضافة منتجات جديدة'
-                      : 'جرب البحث بكلمات مختلفة',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withOpacity(0.6)
-                        : Colors.grey.shade500,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () => _openProductEditor({}),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('إضافة منتج'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
+    if (products.isEmpty && !_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 80,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                  : Colors.grey.shade400,
             ),
-          );
-        }
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isEmpty ? 'لا توجد منتجات' : 'لا توجد نتائج للبحث',
+              style: TextStyle(
+                fontSize: 18,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.7)
+                    : Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _searchQuery.isEmpty
+                  ? 'قم بإضافة منتجات جديدة'
+                  : 'جرب البحث بكلمات مختلفة',
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                    : Colors.grey.shade500,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => _openProductEditor({}),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('إضافة منتج'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
-        return SingleChildScrollView(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            controller: _horizontalScrollController,
-            physics: const BouncingScrollPhysics(),
-            child: Table(
+    return SingleChildScrollView(
+      controller: _verticalScrollController,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        controller: _horizontalScrollController,
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          children: [
+            Table(
               columnWidths:
                   ResponsiveUtils.getResponsiveTableColumnWidths(context),
               border: TableBorder.symmetric(
@@ -461,9 +553,30 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 }),
               ],
             ),
-          ),
-        );
-      },
+            // Loading indicator at the bottom
+            if (_isLoading && _products.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            // Show total count if available
+            if (_totalCount > 0 && !_isLoading)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'عرض ${_products.length} من $_totalCount منتج',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -692,7 +805,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ],
           ),
           child: DropdownButtonFormField<int>(
-            value: selectedCategoryId,
+            initialValue: selectedCategoryId,
             menuMaxHeight: 200,
             isDense: true,
             decoration: InputDecoration(
@@ -805,8 +918,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         name: currentUser?.name,
       );
       if (!mounted) return;
-      setState(() {});
-
+      setState(() {}); // تحديث الواجهة بعد الحذف
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم حذف المنتج بنجاح')),
       );
@@ -1194,8 +1306,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
       ),
     );
 
-    if (result == true) {
-      setState(() {});
+    if (result == true && mounted) {
+      setState(() {}); // تحديث الواجهة بعد التعديل
     }
   }
 
