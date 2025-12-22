@@ -652,29 +652,28 @@ class _AppShellState extends State<AppShell> {
 
               // Footer section
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: scheme.surface.withOpacity(0.06),
-                  border: Border(
-                    top: BorderSide(
-                      color: DarkModeUtils.getBorderColor(context),
-                      width: 1,
-                    ),
+                  color: scheme.primaryContainer.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: scheme.primary.withOpacity(0.4),
+                    width: 1.5,
                   ),
                 ),
                 child: Row(
                   children: [
                     CircleAvatar(
-                      radius: 20,
+                      radius: 16,
                       backgroundColor:
                           scheme.primaryContainer.withOpacity(0.25),
                       child: Icon(
                         Icons.person,
                         color: scheme.onPrimaryContainer,
-                        size: 24,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -686,7 +685,7 @@ class _AppShellState extends State<AppShell> {
                             style: TextStyle(
                               color: DarkModeUtils.getTextColor(context),
                               fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
                           ),
                           Text(
@@ -696,7 +695,7 @@ class _AppShellState extends State<AppShell> {
                             style: TextStyle(
                               color:
                                   DarkModeUtils.getSecondaryTextColor(context),
-                              fontSize: 12,
+                              fontSize: 11,
                             ),
                           ),
                         ],

@@ -1003,7 +1003,7 @@ Widget _buildResetPasswordsButton(
     width: double.infinity,
     decoration: BoxDecoration(
       border: Border.all(
-        color: Colors.orange,
+        color: Colors.red,
         width: 1,
       ),
       borderRadius: BorderRadius.circular(8),
@@ -1019,7 +1019,7 @@ Widget _buildResetPasswordsButton(
         ),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.orange,
+        backgroundColor: Colors.red,
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
@@ -1041,7 +1041,7 @@ Future<void> _showResetPasswordsDialog(
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warning, color: Colors.orange, size: 20),
+            Icon(Icons.warning, color: Colors.red, size: 20),
             const SizedBox(width: 6),
             const Text('تأكيد إعادة الضبط', style: TextStyle(fontSize: 16)),
           ],
@@ -1128,7 +1128,7 @@ Future<void> _showResetPasswordsDialog(
               await _resetAllPasswords(context, db, onAfterReset);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: Colors.red,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
