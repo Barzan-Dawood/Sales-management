@@ -34,6 +34,23 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
 
     return Scaffold(
       backgroundColor: DarkModeUtils.getBackgroundColor(context),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: DarkModeUtils.getTextColor(context),
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          'تفعيل الترخيص',
+          style: TextStyle(
+            color: DarkModeUtils.getTextColor(context),
+          ),
+        ),
+      ),
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: SafeArea(

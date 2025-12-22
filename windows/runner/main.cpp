@@ -27,7 +27,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"تجارتي", origin, size)) {
+  // استخدام Unicode escape sequences لضمان عرض النص العربي بشكل صحيح
+  if (!window.Create(L"\u062A\u062C\u0627\u0631\u062A\u064A", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
