@@ -178,50 +178,6 @@ class DatabaseMigrations {
             where: 'id = ?',
             whereArgs: [user['id']]);
       }
-
-      // إضافة المستخدمين الافتراضيين
-      // تحذير: يجب تغيير كلمات المرور الافتراضية فوراً بعد التثبيت للأمان
-      final defaultUsers = [
-        {
-          'name': 'المدير',
-          'username': 'manager',
-          'password': 'man2026',
-          'role': 'manager',
-          'employee_code': 'A1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'المشرف',
-          'username': 'supervisor',
-          'password': 'sup2026',
-          'role': 'supervisor',
-          'employee_code': 'S1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'الموظف',
-          'username': 'employee',
-          'password': 'emp2026',
-          'role': 'employee',
-          'employee_code': 'C1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-      ];
-
-      for (final user in defaultUsers) {
-        final existing = await db.query('users',
-            where: 'username = ?', whereArgs: [user['username']], limit: 1);
-
-        if (existing.isEmpty) {
-          await db.insert('users', user);
-        }
-      }
     } catch (e) {
       // تجاهل خطأ Migration V7
     }
@@ -271,51 +227,6 @@ class DatabaseMigrations {
       await db.execute('ALTER TABLE users_new RENAME TO users');
 
       await db.execute('PRAGMA foreign_keys=on');
-
-      // إضافة المستخدمين الافتراضيين
-      // تحذير: يجب تغيير كلمات المرور الافتراضية فوراً بعد التثبيت للأمان
-      final now = DateTime.now().toIso8601String();
-      final defaultUsers = [
-        {
-          'name': 'المدير',
-          'username': 'manager',
-          'password': 'man2026',
-          'role': 'manager',
-          'employee_code': 'A1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'المشرف',
-          'username': 'supervisor',
-          'password': 'sup2026',
-          'role': 'supervisor',
-          'employee_code': 'S1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'الموظف',
-          'username': 'employee',
-          'password': 'emp2026',
-          'role': 'employee',
-          'employee_code': 'C1',
-          'active': 1,
-          'created_at': now,
-          'updated_at': now,
-        },
-      ];
-
-      for (final user in defaultUsers) {
-        final existing = await db.query('users',
-            where: 'username = ?', whereArgs: [user['username']], limit: 1);
-
-        if (existing.isEmpty) {
-          await db.insert('users', user);
-        }
-      }
     } catch (e) {
       // تجاهل خطأ Migration V8
     }
@@ -416,23 +327,26 @@ class DatabaseMigrations {
   }
 
   static Future<void> migrateToV11(Database db) async {
-    // إضافة جدول returns للمرتجعات
+    // إضافة جدول returns للمرتجعات (هيكل موحّد مع DatabaseSchema)
     try {
       await db.execute('''
         CREATE TABLE IF NOT EXISTS returns (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           sale_id INTEGER NOT NULL,
-          total_amount REAL NOT NULL,
-          return_date TEXT NOT NULL,
-          notes TEXT,
+          product_id INTEGER NOT NULL,
+          quantity INTEGER NOT NULL,
+          reason TEXT,
+          status TEXT NOT NULL DEFAULT 'pending',
           created_at TEXT NOT NULL,
-          FOREIGN KEY(sale_id) REFERENCES sales(id)
+          updated_at TEXT,
+          FOREIGN KEY(sale_id) REFERENCES sales(id),
+          FOREIGN KEY(product_id) REFERENCES products(id)
         );
       ''');
       await db.execute(
           'CREATE INDEX IF NOT EXISTS idx_returns_sale_id ON returns(sale_id)');
       await db.execute(
-          'CREATE INDEX IF NOT EXISTS idx_returns_return_date ON returns(return_date)');
+          'CREATE INDEX IF NOT EXISTS idx_returns_status ON returns(status)');
     } catch (e) {
       // تجاهل خطأ Migration V11
     }

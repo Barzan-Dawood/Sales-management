@@ -340,56 +340,7 @@ class DatabaseSchema {
   /// إنشاء البيانات الافتراضية
   static Future<void> seedData(
       Database db, String Function(String) sha256Hex) async {
-    final now = DateTime.now().toIso8601String();
-
-    // إنشاء المستخدمين الافتراضيين
-    // تحذير: يجب تغيير كلمات المرور الافتراضية فوراً بعد التثبيت للأمان
-    final defaultUsers = [
-      {
-        'name': 'المدير',
-        'username': 'manager',
-        'password': sha256Hex('man2026'),
-        'role': 'manager',
-        'employee_code': 'A1',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      },
-      {
-        'name': 'المشرف',
-        'username': 'supervisor',
-        'password': sha256Hex('sup2026'),
-        'role': 'supervisor',
-        'employee_code': 'S1',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      },
-      {
-        'name': 'الموظف',
-        'username': 'employee',
-        'password': sha256Hex('emp2026'),
-        'role': 'employee',
-        'employee_code': 'C1',
-        'active': 1,
-        'created_at': now,
-        'updated_at': now,
-      },
-    ];
-
-    for (final user in defaultUsers) {
-      final existing = await db.query('users',
-          where: 'username = ?', whereArgs: [user['username']], limit: 1);
-
-      if (existing.isEmpty) {
-        await db.insert('users', user);
-      } else {
-        await db.update('users', user,
-            where: 'username = ?', whereArgs: [user['username']]);
-      }
-    }
-
-    // التأكد من وجود المستخدم الموحد للتوافق مع الإصدارات القديمة
+    // التأكد من عدم وجود المستخدم الموحد القديم للتوافق مع الإصدارات القديمة
     final existingAdmin = await db.query('users',
         where: 'username = ?', whereArgs: ['admin'], limit: 1);
 
