@@ -24,7 +24,7 @@ class StoreInfo {
   // معلومات المطور
   static const String developer = 'برزان داود الهبابي';
   static const String language = 'العربية';
-  static const String releaseYear = '2025';
+  static const String releaseYear = '2026';
 
   // معلومات التواصل والدعم
   static const String supportPhone = '07866744144';
@@ -32,7 +32,7 @@ class StoreInfo {
   static const String supportAddress = 'شنكال(سنجار) - نينوى';
 
   // معلومات قانونية
-  static const String copyright = '© 2025 تجارتي - نظام إدارة التجارة';
+  static const String copyright = '© 2026 تجارتي - نظام إدارة التجارة';
   static const String rightsReserved = 'جميع الحقوق محفوظة';
   static const String ownership =
       'هذا التطبيق مملوك ومطور بواسطة فريق التطوير العراقي';

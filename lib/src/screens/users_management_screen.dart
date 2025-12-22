@@ -1046,10 +1046,8 @@ Future<void> _showResetPasswordsDialog(
         ),
         content: const Text(
           'هل أنت متأكد من إعادة ضبط أسماء المستخدمين وكلمات المرور لجميع المستخدمين إلى القيم الافتراضية؟\n\n'
-          'سيتم إعادة تعيين إلى:\n'
-          '• المدير: manager / admin123\n'
-          '• المشرف: supervisor / super123\n'
-          '• الموظف: employee / emp123',
+          'سيتم إعادة تعيين أسماء المستخدمين وكلمات المرور الافتراضية.\n\n'
+          'تحذير: سيتم إعادة تعيين كلمات المرور إلى القيم الافتراضية المؤقتة. يرجى تغييرها فوراً بعد هذه العملية للأمان.',
           style: TextStyle(fontSize: 16),
         ),
         actions: [
@@ -1116,7 +1114,7 @@ Future<void> _resetAllPasswords(
         'users',
         {
           'username': 'manager',
-          'password': _sha256Hash('admin123'),
+          'password': _sha256Hash('man2026'),
           'updated_at': nowIso,
         },
         where: 'id = ?',
@@ -1152,7 +1150,7 @@ Future<void> _resetAllPasswords(
           'users',
           {
             'username': 'supervisor',
-            'password': _sha256Hash('super123'),
+            'password': _sha256Hash('sup2026'),
             'updated_at': nowIso,
           },
           where: 'id = ?',
@@ -1164,7 +1162,7 @@ Future<void> _resetAllPasswords(
           await db.database.update(
             'users',
             {
-              'password': _sha256Hash('super123'),
+              'password': _sha256Hash('sup2026'),
               'updated_at': nowIso,
             },
             where: 'id = ?',
@@ -1204,7 +1202,7 @@ Future<void> _resetAllPasswords(
           'users',
           {
             'username': 'employee',
-            'password': _sha256Hash('emp123'),
+            'password': _sha256Hash('emp2026'),
             'updated_at': nowIso,
           },
           where: 'id = ?',
@@ -1216,7 +1214,7 @@ Future<void> _resetAllPasswords(
           await db.database.update(
             'users',
             {
-              'password': _sha256Hash('emp123'),
+              'password': _sha256Hash('emp2026'),
               'updated_at': nowIso,
             },
             where: 'id = ?',

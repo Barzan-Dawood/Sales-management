@@ -180,11 +180,12 @@ class DatabaseMigrations {
       }
 
       // إضافة المستخدمين الافتراضيين
+      // تحذير: يجب تغيير كلمات المرور الافتراضية فوراً بعد التثبيت للأمان
       final defaultUsers = [
         {
           'name': 'المدير',
           'username': 'manager',
-          'password': 'admin123',
+          'password': 'man2026',
           'role': 'manager',
           'employee_code': 'A1',
           'active': 1,
@@ -194,7 +195,7 @@ class DatabaseMigrations {
         {
           'name': 'المشرف',
           'username': 'supervisor',
-          'password': 'super123',
+          'password': 'sup2026',
           'role': 'supervisor',
           'employee_code': 'S1',
           'active': 1,
@@ -204,7 +205,7 @@ class DatabaseMigrations {
         {
           'name': 'الموظف',
           'username': 'employee',
-          'password': 'emp123',
+          'password': 'emp2026',
           'role': 'employee',
           'employee_code': 'C1',
           'active': 1,
@@ -272,12 +273,13 @@ class DatabaseMigrations {
       await db.execute('PRAGMA foreign_keys=on');
 
       // إضافة المستخدمين الافتراضيين
+      // تحذير: يجب تغيير كلمات المرور الافتراضية فوراً بعد التثبيت للأمان
       final now = DateTime.now().toIso8601String();
       final defaultUsers = [
         {
           'name': 'المدير',
           'username': 'manager',
-          'password': 'admin123',
+          'password': 'man2026',
           'role': 'manager',
           'employee_code': 'A1',
           'active': 1,
@@ -287,7 +289,7 @@ class DatabaseMigrations {
         {
           'name': 'المشرف',
           'username': 'supervisor',
-          'password': 'super123',
+          'password': 'sup2026',
           'role': 'supervisor',
           'employee_code': 'S1',
           'active': 1,
@@ -297,7 +299,7 @@ class DatabaseMigrations {
         {
           'name': 'الموظف',
           'username': 'employee',
-          'password': 'emp123',
+          'password': 'emp2026',
           'role': 'employee',
           'employee_code': 'C1',
           'active': 1,

@@ -4,15 +4,17 @@ import '../db/database_service.dart';
 import '../../models/user_model.dart';
 import 'package:crypto/crypto.dart';
 
-// Default usernames and passwords (manager can change them later from settings)
-// كلمات المرور الافتراضية: admin123, super123, emp123
+// Default usernames and passwords
+// IMPORTANT: These default passwords should be changed immediately after first login for security
+// كلمات المرور الافتراضية يجب تغييرها فوراً بعد أول تسجيل دخول للأمان
 const String kDefaultAdminUsername = 'manager';
 const String kDefaultSupervisorUsername = 'supervisor';
 const String kDefaultEmployeeUsername = 'employee';
 
-const String kDefaultAdminPassword = 'admin123';
-const String kDefaultSupervisorPassword = 'super123';
-const String kDefaultEmployeePassword = 'emp123';
+// Default passwords - MUST be changed after first installation
+const String kDefaultAdminPassword = 'man2026';
+const String kDefaultSupervisorPassword = 'sup2026';
+const String kDefaultEmployeePassword = 'emp2026';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider(this._db);
@@ -142,31 +144,22 @@ class AuthProvider extends ChangeNotifier {
       );
 
       if (existing.isEmpty) {
+        // إضافة المستخدم فقط إذا لم يكن موجوداً
         try {
           await _db.database.insert('users', user);
         } catch (e) {
           // تجاهل خطأ إضافة المستخدم إذا كان موجوداً بالفعل
         }
       } else {
-        // تأكيد تطبيق كلمات المرور الافتراضية لجميع المستخدمين حتى إن كانوا موجودين مسبقاً
+        // المستخدم موجود - تحديث الحقول الآمنة فقط (لا كلمة المرور)
+        // لا نقوم بتحديث كلمة المرور لأنها قد تكون تم تغييرها مسبقاً
         try {
-          String passwordToStore;
-          if (user['username'] == kDefaultAdminUsername) {
-            passwordToStore = _sha256Hex(kDefaultAdminPassword);
-          } else if (user['username'] == kDefaultSupervisorUsername) {
-            passwordToStore = _sha256Hex(kDefaultSupervisorPassword);
-          } else if (user['username'] == kDefaultEmployeeUsername) {
-            passwordToStore = _sha256Hex(kDefaultEmployeePassword);
-          } else {
-            passwordToStore = _sha256Hex(user['password'] as String);
-          }
-
           // Only update safe fields to avoid UNIQUE constraint conflicts.
           // Do NOT overwrite existing employee_code; it may already be used elsewhere.
+          // Do NOT overwrite password; it may have been changed by the admin
           await _db.database.update(
             'users',
             {
-              'password': passwordToStore,
               'name': user['name'],
               'active': 1,
               'updated_at': nowIso,

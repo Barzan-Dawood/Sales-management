@@ -6430,12 +6430,13 @@ class DatabaseService {
       }
 
       // إنشاء المستخدمين الافتراضيين ببساطة
+      // تحذير: يجب تغيير كلمات المرور الافتراضية فوراً بعد التثبيت للأمان
       final nowIso = DateTime.now().toIso8601String();
       final defaultUsers = [
         {
           'name': 'المدير',
           'username': 'manager',
-          'password': _sha256Hex('admin123'),
+          'password': _sha256Hex('man2026'),
           'role': 'manager',
           'employee_code': 'A1',
           'active': 1,
@@ -6445,7 +6446,7 @@ class DatabaseService {
         {
           'name': 'المشرف',
           'username': 'supervisor',
-          'password': _sha256Hex('super123'),
+          'password': _sha256Hex('sup2026'),
           'role': 'supervisor',
           'employee_code': 'S1',
           'active': 1,
@@ -6455,7 +6456,7 @@ class DatabaseService {
         {
           'name': 'الموظف',
           'username': 'employee',
-          'password': _sha256Hex('emp123'),
+          'password': _sha256Hex('emp2026'),
           'role': 'employee',
           'employee_code': 'C1',
           'active': 1,
