@@ -1032,28 +1032,95 @@ Widget _buildResetPasswordsButton(
 // حوار تأكيد إعادة ضبط كلمات المرور
 Future<void> _showResetPasswordsDialog(
     BuildContext context, DatabaseService db, VoidCallback onAfterReset) async {
+  final bool isDark = Theme.of(context).brightness == Brightness.dark;
   return showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: const Row(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warning, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('تأكيد إعادة الضبط'),
+            Icon(Icons.warning, color: Colors.orange, size: 20),
+            const SizedBox(width: 6),
+            const Text('تأكيد إعادة الضبط', style: TextStyle(fontSize: 16)),
           ],
         ),
-        content: const Text(
-          'هل أنت متأكد من إعادة ضبط أسماء المستخدمين وكلمات المرور لجميع المستخدمين إلى القيم الافتراضية؟\n\n'
-          'سيتم إعادة تعيين أسماء المستخدمين وكلمات المرور الافتراضية.\n\n'
-          'تحذير: سيتم إعادة تعيين كلمات المرور إلى القيم الافتراضية المؤقتة. يرجى تغييرها فوراً بعد هذه العملية للأمان.',
-          style: TextStyle(fontSize: 16),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'هل أنت متأكد من إعادة ضبط أسماء المستخدمين وكلمات المرور؟',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(isDark ? 0.15 : 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.blue.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                            color: Colors.blue.shade700, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'بيانات الدخول الافتراضية:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _buildCredentialRow(
+                        context, 'المدير', 'manager', 'man2026', isDark),
+                    const SizedBox(height: 6),
+                    _buildCredentialRow(
+                        context, 'المشرف', 'supervisor', 'sup2026', isDark),
+                    const SizedBox(height: 6),
+                    _buildCredentialRow(
+                        context, 'الموظف', 'employee', 'emp2026', isDark),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: Colors.orange.shade700, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'تحذير: سيتم إعادة تعيين كلمات المرور إلى القيم الافتراضية. يرجى تغييرها فوراً للأمان.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('إلغاء'),
+            child: const Text('إلغاء', style: TextStyle(fontSize: 13)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -1063,12 +1130,82 @@ Future<void> _showResetPasswordsDialog(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
-            child: const Text('تأكيد الإعادة'),
+            child: const Text('تأكيد الإعادة', style: TextStyle(fontSize: 13)),
           ),
         ],
       );
     },
+  );
+}
+
+// دالة مساعدة لعرض بيانات الدخول
+Widget _buildCredentialRow(BuildContext context, String roleName,
+    String username, String password, bool isDark) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    decoration: BoxDecoration(
+      color:
+          isDark ? Colors.grey.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(
+        color: Theme.of(context).dividerColor.withOpacity(0.2),
+      ),
+    ),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 50,
+          child: Text(
+            roleName,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(isDark ? 0.2 : 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: SelectableText(
+              username,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'monospace',
+                color: Colors.blue.shade700,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(isDark ? 0.2 : 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: SelectableText(
+              password,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'monospace',
+                color: Colors.green.shade700,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }
 
