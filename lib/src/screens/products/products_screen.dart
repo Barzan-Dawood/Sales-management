@@ -918,7 +918,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
         name: currentUser?.name,
       );
       if (!mounted) return;
-      setState(() {}); // تحديث الواجهة بعد الحذف
+      // إعادة تحميل المنتجات من قاعدة البيانات
+      await _loadProducts(reset: true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم حذف المنتج بنجاح')),
       );
@@ -1307,7 +1308,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
 
     if (result == true && mounted) {
-      setState(() {}); // تحديث الواجهة بعد التعديل
+      // إعادة تحميل المنتجات من قاعدة البيانات
+      await _loadProducts(reset: true);
     }
   }
 
