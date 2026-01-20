@@ -88,7 +88,7 @@ class DatabaseService {
     await DatabaseSchema.createIndexes(_db);
 
     // فحص وإصلاح المستخدمين الافتراضيين فقط
-    await checkAndFixDefaultUsers();
+    await _checkAndFixDefaultUsers();
   }
 
   Future<void> reopen() async {
@@ -111,8 +111,105 @@ class DatabaseService {
     await _cleanupOrphanObjects(_db);
     await _ensureCategorySchemaOn(_db);
     await _ensureSaleItemsDiscountColumn(_db);
-    await checkAndFixDefaultUsers();
+    await _checkAndFixDefaultUsers();
     await cleanupSalesOldReferences();
+  }
+
+  /// فحص وإصلاح المستخدمين الافتراضيين (manager/supervisor/employee)
+  Future<void> _checkAndFixDefaultUsers() async {
+    try {
+      debugPrint('بدء فحص المستخدمين الافتراضيين...');
+
+      final now = DateTime.now().toIso8601String();
+
+      // جلب جميع المستخدمين الحاليين
+      final existingUsers = await _db.query('users');
+
+      // تحويلهم إلى خريطة حسب الدور
+      final Map<String, Map<String, Object?>> byRole = {};
+      for (final u in existingUsers) {
+        final role = (u['role'] ?? '').toString();
+        if (role.isEmpty) continue;
+        // نأخذ أول مستخدم لكل دور فقط
+        byRole.putIfAbsent(role, () => u);
+      }
+
+      // بيانات المستخدمين الافتراضية (بدون كلمة مرور)
+      final defaultUsers = DefaultUsers.getUsersForDatabase();
+
+      Future<void> ensureUser({
+        required String role,
+        required String defaultUsername,
+        required String defaultPassword,
+      }) async {
+        final existing = byRole[role];
+        if (existing == null) {
+          // لا يوجد مستخدم بهذا الدور -> إنشاء مستخدم جديد
+          final template = defaultUsers.firstWhere((u) => u['role'] == role,
+              orElse: () => {});
+          if (template.isEmpty) return;
+
+          final data = Map<String, Object?>.from(template);
+          data['username'] = defaultUsername;
+          data['password'] = _sha256Hex(defaultPassword);
+          data['created_at'] = now;
+          data['updated_at'] = now;
+          data['active'] = 1;
+
+          await _db.insert('users', data);
+          debugPrint('تم إنشاء مستخدم جديد للدور: $role');
+        } else {
+          // يوجد مستخدم -> نضمن على الأقل اسم المستخدم وكلمة المرور الافتراضية
+          final id = existing['id'];
+          if (id == null) return;
+
+          final updates = <String, Object?>{
+            'updated_at': now,
+            'active': 1,
+          };
+
+          // توحيد اسم المستخدم إلى القيمة الافتراضية (لتطابق شاشة الدخول)
+          updates['username'] = defaultUsername;
+
+          // فرض كلمة المرور الافتراضية المطلوبة
+          updates['password'] = _sha256Hex(defaultPassword);
+
+          await _db.update(
+            'users',
+            updates,
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+          debugPrint('تم تحديث مستخدم: $role');
+        }
+      }
+
+      // المدير
+      await ensureUser(
+        role: 'manager',
+        defaultUsername: 'manager',
+        defaultPassword: 'man2026',
+      );
+
+      // المشرف
+      await ensureUser(
+        role: 'supervisor',
+        defaultUsername: 'supervisor',
+        defaultPassword: 'sup2026',
+      );
+
+      // الموظف
+      await ensureUser(
+        role: 'employee',
+        defaultUsername: 'employee',
+        defaultPassword: 'emp2026',
+      );
+
+      debugPrint('انتهى فحص وإصلاح المستخدمين الافتراضيين');
+    } catch (e) {
+      // في حال حدوث خطأ، لا نمنع التطبيق من العمل
+      debugPrint('فشل فحص/إصلاح المستخدمين الافتراضيين: $e');
+    }
   }
 
   /// Ensure discount_percent column exists on sale_items
@@ -4718,7 +4815,7 @@ class DatabaseService {
       // تعطيل المفاتيح الخارجية خارج transaction
       await _db.execute('PRAGMA foreign_keys = OFF');
 
-      // نفّذ الحذف داخل معاملة واحدة
+      // نفّذ الحذف داخل معاملة واحدة مع السماح بتحديث الواجهة
       await _db.transaction((txn) async {
         // حذف الجداول بالترتيب الصحيح لتجنب مشاكل المفاتيح الخارجية
         // أولاً: حذف الجداول الفرعية
@@ -4841,6 +4938,9 @@ class DatabaseService {
         }
       });
 
+      // السماح للواجهة بالتحديث قبل إعادة تفعيل المفاتيح الخارجية
+      await Future.delayed(const Duration(milliseconds: 10));
+
       // إعادة تفعيل المفاتيح الخارجية
       await _db.execute('PRAGMA foreign_keys = ON');
     } catch (e) {
@@ -4860,6 +4960,9 @@ class DatabaseService {
     try {
       // استخدام الدالة المشتركة لحذف البيانات عدا المستخدمين
       await _deleteAllDataExceptUsers();
+
+      // السماح للواجهة بالتحديث قبل إعادة إنشاء البيانات الأساسية
+      await Future.delayed(const Duration(milliseconds: 50));
 
       // إعادة إنشاء البيانات الأساسية
       try {

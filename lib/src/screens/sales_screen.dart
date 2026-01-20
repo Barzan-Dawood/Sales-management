@@ -890,10 +890,24 @@ class _SalesScreenState extends State<SalesScreen> {
                                     ),
                                     child: FutureBuilder<
                                         List<Map<String, Object?>>>(
-                                      future: db.getAllProducts(query: _query),
+                                      // في صفحة المبيعات: عدّ المنتجات بعد التصفية بالباركود فقط
+                                      future: db.getAllProducts(),
                                       builder: (context, snapshot) {
-                                        final count =
-                                            snapshot.data?.length ?? 0;
+                                        final items = snapshot.data ?? [];
+                                        final query = _query.trim();
+                                        final filteredItems = query.isEmpty
+                                            ? items
+                                            : items.where((item) {
+                                                final barcode = item['barcode']
+                                                        ?.toString()
+                                                        .trim() ??
+                                                    '';
+                                                // هنا نظهر فقط المطابق تماماً للباركود
+                                                return barcode.isNotEmpty &&
+                                                    barcode == query;
+                                              }).toList();
+
+                                        final count = filteredItems.length;
                                         return Text(
                                           '$count منتج',
                                           style: TextStyle(
@@ -914,7 +928,8 @@ class _SalesScreenState extends State<SalesScreen> {
                             // Products List
                             Expanded(
                               child: FutureBuilder<List<Map<String, Object?>>>(
-                                future: db.getAllProducts(query: _query),
+                                // في صفحة المبيعات: عرض المنتجات المصفّاة بالباركود فقط
+                                future: db.getAllProducts(),
                                 builder: (context, snapshot) {
                                   if (!snapshot.hasData) {
                                     return const Center(
@@ -929,7 +944,20 @@ class _SalesScreenState extends State<SalesScreen> {
                                       ),
                                     );
                                   }
-                                  final items = snapshot.data!;
+                                  final allItems = snapshot.data ?? [];
+                                  final query = _query.trim();
+                                  final items = query.isEmpty
+                                      ? allItems
+                                      : allItems.where((item) {
+                                          final barcode = item['barcode']
+                                                  ?.toString()
+                                                  .trim() ??
+                                              '';
+                                          // إظهار المنتج فقط إذا كان باركوده يطابق النص بالكامل
+                                          return barcode.isNotEmpty &&
+                                              barcode == query;
+                                        }).toList();
+
                                   if (items.isEmpty) {
                                     return Center(
                                       child: Column(
@@ -959,7 +987,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
-                                            'جرب البحث بكلمات مختلفة',
+                                            'جرب إدخال الباركود بشكل صحيح',
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodyMedium

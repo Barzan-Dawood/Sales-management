@@ -1828,13 +1828,21 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
     if (!confirmed) return;
 
     try {
+      // عرض حوار التحميل أولاً والسماح للواجهة بالتحديث
       _showLoadingDialog('جاري حذف جميع البيانات...');
+      // السماح للواجهة بالتحديث لعرض حوار التحميل
+      await Future.delayed(const Duration(milliseconds: 100));
 
       final db = context.read<DatabaseService>();
-      await db.deleteAllDataNew();
+      // تنفيذ العملية بشكل غير متزامن للسماح بتحديث الواجهة
+      await Future.microtask(() => db.deleteAllDataNew());
 
-      Navigator.of(context).pop();
-      _showSnackBar('تم حذف جميع البيانات بنجاح', Colors.green);
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      if (mounted) {
+        _showSnackBar('تم حذف جميع البيانات بنجاح', Colors.green);
+      }
     } catch (e) {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();

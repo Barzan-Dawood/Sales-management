@@ -82,10 +82,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
       if (mounted) {
         setState(() {
+          // إنشاء نسخة قابلة للتعديل من القائمة لتجنب خطأ read-only
+          final modifiableProducts = List<Map<String, Object?>>.from(products);
           if (reset) {
-            _products = products;
+            _products = modifiableProducts;
           } else {
-            _products.addAll(products);
+            _products.addAll(modifiableProducts);
           }
           _hasMore = products.length == _pageSize;
           _isLoading = false;
