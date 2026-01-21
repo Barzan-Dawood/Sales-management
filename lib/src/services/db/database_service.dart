@@ -4156,9 +4156,20 @@ class DatabaseService {
 
         // حذف النسخة الاحتياطية المؤقتة وجميع ملفاتها
         try {
-          await File(currentBackupPath).delete();
-          await File('$currentBackupPath-wal').delete();
-          await File('$currentBackupPath-shm').delete();
+          final currentBackupFile = File(currentBackupPath);
+          if (await currentBackupFile.exists()) {
+            await currentBackupFile.delete();
+          }
+
+          final currentBackupWalFile = File('$currentBackupPath-wal');
+          if (await currentBackupWalFile.exists()) {
+            await currentBackupWalFile.delete();
+          }
+
+          final currentBackupShmFile = File('$currentBackupPath-shm');
+          if (await currentBackupShmFile.exists()) {
+            await currentBackupShmFile.delete();
+          }
         } catch (_) {}
 
         throw Exception(
@@ -4167,9 +4178,20 @@ class DatabaseService {
 
       // حذف النسخة الاحتياطية المؤقتة وجميع ملفاتها بعد نجاح الاستعادة
       try {
-        await File(currentBackupPath).delete();
-        await File('$currentBackupPath-wal').delete();
-        await File('$currentBackupPath-shm').delete();
+        final currentBackupFile = File(currentBackupPath);
+        if (await currentBackupFile.exists()) {
+          await currentBackupFile.delete();
+        }
+
+        final currentBackupWalFile = File('$currentBackupPath-wal');
+        if (await currentBackupWalFile.exists()) {
+          await currentBackupWalFile.delete();
+        }
+
+        final currentBackupShmFile = File('$currentBackupPath-shm');
+        if (await currentBackupShmFile.exists()) {
+          await currentBackupShmFile.delete();
+        }
       } catch (_) {}
     } catch (e) {
       // محاولة إعادة فتح قاعدة البيانات في حالة الخطأ
@@ -4954,28 +4976,8 @@ class DatabaseService {
     }
   }
 
-  /// حذف جميع البيانات من قاعدة البيانات (نسخة محدثة)
-  /// يحذف كل شيء عدا المستخدمين
-  Future<void> deleteAllDataNew() async {
-    try {
-      // استخدام الدالة المشتركة لحذف البيانات عدا المستخدمين
-      await _deleteAllDataExceptUsers();
-
-      // السماح للواجهة بالتحديث قبل إعادة إنشاء البيانات الأساسية
-      await Future.delayed(const Duration(milliseconds: 50));
-
-      // إعادة إنشاء البيانات الأساسية
-      try {
-        await DatabaseSchema.seedData(_db, _sha256Hex);
-      } catch (e) {
-        debugPrint('خطأ في إعادة إنشاء البيانات الأساسية: $e');
-        // لا نرمي الخطأ هنا لأن الحذف تم بنجاح
-      }
-    } catch (e) {
-      debugPrint('خطأ في حذف جميع البيانات: $e');
-      throw Exception('خطأ في حذف جميع البيانات: $e');
-    }
-  }
+  // تم الإبقاء على الدالة القديمة `deleteAllDataNew` في الإصدارات السابقة.
+  // الدالة الجديدة الكاملة توجد في الأسفل باسم deleteAllDataHardReset().
 
   /// حذف المنتجات والأقسام فقط
   Future<void> deleteProductsAndCategories() async {
@@ -7896,5 +7898,77 @@ class DatabaseService {
   /// حذف كوبون خصم
   Future<void> deleteDiscountCoupon(int id) async {
     await _db.delete('discount_coupons', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// حذف جميع البيانات من جميع جداول قاعدة البيانات مع الحفاظ على بنيتها
+  ///
+  /// - يمسح محتوى جميع الجداول (ما عدا جداول النظام الداخلية الخاصة بـ SQLite)
+  /// - لا يقوم بحذف الجداول نفسها
+  /// - يعطّل قيود المفاتيح الخارجية مؤقتًا أثناء الحذف لتفادي تعارض القيود
+  /// - بعد الحذف يعيد التأكد من وجود المستخدمين الافتراضيين
+  Future<void> deleteAllDataHardReset() async {
+    debugPrint('deleteAllDataHardReset: بدء عملية حذف جميع البيانات...');
+
+    // قائمة الجداول التي نريد تفريغها (بدون حذفها)
+    const tablesToClear = <String>[
+      'categories',
+      'products',
+      'customers',
+      'suppliers',
+      'sales',
+      'sale_items',
+      'installments',
+      'expenses',
+      'payments',
+      'supplier_payments',
+      'event_log',
+      'deleted_items',
+      'product_discounts',
+      'discount_coupons',
+      'returns',
+      // يمكن إضافة جداول أخرى هنا عند الحاجة
+    ];
+
+    try {
+      // إيقاف المفاتيح الخارجية على مستوى القاعدة
+      await _db.execute('PRAGMA foreign_keys = OFF');
+
+      await _db.transaction((txn) async {
+        for (final table in tablesToClear) {
+          try {
+            await txn.execute('DELETE FROM $table');
+          } catch (e) {
+            // نتجاهل الخطأ إذا لم يكن الجدول موجوداً، ونكمل
+            debugPrint('deleteAllDataHardReset: فشل مسح جدول $table: $e');
+          }
+        }
+
+        // إعادة تعيين عداد الـ AUTOINCREMENT للجداول المعروفة
+        try {
+          await txn.execute(
+            "DELETE FROM sqlite_sequence WHERE name IN (${tablesToClear.map((t) => "'$t'").join(', ')})",
+          );
+        } catch (e) {
+          debugPrint(
+              'deleteAllDataHardReset: فشل إعادة تعيين sqlite_sequence: $e');
+        }
+      });
+
+      // إعادة تفعيل المفاتيح الخارجية
+      await _db.execute('PRAGMA foreign_keys = ON');
+
+      // التأكد من وجود المستخدمين الافتراضيين بعد الحذف الكامل
+      await _checkAndFixDefaultUsers();
+
+      debugPrint('deleteAllDataHardReset: انتهت عملية حذف جميع البيانات بنجاح');
+    } catch (e) {
+      // في حالة أي خطأ، نحاول إعادة تفعيل المفاتيح الخارجية ثم نرمي الاستثناء
+      try {
+        await _db.execute('PRAGMA foreign_keys = ON');
+      } catch (_) {}
+
+      debugPrint('deleteAllDataHardReset: خطأ عام في الحذف: $e');
+      rethrow;
+    }
   }
 }

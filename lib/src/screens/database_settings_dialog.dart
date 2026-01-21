@@ -1827,25 +1827,23 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
 
     if (!confirmed) return;
 
-    try {
-      // عرض حوار التحميل أولاً والسماح للواجهة بالتحديث
-      _showLoadingDialog('جاري حذف جميع البيانات...');
-      // السماح للواجهة بالتحديث لعرض حوار التحميل
-      await Future.delayed(const Duration(milliseconds: 100));
+    // عرض حوار التحميل
+    _showLoadingDialog('جاري حذف جميع البيانات...');
 
+    try {
       final db = context.read<DatabaseService>();
-      // تنفيذ العملية بشكل غير متزامن للسماح بتحديث الواجهة
-      await Future.microtask(() => db.deleteAllDataNew());
+      // تنفيذ عملية الحذف وانتظارها حتى تكتمل فعلياً
+      await db.deleteAllDataHardReset();
 
       if (mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(); // إغلاق حوار التحميل
       }
       if (mounted) {
         _showSnackBar('تم حذف جميع البيانات بنجاح', Colors.green);
       }
     } catch (e) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // إغلاق حوار التحميل حتى في حالة الخطأ
       }
 
       // تحليل نوع الخطأ وعرض رسالة مناسبة
@@ -1862,7 +1860,9 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         errorMessage = 'خطأ في حذف البيانات: ${e.toString()}';
       }
 
-      _showSnackBar(errorMessage, Colors.red);
+      if (mounted) {
+        _showSnackBar(errorMessage, Colors.red);
+      }
     }
   }
 
