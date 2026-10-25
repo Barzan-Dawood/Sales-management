@@ -27,6 +27,7 @@ class _SalesScreenState extends State<SalesScreen> {
   String _lastType = 'cash';
   int? _lastInvoiceId; // رقم آخر فاتورة تم إنشاؤها
   final Set<int> _addedToCartProducts = {}; // Track products added to cart
+  final Map<int, TextEditingController> _salePriceControllers = {};
   final TextEditingController _searchController = TextEditingController();
 
 // Customer information controllers
@@ -86,6 +87,53 @@ class _SalesScreenState extends State<SalesScreen> {
     }
   }
 
+  TextEditingController _salePriceController(int productId, double price) {
+    return _salePriceControllers.putIfAbsent(
+      productId,
+      () => TextEditingController(text: _moneyInput(price)),
+    );
+  }
+
+  void _releaseSalePriceController(int productId) {
+    _salePriceControllers.remove(productId)?.dispose();
+  }
+
+  void _releaseAllSalePriceControllers() {
+    for (final controller in _salePriceControllers.values) {
+      controller.dispose();
+    }
+    _salePriceControllers.clear();
+  }
+
+  void _onSalePriceChanged(int productId, double catalogPrice, String val) {
+    final line = _cart.indexWhere((e) => e['product_id'] == productId);
+    if (line < 0) return;
+
+    if (val.trim().isEmpty) {
+      setState(() {
+        _cart[line]['price'] = catalogPrice;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final controller = _salePriceControllers[productId];
+        if (controller == null || controller.text.trim().isNotEmpty) return;
+        final text = _moneyInput(catalogPrice);
+        controller.value = TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        );
+      });
+      return;
+    }
+
+    final price = _parseMoney(val);
+    if (price == null || price <= 0) return;
+    setState(() {
+      _cart[line]['original_price'] ??= catalogPrice;
+      _cart[line]['price'] = price;
+    });
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -93,6 +141,7 @@ class _SalesScreenState extends State<SalesScreen> {
     _customerPhoneController.dispose();
     _customerAddressController.dispose();
     _customerNameFocusNode.dispose();
+    _releaseAllSalePriceControllers();
     super.dispose();
   }
 
@@ -1524,6 +1573,13 @@ class _SalesScreenState extends State<SalesScreen> {
                                         final c = _cart[i];
                                         final basePrice =
                                             (c['price'] as num).toDouble();
+                                        final catalogPrice =
+                                            ((c['original_price'] ?? basePrice)
+                                                    as num)
+                                                .toDouble();
+                                        final priceOverridden =
+                                            (catalogPrice - basePrice).abs() >
+                                                0.001;
                                         final discount =
                                             ((c['discount_percent'] ?? 0)
                                                     as num)
@@ -1692,6 +1748,8 @@ class _SalesScreenState extends State<SalesScreen> {
                                                               .adjustProductQuantity(
                                                                   productId,
                                                                   qty);
+                                                          _releaseSalePriceController(
+                                                              productId);
                                                           setState(() {
                                                             _cart.removeAt(i);
                                                             _addedToCartProducts
@@ -1864,6 +1922,79 @@ class _SalesScreenState extends State<SalesScreen> {
                                                             ),
                                                           ),
                                                         ),
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        SizedBox(
+                                                          width: 72,
+                                                          child: TextFormField(
+                                                            controller:
+                                                                _salePriceController(
+                                                              c['product_id']
+                                                                  as int,
+                                                              basePrice,
+                                                            ),
+                                                            decoration:
+                                                                InputDecoration(
+                                                              labelText:
+                                                                  'السعر',
+                                                              labelStyle:
+                                                                  TextStyle(
+                                                                fontSize: 9,
+                                                                color: Theme.of(
+                                                                        context)
+                                                                    .hintColor,
+                                                              ),
+                                                              floatingLabelStyle:
+                                                                  const TextStyle(
+                                                                      fontSize:
+                                                                          9),
+                                                              isDense: true,
+                                                              contentPadding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                horizontal: 6,
+                                                                vertical: 6,
+                                                              ),
+                                                              border:
+                                                                  const OutlineInputBorder(),
+                                                            ),
+                                                            textAlign:
+                                                                TextAlign
+                                                                    .center,
+                                                            style:
+                                                                const TextStyle(
+                                                                    fontSize:
+                                                                        12),
+                                                            keyboardType:
+                                                                const TextInputType
+                                                                    .numberWithOptions(
+                                                              decimal: true,
+                                                            ),
+                                                            onChanged: (val) =>
+                                                                _onSalePriceChanged(
+                                                              c['product_id']
+                                                                  as int,
+                                                              catalogPrice,
+                                                              val,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        if (priceOverridden)
+                                                          Text(
+                                                            'مخزون: ${Formatters.currencyIQD(catalogPrice)}',
+                                                            style: TextStyle(
+                                                              fontSize: 8,
+                                                              color: Theme.of(
+                                                                      context)
+                                                                  .colorScheme
+                                                                  .onSurface
+                                                                  .withOpacity(
+                                                                      0.55),
+                                                              decoration:
+                                                                  TextDecoration
+                                                                      .lineThrough,
+                                                            ),
+                                                          ),
                                                       ],
                                                     ),
                                                   ],
@@ -2183,6 +2314,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                     _cart.clear();
                                                     _addedToCartProducts
                                                         .clear();
+                                                    _releaseAllSalePriceControllers();
                                                     _couponCode = null;
                                                     _couponId = null;
                                                     _couponDiscount = 0.0;
@@ -2948,6 +3080,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                       // Clear cart
                                                                                       _cart.clear();
                                                                                       _addedToCartProducts.clear();
+                                                                                      _releaseAllSalePriceControllers();
                                                                                       // Clear customer fields
                                                                                       _customerName = '';
                                                                                       _customerPhone = '';
@@ -3007,6 +3140,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                 // Move last invoice items back to cart
                                                                                 _cart.clear();
                                                                                 _addedToCartProducts.clear();
+                                                                                _releaseAllSalePriceControllers();
 
                                                                                 // Add last invoice items back to cart
                                                                                 for (final item in _lastInvoiceItems) {
@@ -3163,6 +3297,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                                                                     // Clear cart
                                                                                     _cart.clear();
                                                                                     _addedToCartProducts.clear();
+                                                                                    _releaseAllSalePriceControllers();
 
                                                                                     // Clear last invoice items
                                                                                     _lastInvoiceItems.clear();
@@ -3710,13 +3845,29 @@ class _SalesScreenState extends State<SalesScreen> {
     return '${input.substring(0, head)}…${input.substring(input.length - tail)}';
   }
 
+  String _moneyInput(double value) {
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toString();
+  }
+
+  double? _parseMoney(String raw) {
+    var s = raw.trim().replaceAll(' ', '').replaceAll(',', '').replaceAll('٬', '');
+    s = s.replaceAll('٫', '.');
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    const persian = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    for (var i = 0; i < 10; i++) {
+      s = s.replaceAll(arabic[i], '$i').replaceAll(persian[i], '$i');
+    }
+    return double.tryParse(s);
+  }
+
   Future<void> _addToCart(Map<String, Object?> p) async {
     // Check if product is already in cart
     final existing = _cart.indexWhere((e) => e['product_id'] == p['id']);
     if (existing >= 0) {
       // Product already in cart, don't add again
       // User can adjust quantity using +/- buttons in cart
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('المنتج موجود في السلة'),
           width: 300,
           behavior: SnackBarBehavior.floating));
@@ -3725,12 +3876,14 @@ class _SalesScreenState extends State<SalesScreen> {
 
     final currentStock = (p['quantity'] as int? ?? 0);
     if (currentStock <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('المنتج غير متوفر'),
           width: 300,
           behavior: SnackBarBehavior.floating));
       return;
     }
+
+    final catalogPrice = (p['price'] as num).toDouble();
 
     // الحصول على خصم المنتج التلقائي
     double productDiscount = 0.0;
@@ -3741,10 +3894,11 @@ class _SalesScreenState extends State<SalesScreen> {
         // التحقق من الخصم بالمبلغ أولاً (لأن discount_percent قد يكون 0 عند استخدام مبلغ)
         if (discount['discount_amount'] != null &&
             (discount['discount_amount'] as num).toDouble() > 0) {
-          final price = (p['price'] as num).toDouble();
           final discountAmount =
               (discount['discount_amount'] as num).toDouble();
-          productDiscount = (discountAmount / price) * 100;
+          if (catalogPrice > 0) {
+            productDiscount = (discountAmount / catalogPrice) * 100;
+          }
         } else if (discount['discount_percent'] != null &&
             (discount['discount_percent'] as num).toDouble() > 0) {
           productDiscount = (discount['discount_percent'] as num).toDouble();
@@ -3754,13 +3908,16 @@ class _SalesScreenState extends State<SalesScreen> {
       // تجاهل خطأ جلب خصم المنتج والاستمرار بدون خصم
     }
 
-    // Reserve one immediately
+    if (!mounted) return;
+
+    // Reserve one immediately — الكمية فقط، من دون المساس بسعر المنتج
     context.read<DatabaseService>().adjustProductQuantity(p['id'] as int, -1);
     setState(() {
       _cart.insert(0, {
         'product_id': p['id'],
         'name': p['name'],
-        'price': p['price'],
+        'price': catalogPrice,
+        'original_price': catalogPrice,
         'cost': p['cost'],
         'quantity': 1,
         'available': currentStock - 1,

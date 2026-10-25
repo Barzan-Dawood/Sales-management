@@ -1540,18 +1540,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
 
           SizedBox(height: isSmallScreen ? 12 : 16),
 
-          // Delete Reports and Statistics
-          _buildDeleteActionCard(
-            icon: Icons.analytics,
-            title: 'حذف الإحصائيات والتقارير',
-            subtitle:
-                'حذف المدفوعات والمصروفات والأقساط (سيتم الاحتفاظ بالبيانات الأساسية)',
-            color: Colors.purple,
-            onTap: () => _deleteReportsAndStatistics(),
-          ),
-
-          SizedBox(height: isSmallScreen ? 12 : 16),
-
           // Delete Sales Only
           _buildDeleteActionCard(
             icon: Icons.shopping_cart,
@@ -1889,32 +1877,6 @@ class _DatabaseSettingsDialogState extends State<DatabaseSettingsDialog>
         Navigator.of(context).pop();
       }
       _showSnackBar('خطأ في حذف المنتجات والأقسام: $e', Colors.red);
-    }
-  }
-
-  Future<void> _deleteReportsAndStatistics() async {
-    final confirmed = await _showDeleteConfirmationDialog(
-      'حذف الإحصائيات والتقارير',
-      'هل أنت متأكد من حذف جميع الإحصائيات والتقارير؟\n\nسيتم حذف:\n• جميع المدفوعات\n• جميع المصروفات\n• جميع الأقساط\n• سجلات الأداء والنسخ الاحتياطي\n\nسيتم الاحتفاظ بـ:\n• المبيعات\n• العملاء\n• المنتجات\n• الأقسام\n• المستخدمين\n\nهذه العملية لا يمكن التراجع عنها!',
-      'حذف الإحصائيات والتقارير',
-      Colors.purple,
-    );
-
-    if (!confirmed) return;
-
-    try {
-      _showLoadingDialog('جاري حذف الإحصائيات والتقارير...');
-
-      final db = context.read<DatabaseService>();
-      await db.deleteReportsAndStatistics();
-
-      Navigator.of(context).pop();
-      _showSnackBar('تم حذف الإحصائيات والتقارير بنجاح', Colors.purple);
-    } catch (e) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-      _showSnackBar('خطأ في حذف الإحصائيات والتقارير: $e', Colors.red);
     }
   }
 

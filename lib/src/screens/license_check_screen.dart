@@ -307,7 +307,13 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
     return Column(
       children: [
         // زر التفعيل
-        if (licenseProvider.isNotActivated || licenseProvider.isInvalid)
+        // نظهر زر التفعيل في الحالات التالية:
+        // - غير مفعّل
+        // - المفتاح غير صالح
+        // - انتهت الفترة التجريبية
+        if (licenseProvider.isNotActivated ||
+            licenseProvider.isInvalid ||
+            licenseProvider.isTrialExpired)
           SizedBox(
             width: double.infinity,
             height: 50,

@@ -6,7 +6,7 @@ library;
 class StoreInfo {
   // معلومات التطبيق
   static const String appTitle = 'تجارتي';
-  static const String displayVersion = '1.0.0';
+  static const String displayVersion = '1.1.0';
   static const String logoAssetPath = 'assets/images/poss.png';
 
   // معلومات المحل الأساسية

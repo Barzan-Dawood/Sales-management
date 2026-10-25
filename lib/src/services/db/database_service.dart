@@ -144,6 +144,14 @@ class DatabaseService {
       }) async {
         final existing = byRole[role];
         if (existing == null) {
+          // في بعض قواعد البيانات القديمة قد لا يسمح CHECK في عمود role بقيمة supervisor
+          // لذلك نتجنب تماماً محاولة إنشاء هذا الدور إذا لم يكن موجوداً من قبل
+          if (role == 'supervisor') {
+            debugPrint(
+                'تجاوز إنشاء مستخدم جديد للدور supervisor لأن الدور غير مدعوم في بعض الإصدارات القديمة من قاعدة البيانات');
+            return;
+          }
+
           // لا يوجد مستخدم بهذا الدور -> إنشاء مستخدم جديد
           final template = defaultUsers.firstWhere((u) => u['role'] == role,
               orElse: () => {});
@@ -156,10 +164,17 @@ class DatabaseService {
           data['updated_at'] = now;
           data['active'] = 1;
 
-          await _db.insert('users', data);
-          debugPrint('تم إنشاء مستخدم جديد للدور: $role');
+          try {
+            await _db.insert('users', data);
+            debugPrint('تم إنشاء مستخدم جديد للدور: $role');
+          } catch (e) {
+            // في بعض قواعد البيانات القديمة قد لا يسمح CHECK في عمود role بقيمة supervisor
+            // أو قد توجد قيود أخرى تمنع الإدراج. في هذه الحالة نتجاهل الخطأ ولا نمنع التطبيق.
+            debugPrint(
+                'فشل إنشاء مستخدم افتراضي للدور $role بسبب قيود في جدول users: $e');
+          }
         } else {
-          // يوجد مستخدم -> نضمن على الأقل اسم المستخدم وكلمة المرور الافتراضية
+          // يوجد مستخدم -> نضمن على الأقل كلمة المرور الافتراضية وتفعيل الحساب
           final id = existing['id'];
           if (id == null) return;
 
@@ -168,8 +183,27 @@ class DatabaseService {
             'active': 1,
           };
 
-          // توحيد اسم المستخدم إلى القيمة الافتراضية (لتطابق شاشة الدخول)
-          updates['username'] = defaultUsername;
+          // إذا كان اسم المستخدم الحالي مختلفًا عن الاسم الافتراضي،
+          // نتحقق أولاً إن كان هناك مستخدم آخر يستخدم هذا الاسم لتجنب كسر UNIQUE
+          final currentUsername = (existing['username'] ?? '').toString();
+          if (currentUsername != defaultUsername) {
+            final conflicts = await _db.query(
+              'users',
+              where: 'username = ? AND id != ?',
+              whereArgs: [defaultUsername, id],
+              limit: 1,
+            );
+
+            if (conflicts.isEmpty) {
+              // لا يوجد تعارض -> يمكننا توحيد اسم المستخدم
+              updates['username'] = defaultUsername;
+            } else {
+              // يوجد مستخدم آخر يحمل نفس اسم المستخدم الافتراضي
+              // في هذه الحالة نحافظ على اسم المستخدم الحالي ونعرض تحذير فقط
+              debugPrint(
+                  'تحذير: تم العثور على مستخدم آخر باسم مستخدم "$defaultUsername"، سيتم تحديث كلمة المرور فقط للدور $role (id=$id)');
+            }
+          }
 
           // فرض كلمة المرور الافتراضية المطلوبة
           updates['password'] = _sha256Hex(defaultPassword);

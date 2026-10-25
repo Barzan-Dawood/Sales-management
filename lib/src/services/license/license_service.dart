@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:encrypt/encrypt.dart';
 import 'hardware_service.dart';
@@ -26,10 +28,18 @@ class LicenseService {
   late final IV _iv;
 
   LicenseService() {
-    final key = Key.fromBase64(
-        base64.encode(utf8.encode(_encryptionKey)).substring(0, 44));
+    // إنشاء مفتاح AES-256 (32 بايت) باستخدام SHA-256
+    final keyBytes = sha256.convert(utf8.encode(_encryptionKey)).bytes;
+    final key = Key(Uint8List.fromList(keyBytes));
     _encrypter = Encrypter(AES(key));
-    _iv = IV.fromLength(16);
+    // استخدام IV ثابت مشتق من مفتاح التشفير لضمان الاتساق
+    // نستخدم أول 16 بايت من hash مختلف للـ IV
+    final ivBytes = sha256
+        .convert(utf8.encode('${_encryptionKey}_IV'))
+        .bytes
+        .take(16)
+        .toList();
+    _iv = IV(Uint8List.fromList(ivBytes));
   }
 
   /// التحقق من حالة الترخيص
@@ -409,9 +419,26 @@ class LicenseService {
   /// فك تشفير مفتاح الترخيص
   String? _decryptLicense(String encryptedLicense) {
     try {
+      // التحقق من أن البيانات المشفرة ليست فارغة
+      if (encryptedLicense.isEmpty) {
+        return null;
+      }
+
+      // التحقق من أن البيانات هي base64 صالحة
+      try {
+        base64.decode(encryptedLicense);
+      } catch (e) {
+        // إذا لم تكن base64 صالحة، قد تكون المفتاح غير مشفر
+        if (_validateLicenseFormat(encryptedLicense)) {
+          return encryptedLicense;
+        }
+        return null;
+      }
+
       final encrypted = Encrypted.fromBase64(encryptedLicense);
       return _encrypter.decrypt(encrypted, iv: _iv);
     } catch (e) {
+      // في حالة فشل فك التشفير (مثل استخدام مفتاح قديم أو بيانات تالفة أو IV مختلف)
       // محاولة استخدام المفتاح كما هو (في حالة عدم وجود تشفير)
       try {
         if (_validateLicenseFormat(encryptedLicense)) {
@@ -420,6 +447,7 @@ class LicenseService {
       } catch (e) {
         // تجاهل الأخطاء
       }
+      // إرجاع null للإشارة إلى فشل فك التشفير
       return null;
     }
   }
